@@ -1,0 +1,633 @@
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg-color: #F8FAFC;
+  --primary-blue: #70C5FF;
+  --light-blue: #BAE6FD;
+  --dark-purple: #2E1A47;
+  --btn-purple: #3B1C71;
+  --accent-orange: #FF6B4A;
+  --lime-green: #B0F135;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --card-radius: 16px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Kanit', sans-serif;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  padding-bottom: 80px;
+}
+
+/* Navbar */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 40px;
+  background: #ffffff;
+  border-bottom: 1px solid #E2E8F0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-left, .nav-center, .nav-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.logo-icon { font-size: 28px; }
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name { font-weight: 800; font-size: 20px; line-height: 1; letter-spacing: 1px; }
+.brand-sub { font-size: 10px; color: var(--text-muted); }
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: #F1F5F9;
+  padding: 8px 16px;
+  border-radius: 8px;
+  gap: 8px;
+  width: 260px;
+}
+
+.search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-size: 13px;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  position: relative;
+  padding: 8px 0;
+}
+
+.nav-link.active {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: var(--accent-orange);
+  border-radius: 2px;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  background-color: var(--light-blue);
+  color: #0284C7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+}
+
+.username { font-weight: 600; }
+.user-role { color: var(--text-muted); font-size: 11px; }
+.dropdown-arrow { font-size: 10px; color: var(--text-muted); }
+
+/* Main Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+
+/* Hero Section */
+.hero-section {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 40px;
+  align-items: center;
+  margin-bottom: 48px;
+}
+
+.hero-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dark-purple);
+  margin-bottom: 8px;
+}
+
+.hero-title {
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--dark-purple);
+  margin-bottom: 16px;
+}
+
+.hero-desc {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.btn-all-events {
+  background-color: var(--primary-blue);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+}
+
+/* Hero Banner Card */
+.hero-card {
+  background-color: var(--primary-blue);
+  border-radius: 24px;
+  padding: 32px;
+  height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(112, 197, 255, 0.3);
+}
+
+.carousel-indicators {
+  display: flex;
+  gap: 6px;
+}
+
+.indicator {
+  height: 4px;
+  width: 24px;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 2px;
+}
+
+.indicator.active {
+  background-color: #ffffff;
+  width: 40px;
+}
+
+.hero-badge {
+  background-color: var(--lime-green);
+  color: #1E293B;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+.hero-card-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--dark-purple);
+  line-height: 1.2;
+}
+
+.hero-card-info {
+  font-size: 13px;
+  color: var(--dark-purple);
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.btn-circle-arrow {
+  position: absolute;
+  bottom: 32px;
+  right: 32px;
+  width: 44px;
+  height: 44px;
+  background: var(--accent-orange);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  font-size: 18px;
+}
+
+/* Category Filter */
+.category-section {
+  margin-bottom: 32px;
+}
+
+.category-subtitle {
+  font-size: 12px;
+  color: var(--dark-purple);
+  font-weight: 600;
+}
+
+.category-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.filter-pills {
+  display: flex;
+  gap: 12px;
+}
+
+.pill {
+  padding: 8px 20px;
+  border-radius: 20px;
+  background-color: #ffffff;
+  border: 1px solid #E2E8F0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pill.active {
+  background-color: var(--primary-blue);
+  color: white;
+  border-color: var(--primary-blue);
+}
+
+/* Gather Picks Banner */
+.gather-picks-banner {
+  background-color: var(--primary-blue);
+  border-radius: 12px;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: white;
+  margin-bottom: 32px;
+}
+
+.gather-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.gather-badge {
+  background-color: rgba(255, 255, 255, 0.3);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.gather-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Event Grid System */
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.event-card {
+  background: #ffffff;
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #F1F5F9;
+}
+
+.event-card.wide {
+  grid-column: span 1;
+}
+
+.card-banner {
+  height: 200px;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+}
+
+.status-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: var(--lime-green);
+  color: #1E293B;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.card-body {
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+  flex: 1;
+}
+
+.date-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 40px;
+}
+
+.date-month {
+  font-size: 12px;
+  color: var(--accent-orange);
+  font-weight: 700;
+}
+
+.date-day {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--dark-purple);
+  line-height: 1;
+}
+
+.card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.event-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--dark-purple);
+  margin-bottom: 8px;
+}
+
+.event-description {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.meta-info {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 12px;
+}
+
+.seats-count {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.btn-register {
+  background-color: var(--btn-purple);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* ===================================================
+   EVENT DETAIL PAGE STYLES
+=================================================== */
+.back-nav {
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.back-link:hover {
+  color: var(--dark-purple);
+}
+
+/* แบนเนอร์ด้านบน */
+.event-hero {
+  height: 400px;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: flex-end;
+}
+
+.event-hero-overlay {
+  padding: 40px 0;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.event-hero-badge {
+  background: white;
+  color: var(--primary-blue);
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
+.event-hero-date {
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.event-hero-title {
+  color: white;
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 12px;
+}
+
+.event-hero-location {
+  color: white;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* เลย์เอาต์เนื้อหาซ้าย-ขวา */
+.event-content-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 60px;
+  padding-top: 48px;
+  padding-bottom: 80px;
+}
+
+/* ด้านซ้าย (รายละเอียด) */
+.section-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.event-desc-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--dark-purple);
+  margin-bottom: 40px;
+}
+
+.event-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  border-top: 1px solid #E2E8F0;
+  border-bottom: 1px solid #E2E8F0;
+  padding: 24px 0;
+}
+
+.info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.info-icon {
+  color: var(--primary-blue);
+  margin-top: 2px;
+}
+
+.info-box-title {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.info-box-detail {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.4;
+}
+
+/* ด้านขวา (กล่องตั๋ว) */
+.ticket-panel {
+  background: white;
+  border-top: 4px solid var(--primary-blue);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  border-radius: 0 0 12px 12px;
+  padding: 32px 24px;
+  position: sticky;
+  top: 100px;
+}
+
+.ticket-panel-title {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.ticket-seats-huge {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1E3A8A; /* สีน้ำเงินเข้มตามรูป */
+  margin-bottom: 4px;
+}
+
+.ticket-registered {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.ticket-type-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #E2E8F0;
+  padding-top: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
