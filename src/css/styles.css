@@ -631,3 +631,241 @@ body {
   font-weight: 700;
   cursor: pointer;
 }
+
+/* ===================================================
+   MY REGISTRATIONS PAGE STYLES
+=================================================== */
+.registrations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 60px;
+}
+
+.registration-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.registration-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+.reg-left-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.reg-date-badge {
+  background: #F1F5F9;
+  border-radius: 12px;
+  padding: 10px 16px;
+  text-align: center;
+  min-width: 60px;
+}
+
+.reg-month {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-orange);
+  display: block;
+}
+
+.reg-day {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--dark-purple);
+  line-height: 1.1;
+}
+
+.reg-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reg-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--dark-purple);
+}
+
+.reg-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.reg-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-pill {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-pill.success {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.status-pill.pending {
+  background: #FEF9C3;
+  color: #A16207;
+}
+
+.btn-view-ticket {
+  background-color: var(--btn-purple);
+  color: white;
+  padding: 9px 18px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* ===================================================
+   MY TICKETS PAGE STYLES
+=================================================== */
+.tickets-header {
+  margin-top: 40px;
+  margin-bottom: 40px;
+  border-bottom: 2px solid var(--dark-purple); /* เส้นใต้หนาๆ สีเข้มตามรูป */
+  padding-bottom: 20px;
+}
+
+.tickets-header .text-blue {
+  color: #60A5FA;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.tickets-header h1 {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--dark-purple);
+  margin: 0 0 8px 0;
+}
+
+.tickets-header p {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* เลย์เอาต์ของการ์ดตั๋ว */
+.ticket-wrapper {
+  display: flex;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #E2E8F0;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+/* ส่วนซ้าย (สีฟ้า) */
+.ticket-left {
+  background-color: #93C5FD; /* สีฟ้าอ่อนตามรูป */
+  color: white;
+  padding: 30px 24px;
+  width: 30%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.ticket-left-badge {
+  background: rgba(255, 255, 255, 0.3);
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  width: max-content;
+}
+
+.ticket-left-title {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/* ส่วนกลาง (รายละเอียด) */
+.ticket-middle {
+  padding: 30px 24px;
+  flex-grow: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.ticket-info-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ticket-info-group label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.ticket-info-group span {
+  font-size: 14px;
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+/* ส่วนขวา (QR Code) */
+.ticket-right {
+  padding: 30px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px dashed #E2E8F0; /* รอยประแบ่ง QR */
+  min-width: 220px;
+}
+
+.ticket-qr-img {
+  width: 130px;
+  height: 130px;
+  object-fit: cover;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.ticket-id {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--dark-purple);
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+
+.ticket-tap-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}

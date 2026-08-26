@@ -3,17 +3,37 @@
    เมื่อต่อ API สำเร็จ ให้ลบข้อมูลจำลองพวกนี้ทิ้ง 
    และนำ Response จาก API มาใส่ในฟังก์ชัน Render แทน
 =================================================== */
+
+// 🟢 สิ่งที่เพิ่มเข้ามา: ข้อมูลและฟังก์ชันสำหรับ Navbar เพื่อไม่ให้ JS ติด Error
+const mockUserData = {
+  username: "User",
+  role: "ผู้ใช้งานทั่วไป",
+  avatarLetter: "A"
+};
+
+function renderUserProfile(user) {
+  const avatar = document.getElementById("nav-avatar");
+  const username = document.getElementById("nav-username");
+  const role = document.getElementById("nav-role");
+  if (avatar && username && role) {
+    avatar.textContent = user.avatarLetter;
+    username.textContent = user.username;
+    role.textContent = user.role;
+  }
+}
+// 🟢 จบส่วนที่เพิ่มเข้ามา
+
 document.addEventListener("DOMContentLoaded", () => {
   // 1. Fetch & Render Navbar Component
   fetch("../../components/navbar.html")
     .then((response) => response.text())
     .then((data) => {
       document.getElementById("navbar-placeholder").innerHTML = data;
-    })
-    .catch((error) => {
-    console.error("โหลด Navbar ไม่สำเร็จ:", error);
+      renderUserProfile(mockUserData);
+
+      // เพิ่มบรรทัดนี้เข้าไปครับ
+      setActiveNavTab(); 
     });
-    
 
   // 2. Render Dynamic Data สำหรับ Hero และ Events Grid
   renderHeroData(mockHeroData);
@@ -130,12 +150,22 @@ function renderEventsGrid(events) {
           </div>
           <div class="card-footer">
             <span class="seats-count">${event.seatsLeft} ที่นั่งเหลือ</span>
-            <button class="btn-register">ลงทะเบียน →</button>
+            <a href="EventDetailPage.html?id=${event.id}" class="btn-register" style="text-decoration: none;">ดูรายละเอียด →</a>
           </div>
         </div>
       </div>
     </div>
   `).join('');
+}
+// ฟังก์ชันสำหรับไฮไลต์แท็บ Navbar ให้ตรงกับหน้า "ค้นหาอีเวนต์"
+function setActiveNavTab() {
+  const navLinks = document.querySelectorAll(".nav-link");
+  navLinks.forEach(link => {
+    link.classList.remove("active"); // ล้างแถบส้มหน้าอื่นออกก่อน
+    if (link.textContent.includes("ค้นหาอีเวนต์")) {
+      link.classList.add("active"); // ใส่แถบส้มให้หน้านี้
+    }
+  });
 }
 
 

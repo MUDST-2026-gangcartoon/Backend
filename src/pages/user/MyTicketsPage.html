@@ -1,11 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตั๋วของฉัน - PETOPIA</title>
+  <link rel="stylesheet" href="../../css/styles.css">
 </head>
 <body>
-    
+
+  <!-- แถบ Navbar (ดึงผ่าน JS) -->
+  <div id="navbar-placeholder"></div>
+
+  <main class="container">
+    <!-- Header หัวข้อหน้า -->
+    <div class="tickets-header">
+      <div class="text-blue">บัตรพร้อมใช้งาน</div>
+      <h1>ตั๋วของฉัน</h1>
+      <p>บัตรทุกใบมี QR ของตัวเอง แตะ QR เพื่อขยายแล้วแสดงให้ทีมงานสแกน</p>
+    </div>
+
+    <!-- Container แสดงรายการตั๋ว (Rendered by JS) -->
+    <div id="tickets-list-container"></div>
+  </main>
+
+  <script src="../../js/myTickets.js"></script>
 </body>
 </html>
