@@ -4,24 +4,45 @@
    และนำ Response จาก API มาใส่ในฟังก์ชัน Render แทน
 =================================================== */
 
-// 🟢 สิ่งที่เพิ่มเข้ามา: ข้อมูลและฟังก์ชันสำหรับ Navbar เพื่อไม่ให้ JS ติด Error
+// 🟢 ตัวแปรจำลองสถานะล็อกอิน (ลองเปลี่ยนเป็น true/false เพื่อดูผลลัพธ์)
+const isLoggedIn = false;
+
 const mockUserData = {
   username: "User",
   role: "ผู้ใช้งานทั่วไป",
   avatarLetter: "A"
 };
 
-function renderUserProfile(user) {
-  const avatar = document.getElementById("nav-avatar");
-  const username = document.getElementById("nav-username");
-  const role = document.getElementById("nav-role");
-  if (avatar && username && role) {
-    avatar.textContent = user.avatarLetter;
-    username.textContent = user.username;
-    role.textContent = user.role;
+// 🟢 อัปเดตฟังก์ชันนี้: จัดการแสดงผล Navbar ทั้งปุ่ม User/Guest และเมนูด้านบน
+function updateNavbarState(isLoggedIn, user) {
+  const guestView = document.getElementById("nav-guest-view");
+  const userView = document.getElementById("nav-user-view");
+  const navRegistrations = document.getElementById("nav-registrations");
+  const navTickets = document.getElementById("nav-tickets");
+
+  if (!guestView || !userView) return;
+
+  if (isLoggedIn && user) {
+    // ล็อกอินแล้ว: แสดงโปรไฟล์ + แสดงเมนูตั๋ว/ลงทะเบียน
+    guestView.style.display = "none";
+    userView.style.display = "flex";
+    if (navRegistrations) navRegistrations.style.display = "inline-flex";
+    if (navTickets) navTickets.style.display = "inline-flex";
+
+    const avatar = document.getElementById("nav-avatar");
+    const username = document.getElementById("nav-username");
+    const role = document.getElementById("nav-role");
+    if (avatar) avatar.textContent = user.avatarLetter;
+    if (username) username.textContent = user.username;
+    if (role) role.textContent = user.role;
+  } else {
+    // ยังไม่ล็อกอิน: แสดงปุ่มสมัคร/เข้าสู่ระบบ + ซ่อนเมนูตั๋ว/ลงทะเบียน
+    guestView.style.display = "flex";
+    userView.style.display = "none";
+    if (navRegistrations) navRegistrations.style.display = "none";
+    if (navTickets) navTickets.style.display = "none";
   }
 }
-// 🟢 จบส่วนที่เพิ่มเข้ามา
 
 document.addEventListener("DOMContentLoaded", () => {
   // 1. Fetch & Render Navbar Component
@@ -29,9 +50,9 @@ document.addEventListener("DOMContentLoaded", () => {
     .then((response) => response.text())
     .then((data) => {
       document.getElementById("navbar-placeholder").innerHTML = data;
-      renderUserProfile(mockUserData);
-
-      // เพิ่มบรรทัดนี้เข้าไปครับ
+      
+      // 🟢 เรียกใช้ updateNavbarState แทน renderUserProfile เดิม
+      updateNavbarState(isLoggedIn, mockUserData);
       setActiveNavTab(); 
     });
 
@@ -53,7 +74,7 @@ const mockEventsData = [
   {
     id: 1,
     statusBadge: "เปิดรับลงทะเบียน",
-    bannerBg: "linear-gradient(135deg, #1e1b4b 0%, #311b92 100%)", // สามารถเปลี่ยนเป็น URL รูปภาพได้
+    bannerBg: "linear-gradient(135deg, #1e1b4b 0%, #311b92 100%)",
     bannerText: "DESIGN LAB\nMAKE IT CLEAR.",
     month: "ส.ค.",
     day: "19",
@@ -124,6 +145,19 @@ function renderHeroData(hero) {
   `;
 }
 
+// ฟังก์ชันดักจับเมื่อผู้ใช้กดปุ่ม "ดูรายละเอียด / ลงทะเบียน"
+function handleRegisterClick(event, eventId) {
+  event.preventDefault(); // ป้องกันการเปลี่ยนหน้าเว็บ
+
+  if (!isLoggedIn) {
+    // 🟢 ถ้ายังไม่ล็อกอิน ให้เปิด Popup Login ขึ้นมาทันทีโดยไม่ต้องเปลี่ยนหน้า
+    openModal(event, 'login');
+  } else {
+    // 🔵 ถ้าล็อกอินแล้ว ให้พาไปหน้ารายละเอียดอีเวนต์ตามปกติ
+    window.location.href = `EventDetailPage.html?id=${eventId}`;
+  }
+}
+
 function renderEventsGrid(events) {
   const gridContainer = document.getElementById("events-grid-container");
   if (!gridContainer) return;
@@ -150,13 +184,17 @@ function renderEventsGrid(events) {
           </div>
           <div class="card-footer">
             <span class="seats-count">${event.seatsLeft} ที่นั่งเหลือ</span>
-            <a href="EventDetailPage.html?id=${event.id}" class="btn-register" style="text-decoration: none;">ดูรายละเอียด →</a>
+            
+            <!-- 🟢 แก้ไขปุ่มให้เรียกใช้ handleRegisterClick -->
+            <a href="#" onclick="handleRegisterClick(event, ${event.id})" class="btn-register" style="text-decoration: none;">ดูรายละเอียด / ลงทะเบียน →</a>
+            
           </div>
         </div>
       </div>
     </div>
   `).join('');
 }
+
 // ฟังก์ชันสำหรับไฮไลต์แท็บ Navbar ให้ตรงกับหน้า "ค้นหาอีเวนต์"
 function setActiveNavTab() {
   const navLinks = document.querySelectorAll(".nav-link");
@@ -168,6 +206,105 @@ function setActiveNavTab() {
   });
 }
 
+/* ===================================================
+   📌 MODAL CONTROL FUNCTIONS (เปิด/ปิด Popup)
+=================================================== */
+function openModal(event, type) {
+  if (event) event.preventDefault();
+  
+  // เปิดฉากกั้นพื้นหลัง
+  document.getElementById("auth-modal-overlay").style.display = "flex";
+  
+  // ปิดกล่องทั้งคู่ก่อน
+  document.getElementById("modal-login").style.display = "none";
+  document.getElementById("modal-register").style.display = "none";
+
+  // เปิดเฉพาะกล่องที่เลือก (login หรือ register)
+  if (type === 'login') {
+    document.getElementById("modal-login").style.display = "block";
+  } else if (type === 'register') {
+    document.getElementById("modal-register").style.display = "block";
+  }
+}
+
+function closeModal() {
+  document.getElementById("auth-modal-overlay").style.display = "none";
+}
+
+// สลับระหว่างหน้า Login กับ Register ใน Popup เดียวกัน
+function switchModal(event, type) {
+  event.preventDefault();
+  openModal(null, type);
+}
+
+// 🟢 ตัวอย่างตอนกด Submit แบบจำลอง
+function handleLoginSubmit(event) {
+  event.preventDefault();
+  alert("เข้าสู่ระบบสำเร็จ!");
+  closeModal();
+  // TODO: เปลี่ยนตัวแปร isLoggedIn เป็น true แล้วเรียก updateNavbarState()
+}
+
+function handleRegisterSubmit(event) {
+  event.preventDefault();
+  alert("สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ");
+  openModal(null, 'login'); // สมัครเสร็จ เด้งไปกล่อง Login ต่อ
+}
+
+/* ===================================================
+   📌 ฟังก์ชันจัดการ POPUP (LOGIN / REGISTER)
+=================================================== */
+
+// ฟังก์ชันเปิด Popup
+function openModal(event, type) {
+  if (event) event.preventDefault();
+  
+  const overlay = document.getElementById("auth-modal-overlay");
+  const loginModal = document.getElementById("modal-login");
+  const regModal = document.getElementById("modal-register");
+
+  if (!overlay || !loginModal || !regModal) return;
+
+  overlay.style.display = "flex";
+  loginModal.style.display = "none";
+  regModal.style.display = "none";
+
+  if (type === 'login') {
+    loginModal.style.display = "block";
+  } else if (type === 'register') {
+    regModal.style.display = "block";
+  }
+}
+
+// ฟังก์ชันปิด Popup
+function closeModal() {
+  const overlay = document.getElementById("auth-modal-overlay");
+  if (overlay) overlay.style.display = "none";
+}
+
+// ฟังก์ชันสลับกล่องระหว่าง Login / Register
+function switchModal(event, type) {
+  if (event) event.preventDefault();
+  openModal(null, type);
+}
+
+// ฟังก์ชันทำงานเมื่อกดปุ่มเข้าสู่ระบบใน Popup
+function handleLoginSubmit(event) {
+  event.preventDefault();
+  alert("เข้าสู่ระบบสำเร็จ!");
+  closeModal();
+  
+  // (ตัวอย่าง) จำลองเปลี่ยนสถานะเป็นล็อกอินแล้ว แล้วอัปเดต Navbar
+  // isLoggedIn = true;
+  // updateNavbarState(true, mockUserData);
+}
+
+// ฟังก์ชันทำงานเมื่อกดปุ่มสมัครสมาชิกใน Popup
+function handleRegisterSubmit(event) {
+  event.preventDefault();
+  alert("สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ");
+  openModal(null, 'login'); // สมัครเสร็จเด้งไปหน้าล็อกอินต่อ
+}
 
 /*--ถ้าทำ back แล้ว ให้ใช้โค้ดนี้แทน mock data ด้านบน
 ทำตัวแปร Mock Data ไว้ให้ข้างบนไฟล์ app.js หมดแล้วนะ 
