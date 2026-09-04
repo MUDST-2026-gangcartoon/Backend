@@ -1,0 +1,34 @@
+/* global.css — loaded first, guarantees the app always fills the viewport
+   regardless of which page-specific CSS files get bundled alongside it. */
+
+:root {
+  --bg-color: #F8FAFC;
+  --primary-blue: #70C5FF;
+  --light-blue: #BAE6FD;
+  --dark-purple: #2E1A47;
+  --btn-purple: #3B1C71;
+  --accent-orange: #FF6B4A;
+  --lime-green: #B0F135;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --card-radius: 16px;
+}
+
+html, body, #root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+* , *::before, *::after {
+  box-sizing: border-box;
+}
+
+img, svg {
+  max-width: 100%;
+}
