@@ -1,0 +1,255 @@
+/* ================================================
+   CHECK-IN ATTENDEES PAGE — page-specific styles
+   ================================================ */
+
+/* ---------------- Main check-in card ---------------- */
+.checkin-card{
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card);
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  overflow:hidden;
+  margin-bottom:20px;
+}
+.cc-form{
+  padding:36px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:18px;
+}
+.cc-form .eyebrow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:0.6px;
+  color:var(--paw-coral);
+  text-transform:uppercase;
+}
+label.field-label{
+  font-size:14px;
+  font-weight:700;
+  color:var(--ink);
+  display:block;
+  margin-bottom:8px;
+}
+.ticket-input{
+  width:100%;
+  padding:14px 16px;
+  border:1.5px solid var(--line);
+  border-radius:var(--radius-md);
+  font-family:'Sarabun',monospace;
+  font-size:16px;
+  letter-spacing:1px;
+  color:var(--ink);
+  background:var(--canvas);
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.ticket-input::placeholder{color:#B4AEC9;letter-spacing:1px;}
+.ticket-input:focus{
+  outline:none;
+  border-color:var(--gold-600);
+  background:var(--paper);
+  box-shadow:0 0 0 4px var(--gold-100);
+}
+.ticket-input.err{border-color:#E4573D;box-shadow:0 0 0 4px #FCE6E1;}
+.helper-text{font-size:12.5px;color:var(--ink-soft);margin-top:7px;min-height:16px;}
+.helper-text.err{color:#E4573D;font-weight:600;}
+
+.btn-primary{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  background:var(--gold-700);
+  color:var(--gold-900);
+  border:none;
+  padding:15px 18px;
+  border-radius:var(--radius-md);
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:0 8px 18px -8px rgba(232,164,0,0.55);
+  transition:transform .12s ease, background .15s ease, box-shadow .15s ease;
+}
+.btn-primary:hover{background:var(--gold-600);transform:translateY(-1px);}
+.btn-primary:active{transform:translateY(0);}
+.btn-primary:disabled{
+  background:#C9C3E8;
+  box-shadow:none;
+  cursor:not-allowed;
+  transform:none;
+}
+
+.divider-or{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  color:#B4AEC9;
+  font-size:12px;
+  font-weight:600;
+}
+.divider-or::before,.divider-or::after{
+  content:"";
+  flex:1;
+  height:1px;
+  background:var(--line);
+}
+
+/* scanner side */
+.cc-scan{
+  background:linear-gradient(160deg,var(--gold-900) 0%, #7A5A00 100%);
+  position:relative;
+  min-height:340px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.scan-frame{
+  width:200px;
+  height:200px;
+  border-radius:24px;
+  border:2.5px dashed rgba(255,255,255,0.35);
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.scan-corner{
+  position:absolute;
+  width:26px;height:26px;
+  border-color:var(--paw-mint);
+  border-style:solid;
+  border-width:0;
+}
+.scan-corner.tl{top:-3px;left:-3px;border-top-width:4px;border-left-width:4px;border-radius:10px 0 0 0;}
+.scan-corner.tr{top:-3px;right:-3px;border-top-width:4px;border-right-width:4px;border-radius:0 10px 0 0;}
+.scan-corner.bl{bottom:-3px;left:-3px;border-bottom-width:4px;border-left-width:4px;border-radius:0 0 0 10px;}
+.scan-corner.br{bottom:-3px;right:-3px;border-bottom-width:4px;border-right-width:4px;border-radius:0 0 10px 0;}
+.scan-line{
+  position:absolute;
+  left:8%;
+  width:84%;
+  height:2px;
+  background:linear-gradient(90deg,transparent, var(--paw-mint) 30%, var(--paw-mint) 70%, transparent);
+  animation:sweep 2.6s ease-in-out infinite;
+  box-shadow:0 0 10px 1px rgba(49,196,141,0.7);
+}
+@keyframes sweep{
+  0%{top:10%;}
+  50%{top:90%;}
+  100%{top:10%;}
+}
+.scan-icon{opacity:0.9;}
+.cc-scan-caption{
+  position:absolute;
+  bottom:24px;
+  left:0;right:0;
+  text-align:center;
+  color:rgba(255,255,255,0.75);
+  font-size:12.5px;
+  font-weight:600;
+  letter-spacing:0.3px;
+  padding:0 20px;
+}
+.paw-deco{
+  position:absolute;
+  opacity:0.10;
+}
+.paw-deco.one{top:-18px;right:-14px;width:120px;}
+.paw-deco.two{bottom:-24px;left:-20px;width:140px;}
+
+/* ---------------- stats row ---------------- */
+.stats-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+.stat-card{
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:var(--radius-lg);
+  padding:22px 24px;
+  box-shadow:var(--shadow-card);
+}
+.stat-label{
+  font-size:12.5px;
+  font-weight:700;
+  color:var(--gold-700);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  margin-bottom:10px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.stat-main{
+  font-family:var(--font-display);
+  font-size:24px;
+  font-weight:700;
+  color:var(--ink);
+  margin-bottom:4px;
+}
+.stat-sub{
+  font-size:12.5px;
+  color:var(--ink-soft);
+}
+.stat-number{
+  font-family:var(--font-display);
+  font-size:34px;
+  font-weight:700;
+  color:var(--ink);
+}
+
+.recent-list{
+  margin-top:12px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.recent-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px 10px;
+  background:var(--canvas);
+  border-radius:var(--radius-sm);
+  font-size:13px;
+  animation:pop .3s ease;
+}
+@keyframes pop{
+  from{opacity:0;transform:translateY(-6px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.recent-item .ri-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--paw-mint);
+  flex-shrink:0;
+}
+.recent-item .ri-code{font-weight:700;font-family:'Sarabun',monospace;letter-spacing:0.3px;}
+.recent-item .ri-time{margin-left:auto;color:var(--ink-soft);font-size:11.5px;}
+
+@media (prefers-reduced-motion: reduce){
+  .scan-line{animation:none;top:50%;}
+  .recent-item{animation:none;}
+}
+
+/* ---------------- Responsive: mobile ---------------- */
+@media (max-width:860px){
+  .checkin-card{
+    grid-template-columns:1fr;
+  }
+  .cc-scan{
+    order:-1;
+    min-height:220px;
+  }
+  .cc-form{padding:22px;}
+
+  .stats-row{grid-template-columns:1fr;}
+}
