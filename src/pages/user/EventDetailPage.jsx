@@ -251,39 +251,41 @@ export default function EventDetailPage() {
 
           {/* ================= ฝั่งขวา ================= */}
           <div className="event-sidebar">
-            <div className="ticket-card">
-              <div className="ticket-header">
-                <div className="ticket-label">ที่นั่ง</div>
-                <div className="ticket-left theme-text">เหลือ {eventData.seatsLeft.toLocaleString()} ที่นั่ง</div>
-                <div className="ticket-reg">ลงทะเบียนแล้ว {eventData.registeredSeats} / {eventData.totalSeats}</div>
-              </div>
-              
-              <hr className="divider" />
-              
-              <div className="ticket-types-toggle" onClick={() => setShowTickets(!showTickets)}>
-                <span className="toggle-label">🎟️ {showTickets ? 'ซ่อนประเภทบัตร' : 'แสดงประเภทบัตร'}</span>
-                <span className="toggle-icon">{showTickets ? '>' : 'v'}</span>
-              </div>
-              
-              {showTickets && (
-                <div className="ticket-list">
-                  {eventData.tickets.map((t) => (
-                    <div className="ticket-item" key={t.id}>
-                      <div>
-                        <div className="t-name">{t.name}</div>
-                        <div className="t-desc">{t.desc}</div>
-                      </div>
-                      <div className="t-price theme-text">{t.priceText}</div>
-                    </div>
-                  ))}
+              <div className="ticket-card">
+                <span className="ticket-label">ที่นั่ง</span>
+                <h2 className="ticket-left theme-text">เหลือ 40 ที่นั่ง</h2>
+                <p className="ticket-reg">ลงทะเบียนแล้ว 10 / 50</p>
+                
+                <div className="ticket-divider" />
+
+                <div className="ticket-types-toggle">
+                  <span>🎟️ ซ่อนประเภทบัตร</span>
+                  <span>›</span>
                 </div>
-              )}
-              
-              <button className="btn-register theme-bg" onClick={handleRegisterClick}>
-                ลงทะเบียน &rarr;
-              </button>
+
+                <div className="ticket-list">
+                  <div className="ticket-item">
+                    <div className="t-info">
+                      <div className="t-name">Student</div>
+                      <div className="t-desc">สำหรับนักศึกษา</div>
+                    </div>
+                    <div className="t-price theme-text">ฟรี</div>
+                  </div>
+
+                  <div className="ticket-item">
+                    <div className="t-info">
+                      <div className="t-name">Public</div>
+                      <div className="t-desc">บุคคลทั่วไป</div>
+                    </div>
+                    <div className="t-price theme-text">฿290</div>
+                  </div>
+                </div>
+
+                <button className="btn-register theme-bg" onClick={handleRegisterClick}>
+                  ลงทะเบียน →
+                </button>
+              </div>
             </div>
-          </div>
         </div>
       </div>
 
@@ -348,8 +350,24 @@ export default function EventDetailPage() {
               <span className="theme-text" style={{ fontSize: '32px', fontWeight: 'bold' }}>฿{totalPrice.toLocaleString()}</span>
             </div>
             
-            <div style={{ margin: '0 auto 24px', width: '200px', height: '200px', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              [Mockup QR Code]
+            <div style={{ 
+              margin: '0 auto 24px', 
+              width: '200px', 
+              height: '200px', 
+              background: 'white', 
+              padding: '12px',
+              borderRadius: '16px',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <img 
+                src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://promptpay.io/0812345678/290" 
+                alt="QR Code สำหรับชำระเงิน" 
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
             </div>
 
             <div style={{ color: paymentTimeLeft === 0 ? 'red' : 'var(--theme-blue)', fontWeight: 'bold', marginBottom: '16px' }}>

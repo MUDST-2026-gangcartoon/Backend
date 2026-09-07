@@ -20,13 +20,13 @@
    Typography & Utilities
 ========================================= */
 .theme-text {
-  color: var(--theme-blue);
+  color: var(--theme-blue) !important;
   font-weight: 600;
 }
 
 .theme-bg {
-  background-color: var(--theme-blue);
-  color: white;
+  background-color: var(--theme-blue) !important;
+  color: white !important;
 }
 
 .section-subtitle {
@@ -69,6 +69,7 @@
 
 .event-main-content {
   flex: 1;
+  min-width: 0; /* ป้องกันเนื้อหาฝั่งซ้ายดันจน layout พัง */
 }
 
 .event-sidebar {
@@ -93,6 +94,8 @@
   background-color: var(--bg-light);
   padding: 24px;
   border-radius: 12px;
+  flex-wrap: wrap; /* ให้ปัดบรรทัดอัตโนมัติถ้าจอเล็ก */
+  gap: 16px;
 }
 
 .info-item {
@@ -170,6 +173,7 @@
   justify-content: center;
   font-size: 24px;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .org-label {
@@ -190,7 +194,7 @@
 }
 
 /* =========================================
-   การ์ดลงทะเบียน (ฝั่งขวา)
+   การ์ดลงทะเบียน (ฝั่งขวา) - ⚠️ แก้ไข Layout เพี้ยนที่นี่
 ========================================= */
 .ticket-card {
   background: white;
@@ -198,6 +202,12 @@
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
   border-top: 6px solid var(--theme-blue);
   padding: 32px;
+  
+  /* เพิ่มส่วนนี้เพื่อบังคับไม่ให้เนื้อหาล้นการ์ด */
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .ticket-label {
@@ -210,6 +220,7 @@
   font-size: 28px;
   font-weight: 800;
   margin-bottom: 8px;
+  background: transparent !important; /* ป้องกันกล่องสีทึบทับตัวหนังสือ */
 }
 
 .ticket-reg {
@@ -229,8 +240,13 @@
 .ticket-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start; /* เปลี่ยนเป็น flex-start ให้อยู่ระดับเดียวกัน */
   margin-bottom: 24px;
+  gap: 12px; /* กันตัวหนังสือซ้อนกัน */
+}
+
+.ticket-item > div:first-child {
+  flex: 1; /* ให้ชื่อตั๋วขยายพื้นที่ได้เต็มที่ */
 }
 
 .t-name {
@@ -246,6 +262,7 @@
 .t-price {
   font-size: 18px;
   font-weight: 800;
+  white-space: nowrap; /* ห้ามราคาตกบรรทัด */
 }
 
 .btn-register {
@@ -261,11 +278,11 @@
 }
 
 .btn-register:hover {
-  background-color: var(--theme-blue-hover);
+  background-color: var(--theme-blue-hover) !important;
 }
 
 .btn-register:disabled {
-  background-color: var(--border-color);
+  background-color: var(--border-color) !important;
   cursor: not-allowed;
 }
 
@@ -293,14 +310,27 @@
 }
 
 .btn-close-modal {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: none;
-  border: none;
-  font-size: 20px;
+  position: absolute !important;
+  top: 16px !important;
+  right: 16px !important;
+  width: 32px !important;
+  height: 32px !important;
+  background: transparent !important;
+  border: none !important;
+  font-size: 22px !important;
+  color: #6B7280 !important;
   cursor: pointer;
-  color: var(--text-muted);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  z-index: 10;
+  border-radius: 50% !important;
+}
+
+.btn-close-modal:hover {
+  background: #F3F4F6 !important;
+  color: #111827 !important;
 }
 
 .modal-header {
