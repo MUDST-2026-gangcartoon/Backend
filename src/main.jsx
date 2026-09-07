@@ -13,6 +13,7 @@ import EventCheckinSelectPage from './pages/EventCheckinSelectPage.jsx';
 import CheckinAttendeesPage from './pages/CheckinAttendeesPage.jsx';
 import DevRouteSwitcher from './components/DevRouteSwitcher.jsx';
 import EventDetailPage from "./pages/user/EventDetailPage.jsx";
+import MyRegistrationsPage from './pages/user/MyRegistrationsPage';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -29,6 +30,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           {/* 🟢 เพิ่มบรรทัดนี้เพื่อรองรับ URL แบบไม่มี ID */}
           <Route path="/event-detail" element={<EventDetailPage />} />
           <Route path="/event-detail/:eventId" element={<EventDetailPage />} />
+
+          <Route path="/MyRegistrationsPage" element={<MyRegistrationsPage />} />
         </Routes>
         <DevRouteSwitcher />
       </BrowserRouter>
