@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import Navbar from "../components/Navbar";
 import AttendeesDrawer from '../components/AttendeesDrawer.jsx';
 import { initialEvents } from '../data/events.js';
+import EventDrawer from '../components/EventDrawer.jsx';
 
 const CATEGORY_CLASS = {
   Design: 'design',
