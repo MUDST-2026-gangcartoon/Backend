@@ -1,0 +1,382 @@
+/* กำหนดสีธีมหลัก (สีฟ้า) ตามรูปต้นฉบับ */
+:root {
+  --theme-blue: #2563EB; 
+  --theme-blue-hover: #1D4ED8;
+  --text-main: #111827;
+  --text-muted: #6B7280;
+  --border-color: #E5E7EB;
+  --bg-light: #F9FAFB;
+}
+
+.event-detail-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  font-family: "Kanit", sans-serif;
+  color: var(--text-main);
+}
+
+/* =========================================
+   Typography & Utilities
+========================================= */
+.theme-text {
+  color: var(--theme-blue);
+  font-weight: 600;
+}
+
+.theme-bg {
+  background-color: var(--theme-blue);
+  color: white;
+}
+
+.section-subtitle {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 32px 0;
+}
+
+/* =========================================
+   ปุ่มย้อนกลับ
+========================================= */
+.back-link-container {
+  margin-bottom: 32px;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: var(--theme-blue);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* =========================================
+   Layout หลัก (แบ่ง 2 ฝั่ง)
+========================================= */
+.event-content-wrapper {
+  display: flex;
+  gap: 60px;
+  align-items: flex-start;
+}
+
+.event-main-content {
+  flex: 1;
+}
+
+.event-sidebar {
+  width: 380px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 100px;
+}
+
+/* =========================================
+   ส่วนข้อมูลหลัก (ฝั่งซ้าย)
+========================================= */
+.event-title {
+  font-size: 36px;
+  font-weight: 800;
+  margin: 0 0 32px 0;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  background-color: var(--bg-light);
+  padding: 24px;
+  border-radius: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.info-icon {
+  width: 40px;
+  height: 40px;
+  background-color: #E5E7EB;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.info-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.event-description h2 {
+  font-size: 24px;
+  margin: 0 0 16px 0;
+}
+
+.event-description p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #4B5563;
+  margin-bottom: 16px;
+}
+
+/* ผู้จัดอีเวนต์ */
+.org-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.org-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.btn-text-theme {
+  background: none;
+  border: none;
+  color: var(--theme-blue);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.org-profile {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.org-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.org-label {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.org-name {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.org-desc {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* =========================================
+   การ์ดลงทะเบียน (ฝั่งขวา)
+========================================= */
+.ticket-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  border-top: 6px solid var(--theme-blue);
+  padding: 32px;
+}
+
+.ticket-label {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.ticket-left {
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.ticket-reg {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.ticket-types-toggle {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  margin-bottom: 24px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ticket-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.t-name {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.t-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.t-price {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.btn-register {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-register:hover {
+  background-color: var(--theme-blue-hover);
+}
+
+.btn-register:disabled {
+  background-color: var(--border-color);
+  cursor: not-allowed;
+}
+
+/* =========================================
+   Modals (ส่วนของ Popup ที่ดึง Logic มาใส่)
+========================================= */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.custom-modal-box {
+  background: white;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 16px;
+  padding: 32px;
+  position: relative;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+}
+
+.btn-close-modal {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.modal-header {
+  margin-bottom: 24px;
+}
+
+.modal-title {
+  font-size: 24px;
+  margin: 0 0 8px 0;
+}
+
+.modal-subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.section-label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.modal-ticket-card {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.modal-ticket-card:hover {
+  border-color: var(--theme-blue);
+}
+
+.modal-ticket-card.active {
+  border-color: var(--theme-blue);
+  background-color: #EFF6FF;
+}
+
+.qty-section, .total-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 24px 0;
+}
+
+.qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.qty-controls input {
+  width: 40px;
+  text-align: center;
+  border: none;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.qty-controls button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: white;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+@media (max-width: 900px) {
+  .event-content-wrapper { flex-direction: column; }
+  .event-sidebar { width: 100%; }
+  .info-row { flex-direction: column; gap: 20px; }
+}
