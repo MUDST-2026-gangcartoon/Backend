@@ -1,50 +1,119 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from "../../components/Navbar";
 import '../../EventDetailPage.css'; 
 
-// 📌 ข้อมูลจำลองสำหรับตัวกิจกรรม (Mock Data)
-const mockEventDetail = {
-  id: 1,
-  category: "เกี่ยวกับกิจกรรมนี้",
-  title: "งานสัตว์เลี้ยงที่ใหญ่ที่สุด",
-  dateTime: "พุธ 20 ส.ค. 2570 • 10:00",
-  location: "Central ladprao ชั้น 5",
-  seatsLeft: 99999,
-  registeredSeats: 1,
-  totalSeats: 40,
-  descriptionParagraphs: [
-    "เวิร์กชอปลงมือทำเพื่อเปลี่ยนอินไซต์จากการรีเสิร์ชให้เป็นอินเทอร์เฟซที่คนเข้าใจและไว้วางใจ",
-    "มาร่วมเรียนรู้จากคนที่ลงมือทำจริง แลกเปลี่ยนมุมมองกับผู้เข้าร่วม และเก็บประสบการณ์ที่นำไปใช้ต่อได้หลังจบงาน"
-  ],
-  organizer: {
-    name: "Gather Campus Events",
-    avatarLetter: "G",
-    tag: "ผู้จัดอีเวนต์",
-    bio: "ทีมจัดกิจกรรมจากนักศึกษาที่สร้างพื้นที่ให้เรียนรู้ แลกเปลี่ยน และพบผู้คนใหม่ในมหาวิทยาลัย"
+// 📌 ฐานข้อมูลจำลอง (Mock Database) สำหรับอีเวนต์ทั้งหมด
+const mockEventsDatabase = [
+  {
+    id: 1,
+    category: "DESIGN LAB",
+    title: "ออกแบบเพื่อผู้คนจริง",
+    dateTime: "19 ส.ค. 2570 • 10:00",
+    location: "Creative Hall อาคาร A",
+    seatsLeft: 40,
+    registeredSeats: 10,
+    totalSeats: 50,
+    descriptionParagraphs: [
+      "เวิร์กชอปลงมือทำเพื่อเปลี่ยนอินไซต์จากการรีเสิร์ชให้เป็นอินเทอร์เฟซที่คนเข้าใจและไว้วางใจ",
+      "มาร่วมเรียนรู้จากคนที่ลงมือทำจริง แลกเปลี่ยนมุมมองกับผู้เข้าร่วม และเก็บประสบการณ์ที่นำไปใช้ต่อได้หลังจบงาน"
+    ],
+    organizer: { name: "Design Community", avatarLetter: "D", tag: "ผู้จัดอีเวนต์", bio: "ชุมชนนักออกแบบที่ชอบแบ่งปันความรู้" },
+    tickets: [
+      { id: "t1", name: "Student", desc: "สำหรับนักศึกษา", price: 0, priceText: "ฟรี" },
+      { id: "t2", name: "Public", desc: "บุคคลทั่วไป", price: 290, priceText: "฿290" }
+    ]
   },
-  tickets: [
-    { id: "t1", name: "Student", desc: "For current students", price: 0, priceText: "ฟรี" },
-    { id: "t2", name: "Public", desc: "Includes workshop materials", price: 290, priceText: "฿290" }
-  ]
-};
+  {
+    id: 2,
+    category: "TECHNOLOGY",
+    title: "Spring Boot สำหรับระบบที่ขยายได้",
+    dateTime: "25 ส.ค. 2570 • 13:30",
+    location: "Engineering Lab 3",
+    seatsLeft: 60,
+    registeredSeats: 40,
+    totalSeats: 100,
+    descriptionParagraphs: [
+      "เรียนรู้การสร้างบริการที่เสถียรด้วยขอบเขตธุรกิจ การสังเกตระบบ และสถาปัตยกรรมที่ใช้งานได้จริง",
+      "เหมาะสำหรับนักพัฒนาที่ต้องการยกระดับทักษะการเขียน Backend"
+    ],
+    organizer: { name: "Tech Meetup", avatarLetter: "T", tag: "ผู้จัดอีเวนต์", bio: "กลุ่มนักพัฒนาซอฟต์แวร์ที่หลงใหลในโค้ด" },
+    tickets: [
+      { id: "t1", name: "Early Bird", desc: "ราคาพิเศษ", price: 150, priceText: "฿150" },
+      { id: "t2", name: "Regular", desc: "ราคาปกติ", price: 300, priceText: "฿300" }
+    ]
+  },
+  {
+    id: 3,
+    category: "STARTUP",
+    title: "คืนแห่งโปรดักต์ในมหาวิทยาลัย",
+    dateTime: "31 ส.ค. 2570 • 17:30",
+    location: "หอประชุมใหญ่",
+    seatsLeft: 15,
+    registeredSeats: 85,
+    totalSeats: 100,
+    descriptionParagraphs: [
+      "ทีมสตาร์ตอัพแชร์ต้นแบบ บทเรียน และเหตุผลเนื่องจากการตัดสินใจสร้างโปรดักต์",
+      "มาฟังประสบการณ์จริง เจ็บจริง โตจริง จากรุ่นพี่ในวงการ"
+    ],
+    organizer: { name: "Gather Campus Events", avatarLetter: "G", tag: "ผู้จัดอีเวนต์", bio: "ทีมจัดกิจกรรมจากนักศึกษาเพื่อนักศึกษา" },
+    tickets: [
+      { id: "t1", name: "All Access", desc: "เข้าร่วมได้ทุกคน", price: 0, priceText: "ฟรี" }
+    ]
+  },
+  {
+    id: 4,
+    category: "ACCESSIBILITY",
+    title: "แล็บทดสอบเพื่อการเข้าถึง",
+    dateTime: "7 ก.ย. 2570 • 09:00",
+    location: "Digital Studio 2",
+    seatsLeft: 25,
+    registeredSeats: 25,
+    totalSeats: 50,
+    descriptionParagraphs: [
+      "นำอินเทอร์เฟซของคุณมาทดสอบด้วยคีย์บอร์ด โปรแกรมอ่านหน้าจอ และเช็กลิสต์คอนทราสต์ที่ทำซ้ำได้",
+      "เพื่อสร้างเว็บไซต์ที่ทุกคนสามารถเข้าถึงได้อย่างเท่าเทียม"
+    ],
+    organizer: { name: "A11y Thailand", avatarLetter: "A", tag: "ผู้จัดอีเวนต์", bio: "ขับเคลื่อนความเท่าเทียมทางดิจิทัล" },
+    tickets: [
+      { id: "t1", name: "Workshop Pass", desc: "รวมอุปกรณ์ทดสอบ", price: 500, priceText: "฿500" }
+    ]
+  }
+];
 
 export default function EventDetailPage() {
   const navigate = useNavigate();
+  const { eventId } = useParams(); // 🟢 ดึง ID มาจาก URL เช่น /event-detail/1
 
   // 🟢 1. STATE MANAGEMENT
-  const [eventData] = useState(mockEventDetail);
+  const [eventData, setEventData] = useState(null);
   const [selectedTicketIndex, setSelectedTicketIndex] = useState(0);
   const [qty, setQty] = useState(1);
   const [showOrganizer, setShowOrganizer] = useState(false);
   const [showTickets, setShowTickets] = useState(true);
   
-  // State สำหรับจัดการ Popup Modals: null | 'booking' | 'payment' | 'success'
   const [activeModal, setActiveModal] = useState(null); 
   const [paymentTimeLeft, setPaymentTimeLeft] = useState(300);
   const [refCode, setRefCode] = useState('');
 
-  // 🟢 2. SYSTEM TIMER
+  // 🟢 2. ค้นหาข้อมูลอีเวนต์เมื่อ Component โหลด หรือ URL เปลี่ยน
+  useEffect(() => {
+    // แปลง eventId จาก URL เป็นตัวเลข แล้วไปหาใน mockDatabase
+    const foundEvent = mockEventsDatabase.find(e => e.id === parseInt(eventId));
+    
+    if (foundEvent) {
+      setEventData(foundEvent);
+    } else {
+      // ถ้าหาไม่เจอ (เช่น URL เป็น /event-detail เฉยๆ) ให้แสดงงานที่ 1 เป็นค่าเริ่มต้น
+      setEventData(mockEventsDatabase[0]);
+    }
+    
+    // รีเซ็ตค่าเมื่อเปลี่ยนหน้า
+    setSelectedTicketIndex(0);
+    setQty(1);
+  }, [eventId]);
+
+  // 🟢 3. SYSTEM TIMER
   useEffect(() => {
     let timer = null;
     if (activeModal === 'payment') {
@@ -68,14 +137,16 @@ export default function EventDetailPage() {
     return `${m}:${s}`;
   };
 
-  // 🟢 3. HANDLERS
+  // 🟢 4. HANDLERS
+  // ป้องกัน Error ระหว่างที่ eventData ยังโหลดไม่เสร็จ
+  if (!eventData) return <div style={{textAlign: 'center', marginTop: '100px'}}>กำลังโหลดข้อมูล...</div>;
+
   const selectedTicket = eventData.tickets[selectedTicketIndex];
   const totalPrice = selectedTicket.price * qty;
 
   const handleRegisterClick = (e) => {
     e.preventDefault();
     setQty(1);
-    setSelectedTicketIndex(0);
     setActiveModal('booking');
   };
 
@@ -110,7 +181,6 @@ export default function EventDetailPage() {
       <Navbar />
       
       <div className="event-detail-page">
-        {/* ปุ่มกลับ */}
         <div className="back-link-container">
           <button className="btn-back" onClick={() => navigate(-1)}>
             &larr; กลับไปดูอีเวนต์
@@ -118,9 +188,7 @@ export default function EventDetailPage() {
         </div>
 
         <div className="event-content-wrapper">
-          {/* =========================================
-              ฝั่งซ้าย: ข้อมูลรายละเอียดอีเวนต์
-          ========================================= */}
+          {/* ================= ฝั่งซ้าย ================= */}
           <div className="event-main-content">
             <div className="section-subtitle theme-text">{eventData.category}</div>
             <h1 className="event-title">{eventData.title}</h1>
@@ -181,9 +249,7 @@ export default function EventDetailPage() {
             </div>
           </div>
 
-          {/* =========================================
-              ฝั่งขวา: การ์ดลงทะเบียน/ซื้อตั๋ว
-          ========================================= */}
+          {/* ================= ฝั่งขวา ================= */}
           <div className="event-sidebar">
             <div className="ticket-card">
               <div className="ticket-header">
@@ -221,9 +287,7 @@ export default function EventDetailPage() {
         </div>
       </div>
 
-      {/* ======================================================= */}
-      {/* 🟢 1. BOOKING MODAL (Popup จองบัตร) */}
-      {/* ======================================================= */}
+      {/* ================= MODALS ================= */}
       {activeModal === 'booking' && (
         <div className="custom-modal-overlay">
           <div className="custom-modal-box">
@@ -268,17 +332,13 @@ export default function EventDetailPage() {
               </div>
 
               <button className="btn-register theme-bg" onClick={handleConfirmBooking} style={{ marginTop: '16px' }}>
-                {totalPrice === 0 ? 'ยืนยันการรับบัตรฟรี บาท' : `ดำเนินการชำระเงิน ฿${totalPrice.toLocaleString()} บาท`}
+                {totalPrice === 0 ? 'ยืนยันการรับบัตรฟรี' : `ดำเนินการชำระเงิน ฿${totalPrice.toLocaleString()}`}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ======================================================= */}
-      {/* 🟢 2. PAYMENT MODAL & 3. SUCCESS MODAL */}
-      {/* ======================================================= */}
-      {/* โค้ดส่วนนี้ยังคง Logic เดิมของคุณไว้ แต่ปรับคลาสให้เข้ากับ Modal สีฟ้า */}
       {activeModal === 'payment' && (
         <div className="custom-modal-overlay">
           <div className="custom-modal-box" style={{ textAlign: 'center' }}>
