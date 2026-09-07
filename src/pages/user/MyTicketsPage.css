@@ -1,0 +1,293 @@
+/* =========================================
+   📌 MY TICKETS PAGE
+========================================= */
+
+.tickets-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 20px 60px 20px;
+  font-family: "Kanit", sans-serif;
+}
+
+.tickets-header {
+  margin-top: 40px;
+  margin-bottom: 28px;
+}
+
+.text-blue-tag {
+  color: var(--theme-blue, #2563EB);
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.tickets-header h1 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1E1B4B;
+  margin: 0;
+}
+
+.tickets-header p {
+  color: #64748B;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+/* =========================================
+   📌 TICKET CARD LAYOUT
+========================================= */
+
+.tickets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ticket-card {
+  display: flex;
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ticket-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
+}
+
+/* 🔹 ฝั่งซ้าย: โทนสีฟ้า */
+.ticket-left {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  color: #ffffff;
+  padding: 24px;
+  width: 240px;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ticket-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  align-self: flex-start;
+  backdrop-filter: blur(4px);
+}
+
+.ticket-event-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 16px 0 0 0;
+}
+
+/* 🔹 ตรงกลาง: รายละเอียด */
+.ticket-middle {
+  flex: 1;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  background: #ffffff;
+}
+
+.info-group label {
+  display: block;
+  font-size: 12px;
+  color: #64748B;
+  margin-bottom: 2px;
+}
+
+.info-group span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.info-group.issue-date {
+  grid-column: span 2;
+  border-top: 1px dashed #E2E8F0;
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+.info-group.issue-date label {
+  font-size: 11px;
+  color: #94A3B8;
+}
+
+/* 🔹 ฝั่งขวา: QR Code */
+.ticket-right {
+  width: 180px;
+  border-left: 2px dashed #E2E8F0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #F8FAFC;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: relative;
+}
+
+.ticket-right:hover {
+  background: #EFF6FF;
+}
+
+.ticket-qr-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  background: #ffffff;
+  padding: 4px;
+}
+
+.ticket-id {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E293B;
+  margin-top: 8px;
+  letter-spacing: 0.5px;
+}
+
+.ticket-tap-hint {
+  font-size: 11px;
+  color: var(--theme-blue, #2563EB);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* =========================================
+   📌 MODAL (ขยาย QR CODE)
+========================================= */
+
+.qr-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.qr-modal-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.qr-modal-card h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #0F172A;
+}
+
+.modal-ticket-id {
+  font-size: 13px;
+  color: #64748B;
+  margin: 4px 0 20px 0;
+}
+
+.modal-qr-wrapper {
+  background: #ffffff;
+  padding: 16px;
+  border: 2px solid #E2E8F0;
+  border-radius: 16px;
+  display: inline-block;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.modal-qr-wrapper img {
+  width: 200px;
+  height: 200px;
+  display: block;
+}
+
+.modal-hint {
+  font-size: 13px;
+  color: #64748B;
+  margin: 16px 0 24px 0;
+}
+
+.btn-close-modal {
+  width: 100%;
+  padding: 12px;
+  background: var(--theme-blue, #2563EB);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-close-modal:hover {
+  background: #1D4ED8;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px;
+  color: #64748B;
+  background: #F8FAFC;
+  border-radius: 12px;
+  border: 1px dashed #CBD5E1;
+}
+
+/* =========================================
+   📌 RESPONSIVE
+========================================= */
+
+@media (max-width: 768px) {
+  .ticket-card {
+    flex-direction: column;
+  }
+
+  .ticket-left {
+    width: 100%;
+    min-width: unset;
+    padding: 20px;
+  }
+
+  .ticket-middle {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+
+  .info-group.issue-date {
+    grid-column: span 1;
+  }
+
+  .ticket-right {
+    width: 100%;
+    border-left: none;
+    border-top: 2px dashed #E2E8F0;
+    padding: 20px;
+  }
+}

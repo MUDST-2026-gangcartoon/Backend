@@ -14,6 +14,7 @@ import CheckinAttendeesPage from './pages/CheckinAttendeesPage.jsx';
 import DevRouteSwitcher from './components/DevRouteSwitcher.jsx';
 import EventDetailPage from "./pages/user/EventDetailPage.jsx";
 import MyRegistrationsPage from './pages/user/MyRegistrationsPage';
+import MyTicketsPage from './pages/user/MyTicketsPage';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -32,6 +33,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/event-detail/:eventId" element={<EventDetailPage />} />
 
           <Route path="/MyRegistrationsPage" element={<MyRegistrationsPage />} />
+          <Route path="/MyTicketsPage" element={<MyTicketsPage />} />
         </Routes>
         <DevRouteSwitcher />
       </BrowserRouter>
