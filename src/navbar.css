@@ -93,7 +93,7 @@
 
 .brand-sub {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--text-muted, #64748B);
 }
 
 
@@ -186,7 +186,8 @@
   width: 100%;
   height: 3px;
 
-  background-color: #ffb700;
+  /* 🔹 เปลี่ยนสีขีดเส้นใต้เป็นสีฟ้า */
+  background-color: var(--theme-blue, #2563EB);
 
   border-radius: 2px;
 }
@@ -216,9 +217,9 @@
   width: 36px;
   height: 36px;
 
-  background-color: #ffb700;
-
-  color: #0284C7;
+  /* 🔹 เปลี่ยนสีพื้นหลังรูปโปรไฟล์เป็นสีฟ้า และตัวหนังสือสีขาว */
+  background-color: var(--theme-blue, #2563EB);
+  color: #ffffff;
 
   border-radius: 50%;
 
@@ -347,9 +348,9 @@
 
   border-radius: 8px;
 
-  background: #ffb700;
-
-  border: 1px solid #ffb700;
+  /* 🔹 เปลี่ยนปุ่ม Login เป็นสีฟ้า */
+  background: var(--theme-blue, #2563EB);
+  border: 1px solid var(--theme-blue, #2563EB);
 
   color: #ffffff;
 
@@ -367,9 +368,9 @@
 }
 
 .btn-nav-login:hover {
-  background: #e5a400;
-
-  border-color: #e5a400;
+  /* 🔹 เปลี่ยนสีเมื่อ Hover เป็นสีฟ้าเข้ม */
+  background: var(--theme-blue-hover, #1D4ED8);
+  border-color: var(--theme-blue-hover, #1D4ED8);
 }
 
 
@@ -457,7 +458,7 @@
 .login-subtitle {
   text-align: center;
 
-  color: #3B82F6;
+  color: var(--theme-blue, #2563EB);
 
   font-size: 14px;
 
@@ -513,7 +514,8 @@
 }
 
 .form-group input:focus {
-  border-color: #ffb700;
+  /* 🔹 เปลี่ยนสีกรอบ Input ตอนคลิกใช้งานเป็นสีฟ้า */
+  border-color: var(--theme-blue, #2563EB);
 }
 
 
@@ -543,16 +545,18 @@
 }
 
 .btn-submit-login {
-  background: #ffb700;
+  /* 🔹 เปลี่ยนปุ่มกดยืนยัน Login เป็นสีฟ้า */
+  background: var(--theme-blue, #2563EB);
 
   color: #ffffff;
 }
 
 .btn-submit-login:hover {
-  background: #e5a400;
+  background: var(--theme-blue-hover, #1D4ED8);
 }
 
 .btn-submit-register {
+  /* ปุ่มสมัครสมาชิกเก็บไว้เป็นสีเขียวเพื่อแยกแยะการกระทำที่ชัดเจน (หรือจะเปลี่ยนก็ได้ถ้าต้องการ) */
   background: #10B981;
 
   color: #ffffff;
@@ -578,7 +582,8 @@
 }
 
 .login-footer a {
-  color: #0284C7;
+  /* 🔹 ปรับสีลิงก์ใน Footer เป็นสีฟ้า */
+  color: var(--theme-blue, #2563EB);
 
   text-decoration: none;
 
