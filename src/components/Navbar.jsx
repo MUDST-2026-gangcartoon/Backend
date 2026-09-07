@@ -1,11 +1,37 @@
-import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthModal from './AuthModal.jsx';
 
 export default function Navbar() {
   const { isLoggedIn, user, openModal, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // 🟢 1. STATES
+  const [searchQuery, setSearchQuery] = useState('');
+  const [language, setLanguage] = useState('ไทย');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // 🟢 2. HANDLERS
+  // ฟังก์ชันสลับภาษา
+  const toggleLanguage = (e) => {
+    e.stopPropagation(); // ป้องกันไม่ให้ Event ลามไปโดนปุ่มอื่น
+    setLanguage((prev) => (prev === 'ไทย' ? 'EN' : 'ไทย'));
+  };
+
+  // ฟังก์ชันกด ค้นหา (เมื่อกด Enter)
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      navigate(`/UpcomingEventsPage?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  // ฟังก์ชันออกจากระบบ
+  const handleLogout = () => {
+    setIsDropdownOpen(false);
+    logout();
+  };
 
   const getNavLinkClass = ({ isActive }) => `nav-link${isActive ? ' active' : ''}`;
 
@@ -40,7 +66,13 @@ export default function Navbar() {
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-            <input type="text" placeholder="ค้นหาชื่อ สถานที่ หรือหัวข้อ" />
+            <input 
+              type="text" 
+              placeholder="ค้นหาชื่อ สถานที่ หรือหัวข้อ" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+            />
           </div>
         </div>
 
@@ -72,8 +104,10 @@ export default function Navbar() {
         {/* ด้านขวา: ปุ่มล็อกอิน / โปรไฟล์ */}
         <div className="nav-right">
           {!isLoggedIn ? (
-            <div id="nav-guest-view">
-              <button className="btn-lang-toggle">EN</button>
+            <div id="nav-guest-view" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button type="button" className="btn-lang-toggle" onClick={toggleLanguage}>
+                {language}
+              </button>
               <a href="#" className="btn-nav-register" onClick={(e) => { e.preventDefault(); openModal('register'); }}>
                 สมัครสมาชิก
               </a>
@@ -82,14 +116,34 @@ export default function Navbar() {
               </a>
             </div>
           ) : (
-            <div className="user-profile" onClick={logout} title="คลิกเพื่อออกจากระบบ">
-              <div className="lang-text">ไทย</div>
-              <div className="avatar">{user?.avatarLetter || 'U'}</div>
-              <div className="user-info">
-                <div className="username">{user?.username}</div>
-                <div className="role">{user?.role}</div>
+            <div className="user-profile-container" style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
+              {/* ปุ่มเปลี่ยนภาษา */}
+              <button type="button" className="btn-lang-toggle" onClick={toggleLanguage}>
+                {language}
+              </button>
+
+              {/* กล่องโปรไฟล์ที่กดเปิด Dropdown */}
+              <div 
+                className="user-profile" 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="avatar">{user?.avatarLetter || 'U'}</div>
+                <div className="user-info">
+                  <div className="username">{user?.username}</div>
+                  <div className="role">{user?.role}</div>
+                </div>
+                <span className="dropdown-icon" style={{ transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }}>▼</span>
               </div>
-              <span className="dropdown-icon">▼</span>
+
+              {/* 🟢 Dropdown Menu สำหรับ ออกจากระบบ */}
+              {isDropdownOpen && (
+                <div className="profile-dropdown-menu">
+                  <button type="button" className="dropdown-item logout-btn" onClick={handleLogout}>
+                    🚪 ออกจากระบบ
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

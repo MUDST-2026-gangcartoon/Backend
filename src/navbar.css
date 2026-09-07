@@ -672,3 +672,58 @@
   height: auto;
   object-fit: contain;
 }
+
+/* ตกแต่งกล่อง Dropdown */
+.profile-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background-color: #ffffff;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  padding: 6px;
+  min-width: 150px;
+  z-index: 1000;
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.dropdown-item.logout-btn {
+  color: #EF4444; /* สีแดงสำหรับออกจากระบบ */
+}
+
+.dropdown-item.logout-btn:hover {
+  background-color: #FEF2F2;
+}
+
+/* ตกแต่งปุ่มภาษา */
+.btn-lang-toggle {
+  background: transparent;
+  border: 1px solid #E5E7EB;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-lang-toggle:hover {
+  background-color: #F3F4F6;
+  border-color: #D1D5DB;
+}
