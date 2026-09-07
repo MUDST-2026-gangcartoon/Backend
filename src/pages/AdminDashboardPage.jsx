@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminNavbar from '../components/AdminNavbar.jsx';
+import Navbar from "../components/Navbar";
 import '../admin-dashboard.css';
 
 const funnel = [
@@ -14,7 +14,7 @@ export default function AdminDashboardPage() {
 
   return (
     <>
-      <AdminNavbar />
+      <Navbar />
 
       <main className="dashboard-page">
         <section className="dashboard-header">

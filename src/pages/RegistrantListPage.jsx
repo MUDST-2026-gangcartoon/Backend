@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import AdminNavbar from '../components/AdminNavbar.jsx';
+import Navbar from "../components/Navbar";
 import { initialEvents } from '../data/events.js';
 import '../registrant-list.css';
 
@@ -16,7 +16,7 @@ export default function RegistrantListPage() {
 
   return (
     <div className="app-container">
-      <AdminNavbar />
+      <Navbar />
       <main className="main-content">
         <div className="header-section">
           <div className="subtitle">การจัดการระบบ</div>

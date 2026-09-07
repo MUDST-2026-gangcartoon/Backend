@@ -12,6 +12,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage.jsx';
 import EventCheckinSelectPage from './pages/EventCheckinSelectPage.jsx';
 import CheckinAttendeesPage from './pages/CheckinAttendeesPage.jsx';
 import DevRouteSwitcher from './components/DevRouteSwitcher.jsx';
+import EventDetailPage from "./pages/user/EventDetailPage.jsx";
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -24,6 +25,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           {/* <Route path="/registrants" element={<RegistrantListPage />} /> */}
           <Route path="/staff/checkin" element={<EventCheckinSelectPage />} />
           <Route path="/staff/checkin/:eventId" element={<CheckinAttendeesPage />} />
+          
+          {/* 🟢 เพิ่มบรรทัดนี้เพื่อรองรับ URL แบบไม่มี ID */}
+          <Route path="/event-detail" element={<EventDetailPage />} />
+          <Route path="/event-detail/:eventId" element={<EventDetailPage />} />
         </Routes>
         <DevRouteSwitcher />
       </BrowserRouter>

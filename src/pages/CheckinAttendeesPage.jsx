@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import StaffNavbar from '../components/StaffNavbar.jsx';
+import Navbar from "../components/Navbar";
 import { checkinEvents } from '../data/checkinEvents.js';
 import '../staff-shell.css';
 import '../checkin-attendees.css';
@@ -39,7 +39,7 @@ export default function CheckinAttendeesPage() {
 
   return (
     <>
-      <StaffNavbar />
+      <Navbar />
 
       <main className="page">
         <div className="crumbs">
