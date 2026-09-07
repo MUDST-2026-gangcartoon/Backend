@@ -1,8 +1,18 @@
 /* =========================================
    📌 UPCOMING EVENTS PAGE (HOME)
 ========================================= */
+:root {
+  --theme-blue: #2563EB;
+  --theme-blue-hover: #1D4ED8;
+}
+
+.page-wrapper {
+  background-color: #F8FAFC; 
+  min-height: 100vh;
+}
+
 .events-home-container {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px 80px 20px;
   font-family: "Kanit", sans-serif;
@@ -15,9 +25,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 40px;
-  padding: 60px 0;
-  border-bottom: 1px solid #E2E8F0;
+  gap: 60px;
+  padding: 60px 0 40px 0;
 }
 
 .hero-text {
@@ -25,29 +34,29 @@
 }
 
 .hero-subtitle {
-  color: var(--theme-blue, #2563EB);
+  color: var(--theme-blue);
   font-weight: 700;
-  font-size: 16px;
-  margin-bottom: 12px;
+  font-size: 14px;
+  margin-bottom: 8px;
 }
 
 .hero-title {
   font-size: 48px;
   font-weight: 800;
   color: #1E1B4B;
-  line-height: 1.1;
+  line-height: 1.2;
   margin: 0 0 20px 0;
 }
 
 .hero-desc {
   color: #64748B;
-  font-size: 16px;
+  font-size: 14px;
   margin-bottom: 30px;
   max-width: 400px;
 }
 
 .btn-all-events {
-  background: var(--theme-blue, #2563EB);
+  background: var(--theme-blue);
   color: #fff;
   border: none;
   padding: 12px 24px;
@@ -59,64 +68,50 @@
 }
 
 .btn-all-events:hover {
-  background: #1D4ED8;
+  background: var(--theme-blue-hover);
 }
 
-/* 🔹 Hero Card Dynamic */
+/* 🔹 Hero Card (สีฟ้า) */
 .hero-card-container {
   flex: 1;
-  max-width: 500px;
+  max-width: 550px;
   background: linear-gradient(135deg, #2563EB 0%, #1E1B4B 100%);
   border-radius: 20px;
-  padding: 30px;
-  color: white;
+  padding: 40px;
+  color: #fff;
   position: relative;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3);
+  min-height: 280px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 280px;
-}
-
-.carousel-indicators {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 20px;
-}
-
-.indicator {
-  width: 24px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 2px;
-}
-
-.indicator.active {
-  background: #ffffff;
+  justify-content: center;
 }
 
 .hero-badge {
   display: inline-block;
   background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
   padding: 4px 12px;
   border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   margin-bottom: 16px;
-  backdrop-filter: blur(4px);
+  color: #fff;
 }
 
 .hero-card-title {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
-  margin: 0 0 12px 0;
+  margin: 0 0 16px 0;
   line-height: 1.3;
+  color: #fff;
 }
 
 .hero-card-info {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.8);
   margin: 0;
+  font-weight: 500;
 }
 
 .btn-circle-arrow {
@@ -126,34 +121,40 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: white;
+  background: #fff; 
   color: #1E1B4B;
   border: none;
   font-size: 20px;
-  font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s;
+  font-weight: bold;
 }
-
 .btn-circle-arrow:hover {
-  transform: translateX(4px);
+  transform: translateX(5px);
 }
 
 /* =========================================
-   🏷️ CATEGORY & PICKS
+   🏷️ CATEGORY SECTION
 ========================================= */
 .category-section {
-  padding: 40px 0 20px 0;
+  padding: 20px 0;
 }
 
 .category-subtitle {
-  font-size: 24px;
+  font-size: 14px;
   font-weight: 700;
+  color: #475569;
+  margin: 0;
+}
+
+.category-title {
+  font-size: 24px;
+  font-weight: 800;
   color: #1E1B4B;
-  margin-bottom: 16px;
+  margin: 4px 0 20px 0;
 }
 
 .filter-pills {
@@ -163,8 +164,8 @@
 }
 
 .pill {
-  padding: 8px 20px;
-  border-radius: 20px;
+  padding: 8px 24px;
+  border-radius: 30px;
   border: 1px solid #CBD5E1;
   background: #fff;
   color: #475569;
@@ -174,40 +175,39 @@
   transition: all 0.2s ease;
 }
 
-.pill:hover {
-  border-color: var(--theme-blue, #2563EB);
-  color: var(--theme-blue, #2563EB);
-}
-
 .pill.active {
-  background: var(--theme-blue, #2563EB);
+  background: var(--theme-blue);
   color: #fff;
-  border-color: var(--theme-blue, #2563EB);
+  border-color: var(--theme-blue);
 }
 
+/* =========================================
+   ⭐ GATHER PICKS BANNER
+========================================= */
 .gather-picks-banner {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: #F8FAFC;
-  padding: 20px 24px;
+  background: #fff;
+  padding: 16px 24px;
   border-radius: 12px;
   margin: 30px 0;
   border: 1px solid #E2E8F0;
+  gap: 16px;
 }
 
 .gather-badge {
+  color: var(--theme-blue);
   font-size: 12px;
   font-weight: 700;
-  color: var(--theme-blue, #2563EB);
   letter-spacing: 1px;
 }
 
 .gather-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
   color: #1E1B4B;
-  margin: 4px 0 0 0;
+  margin: 0;
+  flex: 1;
 }
 
 .gather-arrow {
@@ -218,31 +218,28 @@
 }
 
 /* =========================================
-   📅 EVENTS GRID & CARDS (DYNAMIC)
+   📅 EVENTS GRID (2 COLUMNS)
 ========================================= */
 .events-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
 }
 
 .event-card {
   display: flex;
+  flex-direction: column;
   background: #fff;
   border-radius: 16px;
-  border: 1px solid #E2E8F0;
   overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border: 1px solid #E2E8F0;
 }
 
-.event-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.08);
-}
-
-/* 🔹 Card Banner (ฝั่งซ้าย) */
+/* 🔹 Card Banner */
 .card-banner {
-  width: 280px;
+  width: 100%;
+  height: 200px;
   position: relative;
   display: flex;
   align-items: center;
@@ -258,55 +255,53 @@
   left: 16px;
   background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(4px);
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 11px;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
   font-weight: 700;
 }
 
 .banner-text {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1.3;
 }
 
-/* 🔹 Card Body (ฝั่งขวา) */
+/* 🔹 Card Body */
 .card-body {
-  flex: 1;
   display: flex;
   padding: 24px;
-  gap: 24px;
+  gap: 20px;
 }
 
 .date-box {
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: var(--theme-blue, #2563EB);
   min-width: 50px;
 }
 
 .date-month {
+  color: var(--theme-blue);
   font-size: 14px;
   font-weight: 700;
 }
 
 .date-day {
-  font-size: 32px;
+  color: #1E1B4B;
+  font-size: 36px;
   font-weight: 800;
   line-height: 1;
 }
 
 .card-content {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
 }
 
 .event-title {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
   color: #1E1B4B;
   margin: 0 0 8px 0;
 }
@@ -322,7 +317,8 @@
   display: flex;
   gap: 16px;
   font-size: 13px;
-  color: #475569;
+  color: #64748B;
+  margin-bottom: 24px;
   font-weight: 500;
 }
 
@@ -330,66 +326,44 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 24px;
-  padding-top: 16px;
   border-top: 1px solid #F1F5F9;
+  padding-top: 16px;
 }
 
 .seats-count {
   font-size: 14px;
-  font-weight: 600;
-  color: #F59E0B; /* สีส้มแจ้งเตือนที่นั่ง */
+  font-weight: 500;
+  color: #64748B;
 }
 
 .btn-register {
-  background: var(--theme-blue, #2563EB);
+  background: var(--theme-blue);
   color: white;
   border: none;
-  padding: 8px 20px;
+  padding: 8px 16px;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: 0.2s;
 }
 
 .btn-register:hover {
-  background: #1D4ED8;
+  background: var(--theme-blue-hover);
 }
 
 /* =========================================
    📱 RESPONSIVE
 ========================================= */
-@media (max-width: 850px) {
-  .event-card {
-    flex-direction: column;
+@media (max-width: 992px) {
+  .events-grid {
+    grid-template-columns: 1fr;
   }
-  
-  .card-banner {
-    width: 100%;
-    height: 160px;
-  }
-  
-  .card-body {
-    flex-direction: column;
-    gap: 16px;
-  }
-  
-  .date-box {
-    flex-direction: row;
-    gap: 8px;
-    align-items: baseline;
-  }
-}
-
-@media (max-width: 768px) {
   .hero-section {
     flex-direction: column;
-    text-align: center;
-    padding: 40px 0;
   }
-  
-  .hero-desc {
-    margin: 0 auto 30px auto;
+  .hero-card-container {
+    width: 100%;
+    max-width: 100%;
   }
 }

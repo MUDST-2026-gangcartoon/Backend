@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
+import Navbar from '../../components/Navbar';
 import './UpcomingEventsPage.css';
 
 /* ===================================================
@@ -9,7 +9,7 @@ import './UpcomingEventsPage.css';
 const mockHeroData = {
   badgeText: "แนะนำ",
   title: "Pet Expo\nงานสัตว์เลี้ยงที่ใหญ่ที่สุด",
-  dateTimeLocation: "พุธ, 20 ส.ค., 2570 · Central ladprao, ชั้น 5",
+  dateTimeLocation: "พุธ, 20 ส.ค., 2570 - Central ladprao, ชั้น 5",
 };
 
 const mockEventsData = [
@@ -42,7 +42,7 @@ const mockEventsData = [
   {
     id: 3,
     statusBadge: "เปิดรับลงทะเบียน",
-    bannerBg: "linear-gradient(135deg, #0f172a 0%, #f97316 100%)",
+    bannerBg: "linear-gradient(135deg, #172554 0%, #3b82f6 100%)", // ปรับเป็นโทนฟ้า
     bannerText: "PRODUCT NIGHT",
     month: "ส.ค.",
     day: "31",
@@ -55,7 +55,7 @@ const mockEventsData = [
   {
     id: 4,
     statusBadge: "เปิดรับลงทะเบียน",
-    bannerBg: "linear-gradient(135deg, #0f172a 0%, #10b981 100%)",
+    bannerBg: "linear-gradient(135deg, #064e3b 0%, #10b981 100%)",
     bannerText: "ACCESSIBILITY LAB",
     month: "ก.ย.",
     day: "7",
@@ -72,28 +72,17 @@ export default function UpcomingEventsPage() {
   const [activeCategory, setActiveCategory] = useState("ทุกความสนใจ");
   const categories = ["ทุกความสนใจ", "เทคโนโลยี", "ออกแบบ", "อาชีพ", "คอมมูนิตี้"];
 
-  // 🟢 ฟังก์ชันจัดการเมื่อกดปุ่ม "ดูรายละเอียด / ลงทะเบียน"
   const handleRegisterClick = (e, eventId) => {
     e.preventDefault();
-    
-    // จำลองการดึงค่าล็อกอิน (ปรับใช้กับ Context หรือ LocalStorage ของจริงได้เลย)
-    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"; 
-    
-    if (!isLoggedIn) {
-      // ถ้ายังไม่ล็อกอิน แจ้งเตือน หรือเปิด Modal (ตรงนี้คุณสามารถเรียก Component Modal Login ได้ครับ)
-      alert("กรุณาเข้าสู่ระบบก่อนทำการลงทะเบียน (จำลองการเปิด Modal Login)");
-    } else {
-      // ถ้าล็อกอินแล้ว พาไปหน้า EventDetailPage
-      navigate(`/EventDetailPage?id=${eventId}`);
-    }
+    navigate(`/event-detail/${eventId}`);
   };
 
   return (
-    <>
+    <div className="page-wrapper">
       <Navbar />
       
       <main className="events-home-container">
-        {/* 🌟 ส่วน Hero (แบนเนอร์ด้านบน) */}
+        {/* 🌟 Hero Section */}
         <section className="hero-section">
           <div className="hero-text">
             <p className="hero-subtitle">เหตุผลดี ๆ ที่จะได้มาเจอกัน</p>
@@ -103,20 +92,11 @@ export default function UpcomingEventsPage() {
           </div>
           
           <div className="hero-card-container">
-            <div className="carousel-indicators">
-              <div className="indicator active"></div>
-              <div className="indicator"></div>
-              <div className="indicator"></div>
-              <div className="indicator"></div>
-            </div>
             <div className="hero-card-content">
               <span className="hero-badge">{mockHeroData.badgeText}</span>
-              {/* ใช้ split ช่วยตัดคำขึ้นบรรทัดใหม่จาก \n */}
               <h2 className="hero-card-title">
                 {mockHeroData.title.split('\n').map((text, i) => (
-                  <React.Fragment key={i}>
-                    {text}<br />
-                  </React.Fragment>
+                  <React.Fragment key={i}>{text}<br /></React.Fragment>
                 ))}
               </h2>
               <p className="hero-card-info">📅 {mockHeroData.dateTimeLocation}</p>
@@ -125,9 +105,10 @@ export default function UpcomingEventsPage() {
           </div>
         </section>
 
-        {/* 🏷️ ส่วนเลือกหมวดหมู่ */}
+        {/* 🏷️ Category Selection */}
         <section className="category-section">
           <p className="category-subtitle">เลือกตามความสนใจ</p>
+          <h2 className="category-title">เลือกตามความสนใจ</h2>
           <div className="filter-pills">
             {categories.map((cat) => (
               <button 
@@ -141,6 +122,7 @@ export default function UpcomingEventsPage() {
           </div>
         </section>
 
+        {/* ⭐ Gather Picks Banner */}
         <div className="gather-picks-banner">
           <div className="gather-left">
             <span className="gather-badge">PETOPIA PICKS</span>
@@ -149,15 +131,11 @@ export default function UpcomingEventsPage() {
           <span className="gather-arrow">→</span>
         </div>
 
-        {/* 📅 ส่วนรายการอีเวนต์ทั้งหมด */}
+        {/* 📅 Events Grid (2 Columns) */}
         <section className="events-grid">
           {mockEventsData.map((event) => (
             <div className="event-card" key={event.id}>
-              {/* Banner สีสดใส พร้อม Text ตรงกลาง */}
-              <div 
-                className="card-banner" 
-                style={{ background: event.bannerBg }}
-              >
+              <div className="card-banner" style={{ background: event.bannerBg }}>
                 <span className="status-badge">{event.statusBadge}</span>
                 <div className="banner-text">
                   {event.bannerText.split('\n').map((line, i) => (
@@ -166,7 +144,6 @@ export default function UpcomingEventsPage() {
                 </div>
               </div>
 
-              {/* ข้อมูลด้านล่าง */}
               <div className="card-body">
                 <div className="date-box">
                   <span className="date-month">{event.month}</span>
@@ -174,13 +151,12 @@ export default function UpcomingEventsPage() {
                 </div>
                 
                 <div className="card-content">
-                  <div>
-                    <h3 className="event-title">{event.title}</h3>
-                    <p className="event-description">{event.description}</p>
-                    <div className="meta-info">
-                      <span className="meta-item">🕒 {event.time}</span>
-                      <span className="meta-item">📍 {event.location}</span>
-                    </div>
+                  <h3 className="event-title">{event.title}</h3>
+                  <p className="event-description">{event.description}</p>
+                  
+                  <div className="meta-info">
+                    <span className="meta-item">🕒 {event.time}</span>
+                    <span className="meta-item">📍 {event.location}</span>
                   </div>
                   
                   <div className="card-footer">
@@ -198,6 +174,6 @@ export default function UpcomingEventsPage() {
           ))}
         </section>
       </main>
-    </>
+    </div>
   );
 }
