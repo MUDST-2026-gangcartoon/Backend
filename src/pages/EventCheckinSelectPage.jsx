@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import StaffNavbar from '../components/StaffNavbar.jsx';
+import Navbar from "../components/Navbar";
 import { checkinEvents } from '../data/checkinEvents.js';
 import '../staff-shell.css';
 import '../event-checkin.css';
@@ -17,7 +17,7 @@ export default function EventCheckinSelectPage() {
 
   return (
     <>
-      <StaffNavbar />
+      <Navbar />
 
       <main className="page">
         <div className="crumbs">

@@ -1,40 +1,40 @@
 :root {
-  /* Petopia Token System — mapped to the new brand palette (see global.css) */
+  /* Petopia Gold Token System */
 
-  --canvas: var(--bg-color);
-  --cream: var(--bg-color);
+  --canvas: #F6F4FC;
+  --cream: #F6F4FC;
   --card: #FFFFFF;
-  --ink: var(--text-main);
-  --muted: var(--text-muted);
-  --line: var(--light-blue);
-
-  /* Accents (formerly "gold") */
-  --gold-100: var(--light-blue);
-  --gold-300: var(--primary-blue);
-  --gold-500: var(--primary-blue);
-  --gold-700: var(--primary-blue);
-  --gold-900: var(--dark-purple);
-
+  --ink: #2A231B;
+  --muted: #8D8175;
+  --line: #EBE1D2;
+  
+  /* Gold Accents */
+  --gold-100: #FFFBEF;
+  --gold-300: #FFE699;
+  --gold-500: #FFCB3D;
+  --gold-700: #E8A400;
+  --gold-900: #4A3600;
+  
   /* Status & Category Colors */
-  --success: #5C7A00;
-  --success-soft: #EAFAA0;
+  --success: #2E7D32;
+  --success-soft: #E8F5E9;
   --danger: #C0472B;
   --danger-soft: #FBE9E4;
   --danger-line: #F0C7B8;
-
-  --design: var(--dark-purple);
-  --eng: var(--primary-blue);
-  --product: var(--accent-orange);
-  --access: var(--lime-green);
-  --register-accent: var(--lime-green);
-
+  
+  --design: #6B5B95;
+  --eng: #3E6B8A;
+  --product: #C97A2B;
+  --access: #3E8F6C;
+  --register-accent: #10B981;
+  
   /* Spacing & Radius */
-  --radius: var(--card-radius);
+  --radius: 16px;
   --radius-sm: 10px;
   --font-display: 'Kanit', sans-serif;
   --font-body: 'Sarabun', sans-serif;
 
-  --dashboard-background: var(--bg-color);
+  --dashboard-background: #F6F4FC;
 }
 
 
@@ -150,14 +150,14 @@ button {
   font-weight: 600;
   font-size: 14px;
   white-space: nowrap;
-  /* box-shadow: 0 4px 12px rgba(245, 184, 0, 0.25); */
+  box-shadow: 0 4px 12px rgba(245, 184, 0, 0.25);
   transition: all 0.2s ease;
 }
 
-/* .btn-primary:hover {
+.btn-primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(245, 184, 0, 0.35);
-} */
+}
 
 /* ---------- Stats Cards ---------- */
 .stats-row {

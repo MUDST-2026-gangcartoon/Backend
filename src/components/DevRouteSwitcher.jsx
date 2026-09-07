@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom';
 const ROUTES = [
   { path: '/admin/dashboard', label: 'แดชบอร์ด (แอดมิน)' },
   { path: '/manage-events', label: 'จัดการอีเวนต์ (แอดมิน)' },
+  // { path: '/registrants', label: 'ผู้ลงทะเบียนทั้งหมด (แอดมิน)' },
   { path: '/staff/checkin', label: 'เลือกอีเวนต์เช็กอิน (ทีมหน้างาน)' },
 ];
 

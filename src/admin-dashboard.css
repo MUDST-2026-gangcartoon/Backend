@@ -10,31 +10,31 @@
 
 :root {
 
-  --dashboard-gold-dark: var(--dark-purple);
+  --dashboard-gold-dark: #4A3600;
 
-  --dashboard-gold: var(--btn-purple);
+  --dashboard-gold: #E8A400;
 
-  --dashboard-gold-light: var(--primary-blue);
+  --dashboard-gold-light: #F5B800;
 
-  --dashboard-coral: var(--accent-orange);
+  --dashboard-coral: #FF8A5B;
 
-  --dashboard-text: var(--text-main);
+  --dashboard-text: #1E1B2E;
 
-  --dashboard-text-soft: var(--text-muted);
+  --dashboard-text-soft: #6B6580;
 
-  --dashboard-text-faint: #94A3B8;
+  --dashboard-text-faint: #9C97AE;
 
-  --dashboard-line: var(--light-blue);
+  --dashboard-line: #E7E3F6;
 
-  --dashboard-background: var(--bg-color);
+  --dashboard-background: #F6F4FC;
 
-  --dashboard-card: #FFFFFF;
+  --dashboard-card: #FDFCFF;
 
-  --dashboard-radius: var(--card-radius);
+  --dashboard-radius: 20px;
 
   --dashboard-shadow:
-    0 2px 4px rgba(15, 23, 42, 0.04),
-    0 12px 28px -12px rgba(15, 23, 42, 0.14);
+    0 2px 4px rgba(36, 27, 69, 0.04),
+    0 12px 28px -12px rgba(36, 27, 69, 0.14);
 
   --dashboard-display: 'Kanit', sans-serif;
 
@@ -229,13 +229,13 @@ body {
 
   cursor: pointer;
 
-  /* box-shadow:
+  box-shadow:
     0 8px 18px -8px
-    /* rgba(232, 164, 0, 0.5); */
+    rgba(232, 164, 0, 0.5);
 
-  /* transition:
+  transition:
     background 0.15s ease,
-    transform 0.12s ease; */ 
+    transform 0.12s ease;
 
 }
 
@@ -338,8 +338,8 @@ body {
   background:
     linear-gradient(
       160deg,
-      var(--primary-blue) 0%,
-      #3FA0E8 100%
+      #E8A400 0%,
+      #4A3600 100%
     );
 
   border-color:

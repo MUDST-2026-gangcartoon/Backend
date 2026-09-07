@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import AdminNavbar from '../components/AdminNavbar.jsx';
-import EventDrawer from '../components/EventDrawer.jsx';
+import Navbar from "../components/Navbar";
 import AttendeesDrawer from '../components/AttendeesDrawer.jsx';
 import { initialEvents } from '../data/events.js';
+import EventDrawer from '../components/EventDrawer.jsx';
 
 const CATEGORY_CLASS = {
   Design: 'design',
@@ -79,7 +79,7 @@ export default function ManageEventsPage() {
 
   return (
     <>
-      <AdminNavbar />
+      <Navbar />
 
       <main className="page">
         <div className="crumb">

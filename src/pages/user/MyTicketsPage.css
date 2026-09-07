@@ -1,0 +1,285 @@
+/* =========================================
+   📌 MY TICKETS PAGE
+========================================= */
+
+.tickets-container {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 20px 60px 20px;
+  font-family: "Kanit", sans-serif;
+}
+
+.tickets-header {
+  margin-top: 36px;
+  margin-bottom: 24px;
+}
+
+.text-blue-tag {
+  color: #2563EB;
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.tickets-header h1 {
+  font-size: 32px;
+  font-weight: 800;
+  color: #1E1B4B;
+  margin: 0;
+}
+
+.tickets-header p {
+  color: #64748B;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+/* =========================================
+   📌 TICKET CARD LAYOUT (แนวนอนเป๊ะตามเรฟ)
+========================================= */
+
+.tickets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ticket-card {
+  display: flex;
+  flex-direction: row; /* บังคับแนวนอน */
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  height: 240px; /* กำหนดความสูงบัตรแบบแนวนอนให้คงที่ */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ticket-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
+}
+
+/* 🔹 ฝั่งซ้าย: โทนสีฟ้า ดันชื่อลงมามุมล่างซ้ายตามต้นแบบ */
+.ticket-left {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  color: #ffffff;
+  padding: 28px 32px;
+  width: 300px;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end; /* ดันเนื้อหาไปล่างสุด */
+  align-items: flex-start;
+}
+
+.ticket-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+  margin-bottom: 12px;
+}
+
+.ticket-event-title {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.1;
+  margin: 0;
+  color: #ffffff;
+}
+
+/* 🔹 ตรงกลาง: รายละเอียดข้อมูล */
+.ticket-middle {
+  flex: 1;
+  padding: 24px 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  background: #ffffff;
+}
+
+.info-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  margin-bottom: 2px;
+}
+
+.info-group .info-value {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.issue-date {
+  font-size: 12px;
+  color: #94A3B8;
+  margin-top: 4px;
+}
+
+/* 🔹 ฝั่งขวา: เส้นประ + QR Code */
+.ticket-right {
+  width: 220px;
+  min-width: 220px;
+  border-left: 1px dashed #E2E8F0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.ticket-right:hover {
+  background: #F8FAFC;
+}
+
+.ticket-qr-img {
+  width: 105px;
+  height: 105px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.ticket-id {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0F172A;
+  margin-top: 8px;
+  letter-spacing: 0.5px;
+}
+
+.ticket-tap-hint {
+  font-size: 11px;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+/* =========================================
+   📌 MODAL (ขยาย QR CODE)
+========================================= */
+
+.qr-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.qr-modal-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.qr-modal-card h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #0F172A;
+}
+
+.modal-ticket-id {
+  font-size: 13px;
+  color: #64748B;
+  margin: 4px 0 20px 0;
+}
+
+.modal-qr-wrapper {
+  background: #ffffff;
+  padding: 16px;
+  border: 2px solid #E2E8F0;
+  border-radius: 16px;
+  display: inline-block;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.modal-qr-wrapper img {
+  width: 200px;
+  height: 200px;
+  display: block;
+}
+
+.modal-hint {
+  font-size: 13px;
+  color: #64748B;
+  margin: 16px 0 24px 0;
+}
+
+.btn-close-modal {
+  width: 100%;
+  padding: 12px;
+  background: #2563EB;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-close-modal:hover {
+  background: #1D4ED8;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px;
+  color: #64748B;
+  background: #F8FAFC;
+  border-radius: 12px;
+  border: 1px dashed #CBD5E1;
+}
+
+/* Responsive สำหรับมือถือ */
+@media (max-width: 768px) {
+  .ticket-card {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .ticket-left {
+    width: 100%;
+    min-width: unset;
+    padding: 24px;
+    align-items: flex-start;
+  }
+
+  .ticket-middle {
+    padding: 24px;
+  }
+
+  .ticket-right {
+    width: 100%;
+    border-left: none;
+    border-top: 1px dashed #E2E8F0;
+    padding: 24px;
+  }
+}

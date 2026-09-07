@@ -36,7 +36,7 @@
 /* 3. Header Section */
 .drawer-head {
   padding: 24px 28px 16px;
-  border-bottom: 1px solid var(--light-blue);
+  border-bottom: 1px solid #eef0f3;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -45,14 +45,14 @@
 .eyebrow {
   font-size: 13px;
   font-weight: 600;
-  color: var(--btn-purple); /* Petopia accent */
+  color: #10b981; /* เขียวสดใสตาม Accent */
   margin-bottom: 2px;
 }
 
 .drawer-title {
   font-size: 22px;
   font-weight: 700;
-  color: var(--text-main);
+  color: #111827;
   margin: 0;
 }
 
@@ -60,7 +60,7 @@
   background: transparent;
   border: none;
   font-size: 20px;
-  color: var(--text-muted);
+  color: #9ca3af;
   cursor: pointer;
   padding: 4px;
   line-height: 1;
@@ -69,8 +69,8 @@
 }
 
 .close-btn:hover {
-  color: var(--text-main);
-  background: #EEF7FF;
+  color: #111827;
+  background: #f3f4f6;
 }
 
 /* 4. Scrollable Body */
@@ -93,12 +93,12 @@
 .field label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-main);
+  color: #374151;
 }
 
 .hint {
   font-size: 12px;
-  color: var(--text-muted);
+  color: #6b7280;
 }
 
 .field input[type="text"],
@@ -108,11 +108,11 @@
 .field select {
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid var(--light-blue);
+  border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  color: var(--text-main);
+  color: #111827;
   background-color: #fff;
   outline: none;
   box-sizing: border-box;
@@ -122,8 +122,8 @@
 .field input:focus,
 .field textarea:focus,
 .field select:focus {
-  border-color: var(--primary-blue);
-  box-shadow: 0 0 0 3px rgba(112, 197, 255, 0.35);
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
 }
 
 .field-row {
@@ -142,7 +142,7 @@
 
 .cover-thumb {
   aspect-ratio: 16/10;
-  background-color: var(--light-blue);
+  background-color: #e5e7eb;
   border-radius: 6px;
   border: 2px solid transparent;
   cursor: pointer;
@@ -150,8 +150,8 @@
 }
 
 .cover-thumb.selected {
-  border-color: var(--btn-purple);
-  box-shadow: 0 0 0 2px rgba(59, 28, 113, 0.2);
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
 }
 
 /* 6. Attendees Table (รายชื่อผู้ลงทะเบียน) */
@@ -165,14 +165,14 @@
   text-align: left;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: #6b7280;
   padding: 12px 8px;
-  border-bottom: 1px solid var(--light-blue);
+  border-bottom: 1px solid #eef0f3;
 }
 
 .drawer-table td {
   padding: 14px 8px;
-  border-bottom: 1px solid #EEF7FF;
+  border-bottom: 1px solid #f3f4f6;
   font-size: 13px;
   vertical-align: middle;
 }
@@ -187,8 +187,8 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: var(--light-blue); /* re-themed avatar */
-  color: var(--dark-purple);
+  background-color: #fef08a; /* สีส้มอ่อนสำหรับ Avatar */
+  color: #854d0e;
   font-weight: 700;
   font-size: 13px;
   display: flex;
@@ -198,22 +198,22 @@
 
 .user-name {
   font-weight: 600;
-  color: var(--text-main);
+  color: #111827;
 }
 
 .user-email {
-  color: var(--text-muted);
+  color: #4b5563;
 }
 
 .time-cell {
-  color: var(--text-muted);
+  color: #6b7280;
   white-space: nowrap;
 }
 
 /* 7. Footer & Buttons */
 .drawer-footer {
   padding: 16px 28px;
-  border-top: 1px solid var(--light-blue);
+  border-top: 1px solid #eef0f3;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -233,27 +233,27 @@
 
 .btn-ghost {
   background: transparent;
-  color: var(--text-muted);
+  color: #4b5563;
 }
 .btn-ghost:hover {
-  background: #EEF7FF;
-  color: var(--text-main);
+  background: #f3f4f6;
+  color: #111827;
 }
 
 .btn-secondary {
-  background: #EEF7FF;
-  color: var(--text-main);
+  background: #f3f4f6;
+  color: #374151;
 }
 .btn-secondary:hover {
-  background: var(--light-blue);
+  background: #e5e7eb;
 }
 
 .btn-primary {
-  background: var(--btn-purple);
+  background: #f59e0b;
   color: #ffffff;
 }
 .btn-primary:hover {
-  background: var(--dark-purple);
+  background: #d97706;
 }
 
 /* 8. Scrollbar Customization */
@@ -261,11 +261,11 @@
   width: 6px;
 }
 .drawer-body::-webkit-scrollbar-thumb {
-  background-color: var(--light-blue);
+  background-color: #e5e7eb;
   border-radius: 3px;
 }
 .drawer-body::-webkit-scrollbar-thumb:hover {
-  background-color: var(--light-blue);
+  background-color: #d1d5db;
 }
 
 /* 9. Keyframe Animations (จุดที่เพิ่มแก้ไข) */

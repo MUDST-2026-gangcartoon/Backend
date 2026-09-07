@@ -11,7 +11,7 @@
   padding: 12px 40px;
 
   background: #ffffff;
-  border-bottom: 1px solid var(--light-blue);
+  border-bottom: 1px solid #E2E8F0;
 
   position: sticky;
   top: 0;
@@ -93,7 +93,7 @@
 
 .brand-sub {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--text-muted, #64748B);
 }
 
 
@@ -105,7 +105,7 @@
   display: flex;
   align-items: center;
 
-  background: var(--bg-color);
+  background: #F1F5F9;
 
   padding: 8px 16px;
 
@@ -118,7 +118,7 @@
 
 .search-box svg {
   flex-shrink: 0;
-  color: var(--text-muted);
+  color: #64748B;
 }
 
 .search-box input {
@@ -133,7 +133,7 @@
   font-family: "Kanit", sans-serif;
   font-size: 13px;
 
-  color: var(--text-main);
+  color: #111827;
 }
 
 .search-box input::placeholder {
@@ -148,7 +148,7 @@
 .nav-link {
   text-decoration: none;
 
-  color: var(--text-muted);
+  color: #64748B;
 
   font-size: 14px;
 
@@ -164,11 +164,11 @@
 }
 
 .nav-link:hover {
-  color: var(--text-main);
+  color: #111827;
 }
 
 .nav-link.active {
-  color: var(--text-main);
+  color: #111827;
 
   font-weight: 600;
 
@@ -186,7 +186,8 @@
   width: 100%;
   height: 3px;
 
-  background-color: var(--accent-orange);
+  /* 🔹 เปลี่ยนสีขีดเส้นใต้เป็นสีฟ้า */
+  background-color: var(--theme-blue, #2563EB);
 
   border-radius: 2px;
 }
@@ -209,15 +210,15 @@
 
 .lang-text {
   font-size: 14px;
-  color: var(--text-muted);
+  color: #64748B;
 }
 
 .avatar {
   width: 36px;
   height: 36px;
 
-  background-color: var(--primary-blue);
-
+  /* 🔹 เปลี่ยนสีพื้นหลังรูปโปรไฟล์เป็นสีฟ้า และตัวหนังสือสีขาว */
+  background-color: var(--theme-blue, #2563EB);
   color: #ffffff;
 
   border-radius: 50%;
@@ -244,13 +245,13 @@
 }
 
 .role {
-  color: var(--text-muted);
+  color: #64748B;
   font-size: 11px;
 }
 
 .dropdown-icon {
   font-size: 10px;
-  color: var(--text-muted);
+  color: #64748B;
 }
 
 
@@ -285,13 +286,13 @@
 
   font-weight: 500;
 
-  color: var(--text-muted);
+  color: #64748B;
 
   cursor: pointer;
 }
 
 .btn-lang-toggle:hover {
-  color: var(--text-main);
+  color: #111827;
 }
 
 
@@ -311,9 +312,9 @@
 
   background: transparent;
 
-  border: 1px solid var(--light-blue);
+  border: 1px solid #E2E8F0;
 
-  color: var(--text-main);
+  color: #111827;
 
   text-decoration: none;
 
@@ -329,7 +330,7 @@
 }
 
 .btn-nav-register:hover {
-  background: var(--bg-color);
+  background: #F1F5F9;
 }
 
 
@@ -347,9 +348,9 @@
 
   border-radius: 8px;
 
-  background: var(--btn-purple);
-
-  border: 1px solid var(--btn-purple);
+  /* 🔹 เปลี่ยนปุ่ม Login เป็นสีฟ้า */
+  background: var(--theme-blue, #2563EB);
+  border: 1px solid var(--theme-blue, #2563EB);
 
   color: #ffffff;
 
@@ -367,9 +368,9 @@
 }
 
 .btn-nav-login:hover {
-  background: var(--dark-purple);
-
-  border-color: var(--dark-purple);
+  /* 🔹 เปลี่ยนสีเมื่อ Hover เป็นสีฟ้าเข้ม */
+  background: var(--theme-blue-hover, #1D4ED8);
+  border-color: var(--theme-blue-hover, #1D4ED8);
 }
 
 
@@ -427,11 +428,11 @@
 
   cursor: pointer;
 
-  color: var(--text-muted);
+  color: #64748B;
 }
 
 .btn-close-modal:hover {
-  color: var(--text-main);
+  color: #111827;
 }
 
 
@@ -457,7 +458,7 @@
 .login-subtitle {
   text-align: center;
 
-  color: var(--primary-blue);
+  color: var(--theme-blue, #2563EB);
 
   font-size: 14px;
 
@@ -473,7 +474,7 @@
 
   font-weight: 600;
 
-  color: var(--text-main);
+  color: #111827;
 }
 
 .form-group {
@@ -491,7 +492,7 @@
 
   font-weight: 500;
 
-  color: var(--text-main);
+  color: #374151;
 }
 
 .form-group input {
@@ -501,7 +502,7 @@
 
   padding: 0 12px;
 
-  border: 1px solid var(--light-blue);
+  border: 1px solid #E2E8F0;
 
   border-radius: 8px;
 
@@ -513,7 +514,8 @@
 }
 
 .form-group input:focus {
-  border-color: var(--btn-purple);
+  /* 🔹 เปลี่ยนสีกรอบ Input ตอนคลิกใช้งานเป็นสีฟ้า */
+  border-color: var(--theme-blue, #2563EB);
 }
 
 
@@ -543,23 +545,25 @@
 }
 
 .btn-submit-login {
-  background: var(--btn-purple);
+  /* 🔹 เปลี่ยนปุ่มกดยืนยัน Login เป็นสีฟ้า */
+  background: var(--theme-blue, #2563EB);
 
   color: #ffffff;
 }
 
 .btn-submit-login:hover {
-  background: var(--dark-purple);
+  background: var(--theme-blue-hover, #1D4ED8);
 }
 
 .btn-submit-register {
-  background: var(--lime-green);
+  /* ปุ่มสมัครสมาชิกเก็บไว้เป็นสีเขียวเพื่อแยกแยะการกระทำที่ชัดเจน (หรือจะเปลี่ยนก็ได้ถ้าต้องการ) */
+  background: #10B981;
 
-  color: var(--dark-purple);
+  color: #ffffff;
 }
 
 .btn-submit-register:hover {
-  background: #9ADB2A;
+  background: #059669;
 }
 
 
@@ -574,11 +578,12 @@
 
   font-size: 13px;
 
-  color: var(--text-muted);
+  color: #64748B;
 }
 
 .login-footer a {
-  color: var(--primary-blue);
+  /* 🔹 ปรับสีลิงก์ใน Footer เป็นสีฟ้า */
+  color: var(--theme-blue, #2563EB);
 
   text-decoration: none;
 
@@ -666,4 +671,59 @@
   width: 50px;
   height: auto;
   object-fit: contain;
+}
+
+/* ตกแต่งกล่อง Dropdown */
+.profile-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background-color: #ffffff;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  padding: 6px;
+  min-width: 150px;
+  z-index: 1000;
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.dropdown-item.logout-btn {
+  color: #EF4444; /* สีแดงสำหรับออกจากระบบ */
+}
+
+.dropdown-item.logout-btn:hover {
+  background-color: #FEF2F2;
+}
+
+/* ตกแต่งปุ่มภาษา */
+.btn-lang-toggle {
+  background: transparent;
+  border: 1px solid #E5E7EB;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-lang-toggle:hover {
+  background-color: #F3F4F6;
+  border-color: #D1D5DB;
 }
