@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import Navbar from '../../components/Navbar';
 import './MyTicketsPage.css';
 
-// ข้อมูลจำลองรายการตั๋ว
 const mockTicketsData = [
   {
     ticketId: "GTH-7A8BC42012",
@@ -25,7 +24,6 @@ const mockTicketsData = [
 ];
 
 export default function MyTicketsPage() {
-  // State สำหรับเก็บ QR ที่ถูกกดเพื่อเปิด Modal ขยายใหญ่
   const [selectedTicket, setSelectedTicket] = useState(null);
 
   return (
@@ -33,67 +31,62 @@ export default function MyTicketsPage() {
       <Navbar />
 
       <main className="tickets-container">
-        {/* Header หัวข้อหน้า */}
         <div className="tickets-header">
           <div className="text-blue-tag">บัตรพร้อมใช้งาน</div>
           <h1>ตั๋วของฉัน</h1>
           <p>บัตรทุกใบมี QR ของตัวเอง แตะ QR เพื่อขยายแล้วแสดงให้ทีมงานสแกน</p>
         </div>
 
-        {/* Container แสดงรายการตั๋ว */}
         <div className="tickets-list">
           {mockTicketsData.length === 0 ? (
             <div className="empty-state">คุณยังไม่มีตั๋วในขณะนี้</div>
           ) : (
             mockTicketsData.map((ticket) => {
-              // ดึงรูป QR Code อัตโนมัติจาก ticketId
-              const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${ticket.ticketId}`;
+              const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${ticket.ticketId}`;
 
               return (
-                <div key={ticket.ticketId} className="ticket-card">
-                  
-                  {/* ซ้าย: แถบเน้นสีฟ้า + ชื่ออีเวนต์ */}
+                <div className="ticket-card" key={ticket.ticketId}>
+                  {/* 🔹 ฝั่งซ้าย: สีฟ้าแนวนอน ความสูงพอดี ป้ายติดข้างบนชื่ออีเวนต์ */}
                   <div className="ticket-left">
-                    <span className="ticket-badge">{ticket.badgeText}</span>
+                    <div className="ticket-badge">{ticket.badgeText}</div>
                     <h2 className="ticket-event-title">{ticket.eventName}</h2>
                   </div>
 
-                  {/* กลาง: รายละเอียด */}
+                  {/* 🔹 ตรงกลาง: ข้อมูลเรียงบรรทัดแบบเรียบหรู */}
                   <div className="ticket-middle">
                     <div className="info-group">
                       <label>วันและเวลา</label>
-                      <span>{ticket.dateTime}</span>
+                      <div className="info-value">{ticket.dateTime}</div>
                     </div>
+
                     <div className="info-group">
                       <label>สถานที่</label>
-                      <span>{ticket.location}</span>
+                      <div className="info-value">{ticket.location}</div>
                     </div>
+
                     <div className="info-group">
                       <label>ประเภทบัตร</label>
-                      <span>{ticket.ticketType}</span>
+                      <div className="info-value">{ticket.ticketType}</div>
                     </div>
-                    <div className="info-group issue-date">
-                      <label>ออกบัตรเมื่อ {ticket.issueDate}</label>
+
+                    <div className="issue-date">
+                      ออกบัตรเมื่อ {ticket.issueDate}
                     </div>
                   </div>
 
-                  {/* ขวา: QR Code */}
-                  <div 
-                    className="ticket-right"
-                    onClick={() => setSelectedTicket({ ...ticket, qrCodeUrl })}
-                  >
+                  {/* 🔹 ฝั่งขวา: QR Code ตรงกลางขวา */}
+                  <div className="ticket-right" onClick={() => setSelectedTicket(ticket)}>
                     <img src={qrCodeUrl} alt="QR Code" className="ticket-qr-img" />
                     <div className="ticket-id">{ticket.ticketId}</div>
-                    <div className="ticket-tap-hint">🔍 แตะเพื่อขยาย QR</div>
+                    <div className="ticket-tap-hint">แตะเพื่อขยาย QR</div>
                   </div>
-
                 </div>
               );
             })
           )}
         </div>
 
-        {/* 🔍 Pop-up Modal เมื่อแตะที่ QR Code */}
+        {/* Modal ขยาย QR Code */}
         {selectedTicket && (
           <div className="qr-modal-overlay" onClick={() => setSelectedTicket(null)}>
             <div className="qr-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -101,7 +94,10 @@ export default function MyTicketsPage() {
               <p className="modal-ticket-id">รหัสบัตร: {selectedTicket.ticketId}</p>
               
               <div className="modal-qr-wrapper">
-                <img src={selectedTicket.qrCodeUrl} alt="QR Code ใหญ่" />
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${selectedTicket.ticketId}`} 
+                  alt="QR Code ใหญ่" 
+                />
               </div>
               
               <p className="modal-hint">ยื่น QR Code นี้ให้เจ้าหน้าที่สแกนบริเวณหน้างาน</p>

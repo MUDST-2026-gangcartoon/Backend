@@ -3,26 +3,26 @@
 ========================================= */
 
 .tickets-container {
-  max-width: 1000px;
+  max-width: 1040px;
   margin: 0 auto;
   padding: 0 20px 60px 20px;
   font-family: "Kanit", sans-serif;
 }
 
 .tickets-header {
-  margin-top: 40px;
-  margin-bottom: 28px;
+  margin-top: 36px;
+  margin-bottom: 24px;
 }
 
 .text-blue-tag {
-  color: var(--theme-blue, #2563EB);
+  color: #2563EB;
   font-weight: 700;
   font-size: 14px;
   margin-bottom: 4px;
 }
 
 .tickets-header h1 {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
   color: #1E1B4B;
   margin: 0;
@@ -35,7 +35,7 @@
 }
 
 /* =========================================
-   📌 TICKET CARD LAYOUT
+   📌 TICKET CARD LAYOUT (แนวนอนเป๊ะตามเรฟ)
 ========================================= */
 
 .tickets-list {
@@ -46,11 +46,13 @@
 
 .ticket-card {
   display: flex;
+  flex-direction: row; /* บังคับแนวนอน */
   background: #ffffff;
   border: 1px solid #E2E8F0;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  height: 240px; /* กำหนดความสูงบัตรแบบแนวนอนให้คงที่ */
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -59,111 +61,107 @@
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
 }
 
-/* 🔹 ฝั่งซ้าย: โทนสีฟ้า */
+/* 🔹 ฝั่งซ้าย: โทนสีฟ้า ดันชื่อลงมามุมล่างซ้ายตามต้นแบบ */
 .ticket-left {
   background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
   color: #ffffff;
-  padding: 24px;
-  width: 240px;
-  min-width: 200px;
+  padding: 28px 32px;
+  width: 300px;
+  min-width: 300px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-end; /* ดันเนื้อหาไปล่างสุด */
+  align-items: flex-start;
 }
 
 .ticket-badge {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 4px 10px;
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  padding: 5px 14px;
+  border-radius: 20px;
   font-size: 12px;
-  font-weight: 500;
-  align-self: flex-start;
+  font-weight: 600;
   backdrop-filter: blur(4px);
+  margin-bottom: 12px;
 }
 
 .ticket-event-title {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.3;
-  margin: 16px 0 0 0;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.1;
+  margin: 0;
+  color: #ffffff;
 }
 
-/* 🔹 ตรงกลาง: รายละเอียด */
+/* 🔹 ตรงกลาง: รายละเอียดข้อมูล */
 .ticket-middle {
   flex: 1;
-  padding: 24px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  padding: 24px 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
   background: #ffffff;
 }
 
 .info-group label {
   display: block;
   font-size: 12px;
+  font-weight: 600;
   color: #64748B;
   margin-bottom: 2px;
 }
 
-.info-group span {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1E293B;
+.info-group .info-value {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
 }
 
-.info-group.issue-date {
-  grid-column: span 2;
-  border-top: 1px dashed #E2E8F0;
-  padding-top: 12px;
+.issue-date {
+  font-size: 12px;
+  color: #94A3B8;
   margin-top: 4px;
 }
 
-.info-group.issue-date label {
-  font-size: 11px;
-  color: #94A3B8;
-}
-
-/* 🔹 ฝั่งขวา: QR Code */
+/* 🔹 ฝั่งขวา: เส้นประ + QR Code */
 .ticket-right {
-  width: 180px;
-  border-left: 2px dashed #E2E8F0;
+  width: 220px;
+  min-width: 220px;
+  border-left: 1px dashed #E2E8F0;
   padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #F8FAFC;
+  background: #ffffff;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  position: relative;
 }
 
 .ticket-right:hover {
-  background: #EFF6FF;
+  background: #F8FAFC;
 }
 
 .ticket-qr-img {
-  width: 100px;
-  height: 100px;
+  width: 105px;
+  height: 105px;
   border-radius: 8px;
-  border: 1px solid #E2E8F0;
   background: #ffffff;
-  padding: 4px;
 }
 
 .ticket-id {
-  font-size: 12px;
-  font-weight: 700;
-  color: #1E293B;
+  font-size: 13px;
+  font-weight: 800;
+  color: #0F172A;
   margin-top: 8px;
   letter-spacing: 0.5px;
 }
 
 .ticket-tap-hint {
   font-size: 11px;
-  color: var(--theme-blue, #2563EB);
-  margin-top: 4px;
-  font-weight: 500;
+  color: #64748B;
+  margin-top: 2px;
 }
 
 /* =========================================
@@ -237,7 +235,7 @@
 .btn-close-modal {
   width: 100%;
   padding: 12px;
-  background: var(--theme-blue, #2563EB);
+  background: #2563EB;
   color: white;
   border: none;
   border-radius: 10px;
@@ -260,34 +258,28 @@
   border: 1px dashed #CBD5E1;
 }
 
-/* =========================================
-   📌 RESPONSIVE
-========================================= */
-
+/* Responsive สำหรับมือถือ */
 @media (max-width: 768px) {
   .ticket-card {
     flex-direction: column;
+    height: auto;
   }
 
   .ticket-left {
     width: 100%;
     min-width: unset;
-    padding: 20px;
+    padding: 24px;
+    align-items: flex-start;
   }
 
   .ticket-middle {
-    grid-template-columns: 1fr;
-    padding: 20px;
-  }
-
-  .info-group.issue-date {
-    grid-column: span 1;
+    padding: 24px;
   }
 
   .ticket-right {
     width: 100%;
     border-left: none;
-    border-top: 2px dashed #E2E8F0;
-    padding: 20px;
+    border-top: 1px dashed #E2E8F0;
+    padding: 24px;
   }
 }
