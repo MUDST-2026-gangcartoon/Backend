@@ -1,6 +1,6 @@
-# Petopia Admin — React
+# EventFest. Admin — React
 
-แปลงหน้าเว็บ HTML/CSS/vanilla JS เดิมของ Petopia (แอดมิน + ทีมหน้างาน) เป็น React (Vite)
+แปลงหน้าเว็บ HTML/CSS/vanilla JS เดิมของ EventFest. (แอดมิน + ทีมหน้างาน) เป็น React (Vite)
 
 ## โครงสร้าง
 ```
