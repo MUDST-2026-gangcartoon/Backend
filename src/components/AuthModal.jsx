@@ -1,42 +1,77 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function AuthModal() {
-  const { modal, closeModal, login, register } = useAuth();
+  // ดึง openModal มาใช้ด้วยเพื่อสลับหน้า
+  const { modal, closeModal, openModal, login } = useAuth();
+
+  // State สำหรับเก็บค่าฟอร์ม Login
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
   if (!modal) return null;
 
+  const switchModal = (type) => {
+    setErrorMsg(''); // ล้างข้อความ Error
+    setEmail('');
+    setPassword('');
+    openModal(type); // สลับหน้าไป login หรือ register
+  };
+
   const handleLogin = (e) => {
     e.preventDefault();
-    login();
+    // ส่งอีเมลและรหัสผ่านไปเช็ก
+    const success = login(email, password);
+    if (!success) {
+      setErrorMsg('อีเมลหรือรหัสผ่านไม่ถูกต้อง (ลอง user@test.com / 1234)');
+    } else {
+      setErrorMsg('');
+      setEmail('');
+      setPassword('');
+    }
   };
 
   const handleRegister = (e) => {
     e.preventDefault();
-    register();
+    alert('ระบบจำลอง: สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
+    switchModal('login');
   };
 
   return (
     <div className="auth-modal-overlay" onClick={closeModal}>
       {modal === 'login' && (
         <div className="auth-modal-box" onClick={(e) => e.stopPropagation()}>
-          <button className="btn-close-modal" onClick={closeModal}>
-            ✕
-          </button>
+          <button className="btn-close-modal" onClick={closeModal}>✕</button>
           <div className="login-icon">
             <img src="https://via.placeholder.com/48/93C5FD/FFFFFF?text=+" alt="Icon" />
           </div>
           <div className="login-subtitle">สำหรับสมาชิก</div>
           <h1 className="login-title">เข้าสู่ระบบเพื่อลงทะเบียน</h1>
 
+          {/* แสดงแจ้งเตือนกรณีรหัสผิด */}
+          {errorMsg && <div style={{ color: 'red', textAlign: 'center', marginBottom: '12px', fontSize: '14px' }}>{errorMsg}</div>}
+
           <form onSubmit={handleLogin}>
             <div className="form-group">
               <label>อีเมล</label>
-              <input type="email" required />
+              <input 
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="เช่น user@test.com"
+                required 
+              />
             </div>
             <div className="form-group">
               <label>รหัสผ่าน</label>
-              <input type="password" required />
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="เช่น 1234"
+                required 
+              />
             </div>
             <button type="submit" className="btn-submit-login">
               เข้าสู่ระบบ
@@ -44,8 +79,9 @@ export default function AuthModal() {
           </form>
 
           <div className="login-footer">
-            ยังไม่มีบัญชี Petopia?{' '}
-            <a href="#" onClick={(e) => { e.preventDefault(); register(); }}>
+            ยังไม่มีบัญชีใช่ไหม?{' '}
+            {/* 🔹 แก้ตรงนี้ให้ใช้ switchModal */}
+            <a href="#" onClick={(e) => { e.preventDefault(); switchModal('register'); }}>
               สร้างบัญชีใหม่
             </a>
           </div>
@@ -54,11 +90,9 @@ export default function AuthModal() {
 
       {modal === 'register' && (
         <div className="auth-modal-box" onClick={(e) => e.stopPropagation()}>
-          <button className="btn-close-modal" onClick={closeModal}>
-            ✕
-          </button>
+          <button className="btn-close-modal" onClick={closeModal}>✕</button>
           <div className="login-icon">
-            <img src="\assets\public\logo.png" alt="EventFest." />
+            <img src="/assets/public/logo.png" alt="EventFest." />
           </div>
           <div className="login-subtitle" style={{ color: '#10B981' }}>
             สมัครสมาชิก
@@ -85,7 +119,8 @@ export default function AuthModal() {
 
           <div className="login-footer">
             มีบัญชีอยู่แล้ว?{' '}
-            <a href="#" onClick={(e) => { e.preventDefault(); login(); }}>
+            {/* 🔹 แก้ตรงนี้ให้ใช้ switchModal */}
+            <a href="#" onClick={(e) => { e.preventDefault(); switchModal('login'); }}>
               เข้าสู่ระบบ
             </a>
           </div>

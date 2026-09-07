@@ -268,7 +268,7 @@ export default function EventDetailPage() {
               </div>
 
               <button className="btn-register theme-bg" onClick={handleConfirmBooking} style={{ marginTop: '16px' }}>
-                {totalPrice === 0 ? 'ยืนยันการรับบัตรฟรี &rarr;' : `ดำเนินการชำระเงิน ฿${totalPrice.toLocaleString()} &rarr;`}
+                {totalPrice === 0 ? 'ยืนยันการรับบัตรฟรี บาท' : `ดำเนินการชำระเงิน ฿${totalPrice.toLocaleString()} บาท`}
               </button>
             </div>
           </div>
