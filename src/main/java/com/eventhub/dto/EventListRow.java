@@ -8,11 +8,11 @@ public record EventListRow(
         String description,
         String location,
         LocalDateTime startsAt,
-        Integer capacity,
+        int capacity,
         String category,
         String imageUrl,
         String detailImageUrl,
-        Long registeredCount,
-        Boolean registered
+        long registeredCount,
+        boolean registered
 ) {
 }
