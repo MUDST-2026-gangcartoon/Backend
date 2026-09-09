@@ -45,15 +45,17 @@ export default function MyTicketsPage() {
               const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${ticket.ticketId}`;
 
               return (
-                <div className="ticket-card" key={ticket.ticketId}>
-                  {/* 🔹 ฝั่งซ้าย: สีฟ้าแนวนอน ความสูงพอดี ป้ายติดข้างบนชื่ออีเวนต์ */}
-                  <div className="ticket-left">
-                    <div className="ticket-badge">{ticket.badgeText}</div>
-                    <h2 className="ticket-event-title">{ticket.eventName}</h2>
+                // 🌟 เปลี่ยนชื่อคลาสเป็น myticket-card เพื่อแยกขอบเขตชัดเจน
+                <div className="myticket-card" key={ticket.ticketId}>
+                  
+                  {/* 🔹 ฝั่งซ้าย: สีฟ้าแนวนอน เปลี่ยนเป็น myticket-left */}
+                  <div className="myticket-left">
+                    <div className="myticket-badge">{ticket.badgeText}</div>
+                    <h2 className="myticket-event-title">{ticket.eventName}</h2>
                   </div>
 
                   {/* 🔹 ตรงกลาง: ข้อมูลเรียงบรรทัดแบบเรียบหรู */}
-                  <div className="ticket-middle">
+                  <div className="myticket-middle">
                     <div className="info-group">
                       <label>วันและเวลา</label>
                       <div className="info-value">{ticket.dateTime}</div>
@@ -74,11 +76,11 @@ export default function MyTicketsPage() {
                     </div>
                   </div>
 
-                  {/* 🔹 ฝั่งขวา: QR Code ตรงกลางขวา */}
-                  <div className="ticket-right" onClick={() => setSelectedTicket(ticket)}>
-                    <img src={qrCodeUrl} alt="QR Code" className="ticket-qr-img" />
-                    <div className="ticket-id">{ticket.ticketId}</div>
-                    <div className="ticket-tap-hint">แตะเพื่อขยาย QR</div>
+                  {/* 🔹 ฝั่งขวา: QR Code เปลี่ยนเป็น myticket-right */}
+                  <div className="myticket-right" onClick={() => setSelectedTicket(ticket)}>
+                    <img src={qrCodeUrl} alt="QR Code" className="myticket-qr-img" />
+                    <div className="myticket-id">{ticket.ticketId}</div>
+                    <div className="myticket-tap-hint">แตะเพื่อขยาย QR</div>
                   </div>
                 </div>
               );

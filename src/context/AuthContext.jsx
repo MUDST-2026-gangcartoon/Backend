@@ -2,61 +2,91 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 
 const AuthContext = createContext(null);
 
-// 📌 ฝังบัญชีจำลองสำหรับใช้ทดสอบ 3 Roles
-const TEST_USERS = [
-  { email: 'user@test.com', password: '1234', username: 'General User', role: 'User', avatarLetter: 'U' },
-  { email: 'staff@test.com', password: '1234', username: 'Event Staff', role: 'Staff', avatarLetter: 'S' },
-  { email: 'admin@test.com', password: '1234', username: 'System Admin', role: 'Admin', avatarLetter: 'A' }
-];
+const MOCK_ACCOUNTS = {
+  'user@test.com': {
+    username: 'User',
+    role: 'user',
+    roleLabel: 'ผู้ใช้งานทั่วไป',
+    avatarLetter: 'U',
+    password: '1234',
+  },
+  'admin@test.com': {
+    username: 'Admin',
+    role: 'admin',
+    roleLabel: 'ผู้ดูแลระบบ',
+    avatarLetter: 'A',
+    password: '1234',
+  },
+  'staff@test.com': {
+    username: 'Staff',
+    role: 'staff',
+    roleLabel: 'ทีมหน้างาน',
+    avatarLetter: 'S',
+    password: '1234',
+  },
+};
+
+function getStoredUser() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('mockUser') || 'null');
+    return stored && stored.role ? stored : null;
+  } catch {
+    return null;
+  }
+}
 
 export function AuthProvider({ children }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState(null); // เปลี่ยนจาก mockUser ตายตัว มาเก็บใน State แทน
-  const [modal, setModal] = useState(null); // null | 'login' | 'register'
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    localStorage.getItem('isLoggedIn') === 'true'
+  );
+  const [user, setUser] = useState(getStoredUser);
+  const [modal, setModal] = useState(null);
 
-  // ดึงสถานะและข้อมูล User จาก localStorage ตอนโหลดหน้าเว็บ
   useEffect(() => {
-    const storedLoginStatus = localStorage.getItem('isLoggedIn') === 'true';
-    const storedUserData = localStorage.getItem('user');
-
-    if (storedLoginStatus && storedUserData) {
-      setIsLoggedIn(true);
-      setUser(JSON.parse(storedUserData));
+    // ล้างสถานะ login เก่าที่ไม่มี role เพื่อไม่ให้สิทธิ์เก่าค้าง
+    if (isLoggedIn && !user) {
+      localStorage.setItem('isLoggedIn', 'false');
+      setIsLoggedIn(false);
     }
-  }, []);
+  }, [isLoggedIn, user]);
 
   const openModal = useCallback((type) => setModal(type), []);
   const closeModal = useCallback(() => setModal(null), []);
 
-  // 🟢 ฟังก์ชันล็อกอิน: รับค่า email, password มาตรวจสอบ
   const login = useCallback((email, password) => {
-    // หา user ที่ตรงกับ email และ password
-    const foundUser = TEST_USERS.find(u => u.email === email && u.password === password);
-    
-    if (foundUser) {
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('user', JSON.stringify(foundUser)); // เซฟข้อมูล user ไว้
-      setIsLoggedIn(true);
-      setUser(foundUser);
-      setModal(null);
-      return true; // ล็อกอินสำเร็จ
+    const account = MOCK_ACCOUNTS[email.trim().toLowerCase()];
+
+    if (!account || account.password !== password) {
+      return { success: false, message: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' };
     }
-    return false; // ล็อกอินไม่สำเร็จ
+
+    const nextUser = {
+      username: account.username,
+      role: account.role,
+      roleLabel: account.roleLabel,
+      avatarLetter: account.avatarLetter,
+    };
+
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('mockUser', JSON.stringify(nextUser));
+    setIsLoggedIn(true);
+    setUser(nextUser);
+    setModal(null);
+
+    return { success: true, user: nextUser };
   }, []);
 
-  // 🟢 ฟังก์ชันสมัครสมาชิก
   const register = useCallback(() => {
-    alert('ระบบจำลอง: สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
-    setModal('login'); // สลับไปหน้าล็อกอิน
+    alert('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
+    setModal('login');
   }, []);
 
-  // 🟢 ฟังก์ชันออกจากระบบ
   const logout = useCallback(() => {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('user'); // ลบข้อมูล user ออก
+    localStorage.setItem('isLoggedIn', 'false');
+    localStorage.removeItem('mockUser');
     setIsLoggedIn(false);
     setUser(null);
-    alert('ออกจากระบบเรียบร้อยแล้ว');
+    setModal(null);
   }, []);
 
   return (
