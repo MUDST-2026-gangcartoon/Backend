@@ -675,3 +675,62 @@
   }
 }
 
+/* =========================================
+   📌 ซ่อนและปรับแต่งหน้าตา Google Translate
+========================================= */
+
+/* ซ่อนแถบเครื่องมือแปลภาษาด้านบนสุดที่ชอบโผล่มาดันหน้าเว็บ */
+.skiptranslate iframe,
+.goog-te-banner-frame {
+  display: none !important;
+}
+
+/* บังคับไม่ให้หน้าเว็บถูกดันลงมา (ปกติ Google จะดันลง 40px) */
+body {
+  top: 0px !important; 
+}
+
+/* เอาสีพื้นหลัง Tooltip ออก (เวลาเอาเมาส์ชี้ข้อความที่แปลแล้วจะมีกรอบสีเหลืองๆ) */
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ปรับหน้าตากล่องเลือกภาษาให้สวยเข้ากับธีมเว็บเรา */
+.goog-te-combo {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #CBD5E1;
+  background-color: white;
+  font-family: "Kanit", sans-serif; /* ฟอนต์เดียวกับเว็บ */
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  color: #0F172A;
+}
+
+/* ซ่อนข้อความว่า "Powered by Google" */
+.goog-te-gadget {
+  color: transparent !important;
+  font-size: 0px !important;
+}
+.goog-te-gadget .goog-logo-link {
+  display: none !important;
+}
+
+/* ซ่อนแถบเครื่องมือแปลภาษา Google ทั้งหมด */
+.skiptranslate, 
+.goog-te-banner-frame, 
+#google_translate_hidden_element {
+  display: none !important;
+}
+
+body {
+  top: 0px !important;
+}
+
+/* ซ่อนแถบไฮไลต์เวลานำเมาส์ไปวางบนข้อความที่แปล */
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
