@@ -41,10 +41,10 @@
   justify-content:center;
 }
 .event-thumb svg{position:relative;z-index:1;}
-.event-thumb.t-design{background:linear-gradient(150deg,#C9B8FF 0%, #8B72F5 100%);}
-.event-thumb.t-eng{background:linear-gradient(150deg,#8FD8F5 0%, #2F9BD1 100%);}
-.event-thumb.t-product{background:linear-gradient(150deg,#FFB2A0 0%, #FF8A5B 100%);}
-.event-thumb.t-access{background:linear-gradient(150deg,#7FE3BE 0%, #31C48D 100%);}
+.event-thumb.t-design{background:linear-gradient(150deg,#7C5CB8 0%, var(--dark-purple) 100%);}
+.event-thumb.t-eng{background:linear-gradient(150deg,var(--light-blue) 0%, var(--primary-blue) 100%);}
+.event-thumb.t-product{background:linear-gradient(150deg,#FFA98F 0%, var(--accent-orange) 100%);}
+.event-thumb.t-access{background:linear-gradient(150deg,#D4F98A 0%, var(--lime-green) 100%);}
 
 .event-tag{
   position:absolute;

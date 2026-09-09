@@ -38,19 +38,9 @@ export default function Navbar() {
   // ดึง Role มาทำเป็นตัวพิมพ์เล็กเพื่อเช็กได้ง่ายขึ้น
   const userRole = user?.role?.toLowerCase() || '';
 
-  // เช็กว่าเป็น Admin หรือไม่ (เช็กทั้งชื่อ Role และ URL Path)
-  const isAdmin = 
-    userRole === 'admin' || 
-    userRole === 'ผู้ดูแลระบบ' || 
-    location.pathname.startsWith('/admin') || 
-    location.pathname === '/manage-events';
-
-  // เช็กว่าเป็น Staff หรือไม่
-  const isStaff = 
-    userRole === 'staff' || 
-    userRole === 'พนักงาน' || 
-    location.pathname.startsWith('/staff') || 
-    location.pathname.includes('checkin');
+  // เมนูต้องอิงจาก role ของบัญชีเท่านั้น ไม่ใช้ URL เป็นตัวตัดสินสิทธิ์
+  const isAdmin = userRole === 'admin' || userRole === 'ผู้ดูแลระบบ';
+  const isStaff = userRole === 'staff' || userRole === 'พนักงาน';
 
   return (
     <>
@@ -58,7 +48,7 @@ export default function Navbar() {
         {/* ด้านซ้าย: Logo + ช่องค้นหา */}
         <div className="nav-left">
           <NavLink to="/" className="logo">
-            <img src="/assets/public/logo.png" alt="EventFest." />
+            <img src="assets\public\logo.png" alt="EventFest." />
           </NavLink>
           
           <div className="search-box">
@@ -131,7 +121,7 @@ export default function Navbar() {
                 <div className="avatar">{user?.avatarLetter || 'U'}</div>
                 <div className="user-info">
                   <div className="username">{user?.username}</div>
-                  <div className="role">{user?.role}</div>
+                  <div className="role">{user?.roleLabel || user?.role}</div>
                 </div>
                 <span className="dropdown-icon" style={{ transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }}>▼</span>
               </div>

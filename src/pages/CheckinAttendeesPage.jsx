@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import Navbar from "../components/Navbar";
+import StaffNavbar from '../components/StaffNavbar.jsx';
 import { checkinEvents } from '../data/checkinEvents.js';
 import '../staff-shell.css';
 import '../checkin-attendees.css';
@@ -9,16 +9,34 @@ export default function CheckinAttendeesPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
   const event = useMemo(
-    () => checkinEvents.find((e) => e.id === eventId) || checkinEvents[0],
+    () => checkinEvents.find((e) => e.id === eventId),
     [eventId]
   );
 
   const [code, setCode] = useState('');
   const [error, setError] = useState(false);
   const [recent, setRecent] = useState([]);
+  const [checkedInTotal, setCheckedInTotal] = useState(0);
+
+  if (!event) {
+    return (
+      <>
+        <StaffNavbar />
+        <main className="page" style={{ paddingTop: 48 }}>
+          <section style={{ textAlign: 'center', padding: 40 }}>
+            <h1>ไม่พบอีเวนต์</h1>
+            <p className="subtitle">ไม่พบอีเวนต์สำหรับรหัส {eventId}</p>
+            <button type="button" className="btn-primary" onClick={() => navigate('/staff/checkin')}>
+              กลับรายการอีเวนต์
+            </button>
+          </section>
+        </main>
+      </>
+    );
+  }
 
   const totalGuests = event.totalGuests;
-  const checkedIn = recent.length;
+  const checkedIn = checkedInTotal;
   const remaining = Math.max(0, totalGuests - checkedIn);
 
   const handleCheckin = () => {
@@ -30,6 +48,7 @@ export default function CheckinAttendeesPage() {
     setError(false);
     const time = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
     setRecent((prev) => [{ code: trimmed.toUpperCase(), time }, ...prev].slice(0, 6));
+    setCheckedInTotal((prev) => prev + 1);
     setCode('');
   };
 
@@ -39,7 +58,7 @@ export default function CheckinAttendeesPage() {
 
   return (
     <>
-      <Navbar />
+      <StaffNavbar />
 
       <main className="page">
         <div className="crumbs">

@@ -1,22 +1,22 @@
 :root{
-  /* ---- Petopia token system (Yellow theme) ---- */
-  --gold-900:#4A3600;
-  --gold-700:#E8A400;
-  --gold-600:#F5B800;
-  --gold-500:#FFCB3D;
-  --gold-100:#FFF3D1;
-  --gold-50:#FFFBEF;
-  --paw-coral:#FF8A5B;
-  --paw-mint:#31C48D;
-  --ink:#1E1B2E;
-  --ink-soft:#6B6580;
-  --line:#E7E3F6;
-  --paper:#FDFCFF;
-  --canvas:#F6F4FC;
-  --radius-lg:20px;
-  --radius-md:14px;
-  --radius-sm:10px;
-  --shadow-card:0 2px 4px rgba(36,27,69,0.04), 0 12px 28px -12px rgba(36,27,69,0.14);
+  /* ---- Petopia token system (mapped to new brand palette) ---- */
+  --gold-900: var(--dark-purple);
+  --gold-700: var(--primary-blue);
+  --gold-600: var(--primary-blue);
+  --gold-500: var(--primary-blue);
+  --gold-100: var(--light-blue);
+  --gold-50: var(--bg-color);
+  --paw-coral: var(--accent-orange);
+  --paw-mint: var(--lime-green);
+  --ink: var(--text-main);
+  --ink-soft: var(--text-muted);
+  --line: var(--light-blue);
+  --paper: #FFFFFF;
+  --canvas: var(--bg-color);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --shadow-card:0 2px 4px rgba(15,23,42,0.04), 0 12px 28px -12px rgba(15,23,42,0.14);
   --font-display:'Kanit', sans-serif;
   --font-body:'Sarabun', sans-serif;
 }
@@ -77,9 +77,9 @@ h1{
   display:inline-flex;
   align-items:center;
   gap:7px;
-  background:#EAFBF3;
-  color:#1B8A5A;
-  border:1px solid #C6F1DE;
+  background:#EEFAC2;
+  color:#4C6B00;
+  border:1px solid var(--lime-green);
   padding:7px 14px;
   border-radius:999px;
   font-size:12.5px;
@@ -88,7 +88,7 @@ h1{
 .badge-live .dot{
   width:7px;height:7px;border-radius:50%;
   background:var(--paw-mint);
-  box-shadow:0 0 0 3px rgba(49,196,141,0.25);
+  box-shadow:0 0 0 3px rgba(176,241,53,0.35);
 }
 
 hr.rule{
