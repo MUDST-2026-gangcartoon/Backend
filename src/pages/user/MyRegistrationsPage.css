@@ -1,4 +1,21 @@
 /* =========================================
+   🎨 THEME VARIABLES
+========================================= */
+:root {
+  --primary-blue: #70C5FF;       /* 🌟 สีหลัก */
+  --primary-blue-hover: #38BDF8; /* สีตอน Hover */
+  --dark-blue: #0284C7;          /* สีฟ้าเข้มสำหรับตัวหนังสือ/เน้นความชัด */
+  --light-blue: #BAE6FD;         /* สีฟ้าอ่อนสำหรับเส้นขอบ/พื้นหลังจางๆ */
+  --text-main: #1E1B4B;          /* สีตัวอักษรหัวข้อ */
+  --text-body: #111827;          /* สีตัวอักษรเนื้อหา */
+  --text-muted: #64748B;         /* สีตัวอักษรจาง */
+  --bg-white: #ffffff;
+  --bg-light: #F8FAFC;
+  --border-light: #E2E8F0;
+  --border-medium: #CBD5E1;
+}
+
+/* =========================================
    📌 MY REGISTRATIONS PAGE
 ========================================= */
 
@@ -17,12 +34,12 @@
 .page-header h1 {
   font-size: 28px;
   font-weight: 800;
-  color: #1E1B4B;
+  color: var(--text-main);
   margin: 0;
 }
 
 .page-header p {
-  color: #64748B;
+  color: var(--text-muted);
   font-size: 14px;
   margin-top: 4px;
 }
@@ -42,16 +59,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #ffffff;
-  border: 1px solid #E2E8F0;
+  background: var(--bg-white);
+  border: 1px solid var(--border-light);
   border-radius: 12px;
   padding: 20px 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .registration-card:hover {
-  border-color: var(--theme-blue, #2563EB);
+  border-color: var(--primary-blue);
+  box-shadow: 0 6px 16px rgba(112, 197, 255, 0.2);
 }
 
 .reg-left-info {
@@ -60,12 +78,13 @@
   gap: 24px;
 }
 
+/* 🔹 โทนสีวันที่ */
 .reg-date-badge {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: var(--theme-blue, #2563EB);
+  color: var(--dark-blue);
   min-width: 45px;
 }
 
@@ -89,14 +108,14 @@
 .reg-title {
   font-size: 18px;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-body);
 }
 
 .reg-meta {
   display: flex;
   gap: 16px;
   font-size: 13px;
-  color: #64748B;
+  color: var(--text-muted);
 }
 
 /* =========================================
@@ -121,20 +140,23 @@
   color: #065F46;
 }
 
+/* 🔹 ปุ่มสีฟ้า #70C5FF + ฟอนต์สีขาว #FFFFFF */
 .btn-view-ticket {
   display: inline-block;
   text-decoration: none;
-  background-color: var(--theme-blue, #2563EB);
-  color: #ffffff;
+  background-color: var(--primary-blue);
+  color: #FFFFFF;
   padding: 8px 20px;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   transition: background-color 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 2px 8px rgba(112, 197, 255, 0.4);
 }
 
 .btn-view-ticket:hover {
-  background-color: var(--theme-blue-hover, #1D4ED8);
+  background-color: var(--primary-blue-hover);
+  color: #FFFFFF;
 }
 
 .btn-view-ticket:active {
@@ -144,10 +166,10 @@
 .empty-state {
   text-align: center;
   padding: 60px;
-  color: #64748B;
-  background: #F8FAFC;
+  color: var(--text-muted);
+  background: var(--bg-light);
   border-radius: 12px;
-  border: 1px dashed #CBD5E1;
+  border: 1px dashed var(--border-medium);
 }
 
 /* =========================================
@@ -171,6 +193,6 @@
     width: 100%;
     justify-content: space-between;
     padding-top: 16px;
-    border-top: 1px solid #F1F5F9;
+    border-top: 1px solid var(--border-light);
   }
 }
