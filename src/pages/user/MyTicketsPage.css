@@ -1,4 +1,32 @@
 /* =========================================
+   🎨 THEME VARIABLES (ตั้งค่าสีที่นี่)
+========================================= */
+:root {
+  /* โทนสีหลัก (Primary) */
+  --theme-primary: #2563EB;
+  --theme-primary-hover: #1D4ED8;
+  
+  /* โทนสีตัวอักษร (Text) */
+  --text-heading: #1E1B4B;
+  --text-dark: #0F172A;
+  --text-muted: #64748B;
+  --text-light: #94A3B8;
+  --text-white: #ffffff;
+
+  /* โทนสีพื้นหลังและเส้นขอบ (Background & Border) */
+  --bg-white: #ffffff;
+  --bg-light: #F8FAFC;
+  --border-light: #E2E8F0;
+  --border-medium: #CBD5E1;
+
+  /* เงา (Shadows) */
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.03);
+  --shadow-card-hover: 0 8px 20px rgba(37, 99, 235, 0.12); /* ใช้สีฟ้าจางๆ ให้เข้าธีม */
+  --shadow-modal: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --overlay-bg: rgba(15, 23, 42, 0.65);
+}
+
+/* =========================================
    📌 MY TICKETS PAGE
 ========================================= */
 
@@ -15,7 +43,7 @@
 }
 
 .text-blue-tag {
-  color: #2563EB;
+  color: var(--theme-primary);
   font-weight: 700;
   font-size: 14px;
   margin-bottom: 4px;
@@ -24,12 +52,12 @@
 .tickets-header h1 {
   font-size: 32px;
   font-weight: 800;
-  color: #1E1B4B;
+  color: var(--text-heading);
   margin: 0;
 }
 
 .tickets-header p {
-  color: #64748B;
+  color: var(--text-muted);
   font-size: 14px;
   margin-top: 4px;
 }
@@ -47,24 +75,24 @@
 .myticket-card {
   display: flex;
   flex-direction: row; /* บังคับแนวนอน */
-  background: #ffffff;
-  border: 1px solid #E2E8F0;
+  background: var(--bg-white);
+  border: 1px solid var(--border-light);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-card);
   height: 240px; /* กำหนดความสูงบัตรแบบแนวนอนให้คงที่ */
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .myticket-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
+  box-shadow: var(--shadow-card-hover);
 }
 
 /* 🔹 ฝั่งซ้าย: โทนสีฟ้า ดันชื่อลงมามุมล่างซ้ายตามต้นแบบ */
 .myticket-left {
-  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  color: var(--text-white);
   padding: 28px 32px;
   width: 300px;
   min-width: 300px;
@@ -76,7 +104,7 @@
 
 .myticket-badge {
   background: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
+  color: var(--text-white);
   padding: 5px 14px;
   border-radius: 20px;
   font-size: 12px;
@@ -90,7 +118,7 @@
   font-weight: 800;
   line-height: 1.1;
   margin: 0;
-  color: #ffffff;
+  color: var(--text-white);
 }
 
 /* 🔹 ตรงกลาง: รายละเอียดข้อมูล */
@@ -101,26 +129,26 @@
   flex-direction: column;
   justify-content: center;
   gap: 12px;
-  background: #ffffff;
+  background: var(--bg-white);
 }
 
 .info-group label {
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: #64748B;
+  color: var(--text-muted);
   margin-bottom: 2px;
 }
 
 .info-group .info-value {
   font-size: 15px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--text-dark);
 }
 
 .issue-date {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--text-light);
   margin-top: 4px;
 }
 
@@ -128,39 +156,39 @@
 .myticket-right {
   width: 220px;
   min-width: 220px;
-  border-left: 1px dashed #E2E8F0;
+  border-left: 1px dashed var(--border-light);
   padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
+  background: var(--bg-white);
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
 .myticket-right:hover {
-  background: #F8FAFC;
+  background: var(--bg-light);
 }
 
 .myticket-qr-img {
   width: 105px;
   height: 105px;
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--bg-white);
 }
 
 .myticket-id {
   font-size: 13px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--text-dark);
   margin-top: 8px;
   letter-spacing: 0.5px;
 }
 
 .myticket-tap-hint {
   font-size: 11px;
-  color: #64748B;
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -174,7 +202,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.65);
+  background: var(--overlay-bg);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -184,13 +212,13 @@
 }
 
 .qr-modal-card {
-  background: #ffffff;
+  background: var(--bg-white);
   border-radius: 20px;
   padding: 32px;
   max-width: 360px;
   width: 100%;
   text-align: center;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-modal);
   animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -202,22 +230,22 @@
 .qr-modal-card h3 {
   margin: 0;
   font-size: 20px;
-  color: #0F172A;
+  color: var(--text-dark);
 }
 
 .modal-ticket-id {
   font-size: 13px;
-  color: #64748B;
+  color: var(--text-muted);
   margin: 4px 0 20px 0;
 }
 
 .modal-qr-wrapper {
-  background: #ffffff;
+  background: var(--bg-white);
   padding: 16px;
-  border: 2px solid #E2E8F0;
+  border: 2px solid var(--border-light);
   border-radius: 16px;
   display: inline-block;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-card);
 }
 
 .modal-qr-wrapper img {
@@ -228,15 +256,15 @@
 
 .modal-hint {
   font-size: 13px;
-  color: #64748B;
+  color: var(--text-muted);
   margin: 16px 0 24px 0;
 }
 
 .btn-close-modal {
   width: 100%;
   padding: 12px;
-  background: #2563EB;
-  color: white;
+  background: var(--theme-primary);
+  color: var(--text-white);
   border: none;
   border-radius: 10px;
   font-size: 14px;
@@ -246,16 +274,16 @@
 }
 
 .btn-close-modal:hover {
-  background: #1D4ED8;
+  background: var(--theme-primary-hover);
 }
 
 .empty-state {
   text-align: center;
   padding: 60px;
-  color: #64748B;
-  background: #F8FAFC;
+  color: var(--text-muted);
+  background: var(--bg-light);
   border-radius: 12px;
-  border: 1px dashed #CBD5E1;
+  border: 1px dashed var(--border-medium);
 }
 
 /* Responsive สำหรับมือถือ */
@@ -279,7 +307,7 @@
   .myticket-right {
     width: 100%;
     border-left: none;
-    border-top: 1px dashed #E2E8F0;
+    border-top: 1px dashed var(--border-light);
     padding: 24px;
   }
 }
