@@ -1,0 +1,38 @@
+export const checkinEvents = [
+  {
+    id: '1',
+    name: 'ออกแบบเพื่อผู้คนจริง',
+    tag: 'Design',
+    thumbClass: 't-design',
+    dateLabel: 'จันทร์ 31 ส.ค. 2569',
+    place: 'Creative Hall อาคาร A',
+    totalGuests: 128,
+  },
+  {
+    id: '2',
+    name: 'Spring Boot สำหรับระบบที่ขยายได้',
+    tag: 'Engineering',
+    thumbClass: 't-eng',
+    dateLabel: 'อาทิตย์ 6 ก.ย. 2569',
+    place: 'Engineering Lab 3',
+    totalGuests: 84,
+  },
+  {
+    id: '3',
+    name: 'คืนแห่งโปรดักต์ในมหาวิทยาลัย',
+    tag: 'Product Night',
+    thumbClass: 't-product',
+    dateLabel: 'เสาร์ 12 ก.ย. 2569',
+    place: 'หอประชุมใหญ่',
+    totalGuests: 210,
+  },
+  {
+    id: '4',
+    name: 'แล็บทดสอบเพื่อการเข้าถึง',
+    tag: 'Accessibility',
+    thumbClass: 't-access',
+    dateLabel: 'เสาร์ 19 ก.ย. 2569',
+    place: 'Digital Studio 2',
+    totalGuests: 46,
+  },
+];
