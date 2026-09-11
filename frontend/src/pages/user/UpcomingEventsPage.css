@@ -1,0 +1,369 @@
+/* =========================================
+   📌 UPCOMING EVENTS PAGE (HOME)
+========================================= */
+:root {
+  --theme-blue: #2563EB;
+  --theme-blue-hover: #1D4ED8;
+}
+
+.page-wrapper {
+  background-color: #F8FAFC; 
+  min-height: 100vh;
+}
+
+.events-home-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px 80px 20px;
+  font-family: "Kanit", sans-serif;
+}
+
+/* =========================================
+   🌟 HERO SECTION
+========================================= */
+.hero-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 60px;
+  padding: 60px 0 40px 0;
+}
+
+.hero-text {
+  flex: 1;
+}
+
+.hero-subtitle {
+  color: var(--theme-blue);
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.hero-title {
+  font-size: 48px;
+  font-weight: 800;
+  color: #1E1B4B;
+  line-height: 1.2;
+  margin: 0 0 20px 0;
+}
+
+.hero-desc {
+  color: #64748B;
+  font-size: 14px;
+  margin-bottom: 30px;
+  max-width: 400px;
+}
+
+.btn-all-events {
+  background: var(--theme-blue);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.btn-all-events:hover {
+  background: var(--theme-blue-hover);
+}
+
+/* 🔹 Hero Card (สีฟ้า) */
+.hero-card-container {
+  flex: 1;
+  max-width: 550px;
+  background: linear-gradient(135deg, #2563EB 0%, #1E1B4B 100%);
+  border-radius: 20px;
+  padding: 40px;
+  color: #fff;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3);
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.hero-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #fff;
+}
+
+.hero-card-title {
+  font-size: 32px;
+  font-weight: 800;
+  margin: 0 0 16px 0;
+  line-height: 1.3;
+  color: #fff;
+}
+
+.hero-card-info {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  font-weight: 500;
+}
+
+.btn-circle-arrow {
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fff; 
+  color: #1E1B4B;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+  font-weight: bold;
+}
+.btn-circle-arrow:hover {
+  transform: translateX(5px);
+}
+
+/* =========================================
+   🏷️ CATEGORY SECTION
+========================================= */
+.category-section {
+  padding: 20px 0;
+}
+
+.category-subtitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #475569;
+  margin: 0;
+}
+
+.category-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1E1B4B;
+  margin: 4px 0 20px 0;
+}
+
+.filter-pills {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  padding: 8px 24px;
+  border-radius: 30px;
+  border: 1px solid #CBD5E1;
+  background: #fff;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pill.active {
+  background: var(--theme-blue);
+  color: #fff;
+  border-color: var(--theme-blue);
+}
+
+/* =========================================
+   ⭐ GATHER PICKS BANNER
+========================================= */
+.gather-picks-banner {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  padding: 16px 24px;
+  border-radius: 12px;
+  margin: 30px 0;
+  border: 1px solid #E2E8F0;
+  gap: 16px;
+}
+
+.gather-badge {
+  color: var(--theme-blue);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.gather-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1E1B4B;
+  margin: 0;
+  flex: 1;
+}
+
+.gather-arrow {
+  font-size: 24px;
+  font-weight: bold;
+  color: #64748B;
+  cursor: pointer;
+}
+
+/* =========================================
+   📅 EVENTS GRID (2 COLUMNS)
+========================================= */
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
+}
+
+.event-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border: 1px solid #E2E8F0;
+}
+
+/* 🔹 Card Banner */
+.card-banner {
+  width: 100%;
+  height: 200px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-align: center;
+  padding: 24px;
+}
+
+.status-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.banner-text {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+/* 🔹 Card Body */
+.card-body {
+  display: flex;
+  padding: 24px;
+  gap: 20px;
+}
+
+.date-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 50px;
+}
+
+.date-month {
+  color: var(--theme-blue);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.date-day {
+  color: #1E1B4B;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.card-content {
+  flex: 1;
+}
+
+.event-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1E1B4B;
+  margin: 0 0 8px 0;
+}
+
+.event-description {
+  font-size: 14px;
+  color: #64748B;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.meta-info {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #64748B;
+  margin-bottom: 24px;
+  font-weight: 500;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 16px;
+}
+
+.seats-count {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+.btn-register {
+  background: var(--theme-blue);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-register:hover {
+  background: var(--theme-blue-hover);
+}
+
+/* =========================================
+   📱 RESPONSIVE
+========================================= */
+@media (max-width: 992px) {
+  .events-grid {
+    grid-template-columns: 1fr;
+  }
+  .hero-section {
+    flex-direction: column;
+  }
+  .hero-card-container {
+    width: 100%;
+    max-width: 100%;
+  }
+}

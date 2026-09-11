@@ -1,0 +1,21 @@
+/* global.css — loaded first, guarantees the app always fills the viewport
+   regardless of which page-specific CSS files get bundled alongside it. */
+
+html, body, #root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+* , *::before, *::after {
+  box-sizing: border-box;
+}
+
+img, svg {
+  max-width: 100%;
+}
