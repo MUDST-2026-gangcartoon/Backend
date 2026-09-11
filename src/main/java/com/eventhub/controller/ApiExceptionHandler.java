@@ -13,12 +13,35 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.access.AccessDeniedException;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
     private static final Logger log =
             LoggerFactory.getLogger(ApiExceptionHandler.class);
 
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiDtos.ErrorDto> handleAuthentication(
+            AuthenticationException ex
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiDtos.ErrorDto(
+                        "Invalid email or password"
+                ));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiDtos.ErrorDto> handleAccessDenied(
+            AccessDeniedException ex
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(new ApiDtos.ErrorDto(
+                        "Access denied"
+                ));
+    }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiDtos.ErrorDto> handleValidation(
             MethodArgumentNotValidException ex

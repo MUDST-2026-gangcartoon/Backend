@@ -8,6 +8,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import java.util.Locale;
+
 public final class ApiDtos {
 
     private ApiDtos() {
@@ -28,6 +30,11 @@ public final class ApiDtos {
             @Size(max = 100, message = "Password must not exceed 100 characters")
             String password
     ) {
+        public LoginRequest {
+            if (email != null) {
+                email = email.trim().toLowerCase(Locale.ROOT);
+            }
+        }
     }
 
     public record SignupRequest(
@@ -53,6 +60,15 @@ public final class ApiDtos {
             )
             String password
     ) {
+        public SignupRequest {
+            if (name != null) {
+                name = name.trim();
+            }
+
+            if (email != null) {
+                email = email.trim().toLowerCase(Locale.ROOT);
+            }
+        }
     }
 
     public record UserDto(
@@ -62,7 +78,11 @@ public final class ApiDtos {
             Role role
     ) {
     }
-
+    public record CsrfDto(
+            String token,
+            String headerName
+    ) {
+    }
 
     // =========================
     // Detail Images

@@ -5,3 +5,9 @@ spring:
 
   jpa:
     open-in-view: false
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
