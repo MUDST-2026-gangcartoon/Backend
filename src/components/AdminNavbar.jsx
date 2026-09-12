@@ -1,18 +1,34 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthModal from './AuthModal.jsx';
+import logo from '../../assets/public/logo.png';
 
 export default function AdminNavbar() {
-  const { isLoggedIn, user, openModal } = useAuth();
+  const { isLoggedIn, user, openModal, logout } = useAuth();
+  const navigate = useNavigate();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  // State สำหรับจัดการเปลี่ยนภาษา (ไทย / EN)
+  const [currentLang, setCurrentLang] = useState('ไทย');
+
+  const handleLogout = () => {
+    setIsDropdownOpen(false);
+    logout();
+    navigate('/');
+  };
+
+  const toggleLanguage = () => {
+    setCurrentLang((prev) => (prev === 'ไทย' ? 'EN' : 'ไทย'));
+  };
 
   return (
     <>
       <nav className="navbar">
         <div className="nav-left">
-          <a className="logo" href="/admin/dashboard">
-            <img src="/logo.png" alt="EVentFast" />
-          </a>
+          <NavLink to="/" className="logo" aria-label="หน้าหลักค้นหาอีเวนต์">
+            <img src={logo} alt="EventFest." />
+          </NavLink>
           <div className="search-box">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8" />
@@ -34,7 +50,9 @@ export default function AdminNavbar() {
         <div className="nav-right">
           {!isLoggedIn && (
             <div className="nav-auth-buttons">
-              <button className="btn-lang-toggle">EN</button>
+              <button className="btn-lang-toggle" onClick={toggleLanguage}>
+                {currentLang}
+              </button>
               <a href="#" className="btn-nav-register" onClick={(e) => { e.preventDefault(); openModal('register'); }}>
                 สมัครสมาชิก
               </a>
@@ -45,14 +63,39 @@ export default function AdminNavbar() {
           )}
 
           {isLoggedIn && (
-            <div className="user-profile">
-              <div className="lang-text">ไทย</div>
-              <div className="avatar">{user.avatarLetter}</div>
-              <div className="user-info">
-                <div className="username">{user.username}</div>
-                <div className="role">ผู้ดูแลระบบ</div>
+            <div className="user-profile flex items-center">
+              {/* ปุ่มสลับภาษาและเส้นกั้นแนวตั้ง */}
+              <button 
+                className="lang-text bg-transparent border-none cursor-pointer font-medium px-2"
+                onClick={toggleLanguage}
+              >
+                {currentLang}
+              </button>
+              <div className="lang-divider" style={{ width: '1px', height: '24px', backgroundColor: '#cbd5e1', margin: '0 8px' }} />
+
+              <div
+                className="user-profile"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="avatar" style={{ backgroundColor: '#bae6fd', color: '#0369a1' }}>
+                  {user?.avatarLetter || 'A'}
+                </div>
+                <div className="user-info">
+                {/* บังคับแสดงคำว่า Staff และ สตาฟหน้างาน สำหรับหน้า Staff โดยเฉพาะ */}
+                  <div className="username">{user?.username || 'Admin'}</div>
+                  <div className="role">{user?.roleLabel || 'ผู้ดูแลระบบ'}</div>
+                </div>
+                <span className="dropdown-icon" style={{ transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }}>▼</span>
               </div>
-              <span className="dropdown-icon">▼</span>
+
+              {isDropdownOpen && (
+                <div className="profile-dropdown-menu">
+                  <button type="button" className="dropdown-item logout-btn" onClick={handleLogout}>
+                    🚪 ออกจากระบบ
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

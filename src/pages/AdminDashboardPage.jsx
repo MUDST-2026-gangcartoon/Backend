@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from "../components/Navbar";
+import AdminNavbar from '../components/AdminNavbar.jsx';
 import '../admin-dashboard.css';
 
 const funnel = [
@@ -14,7 +14,7 @@ export default function AdminDashboardPage() {
 
   return (
     <>
-      <Navbar />
+      <AdminNavbar />
 
       <main className="dashboard-page">
         <section className="dashboard-header">
@@ -105,13 +105,13 @@ export default function AdminDashboardPage() {
             <div className="dashboard-donut-content">
               <div className="dashboard-donut">
                 <svg width="130" height="130" viewBox="0 0 130 130" aria-hidden="true">
-                  <circle cx="65" cy="65" r="50" fill="none" stroke="#E7E3F6" strokeWidth="14" />
+                  <circle cx="65" cy="65" r="50" fill="none" stroke="#BAE6FD" strokeWidth="14" />
                   <circle
                     cx="65"
                     cy="65"
                     r="50"
                     fill="none"
-                    stroke="#FF8A5B"
+                    stroke="#FF6B4A"
                     strokeWidth="14"
                     strokeDasharray="1 314"
                     transform="rotate(-90 65 65)"

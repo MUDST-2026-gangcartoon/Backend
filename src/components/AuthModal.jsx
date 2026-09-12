@@ -1,41 +1,42 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function AuthModal() {
-  // ดึง openModal มาใช้ด้วยเพื่อสลับหน้า
-  const { modal, closeModal, openModal, login } = useAuth();
-
-  // State สำหรับเก็บค่าฟอร์ม Login
+  const { modal, closeModal, login, register } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [loginError, setLoginError] = useState('');
 
   if (!modal) return null;
 
-  const switchModal = (type) => {
-    setErrorMsg(''); // ล้างข้อความ Error
-    setEmail('');
-    setPassword('');
-    openModal(type); // สลับหน้าไป login หรือ register
-  };
-
   const handleLogin = (e) => {
     e.preventDefault();
-    // ส่งอีเมลและรหัสผ่านไปเช็ก
-    const success = login(email, password);
-    if (!success) {
-      setErrorMsg('อีเมลหรือรหัสผ่านไม่ถูกต้อง (ลอง user@test.com / 1234)');
+    const result = login(email, password);
+
+    if (!result.success) {
+      setLoginError(result.message);
+      return;
+    }
+
+    setLoginError('');
+    setEmail('');
+    setPassword('');
+
+    // หลัง Login ให้ไปยังหน้าแรกของแต่ละ Role
+    if (result.user?.role === 'admin') {
+      navigate('/admin/dashboard');
+    } else if (result.user?.role === 'staff') {
+      navigate('/staff/checkin');
     } else {
-      setErrorMsg('');
-      setEmail('');
-      setPassword('');
+      navigate('/');
     }
   };
 
   const handleRegister = (e) => {
     e.preventDefault();
-    alert('ระบบจำลอง: สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
-    switchModal('login');
+    register();
   };
 
   return (
@@ -49,39 +50,52 @@ export default function AuthModal() {
           <div className="login-subtitle">สำหรับสมาชิก</div>
           <h1 className="login-title">เข้าสู่ระบบเพื่อลงทะเบียน</h1>
 
-          {/* แสดงแจ้งเตือนกรณีรหัสผิด */}
-          {errorMsg && <div style={{ color: 'red', textAlign: 'center', marginBottom: '12px', fontSize: '14px' }}>{errorMsg}</div>}
-
           <form onSubmit={handleLogin}>
             <div className="form-group">
               <label>อีเมล</label>
-              <input 
-                type="email" 
+              <input
+                type="email"
+                required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="เช่น user@test.com"
-                required 
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setLoginError('');
+                }}
+                placeholder="user@test.com"
               />
             </div>
             <div className="form-group">
               <label>รหัสผ่าน</label>
-              <input 
-                type="password" 
+              <input
+                type="password"
+                required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="เช่น 1234"
-                required 
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setLoginError('');
+                }}
+                placeholder="1234"
               />
             </div>
+
+            {loginError && (
+              <p className="helper-text err" role="alert">{loginError}</p>
+            )}
+
             <button type="submit" className="btn-submit-login">
               เข้าสู่ระบบ
             </button>
           </form>
 
           <div className="login-footer">
-            ยังไม่มีบัญชีใช่ไหม?{' '}
-            {/* 🔹 แก้ตรงนี้ให้ใช้ switchModal */}
-            <a href="#" onClick={(e) => { e.preventDefault(); switchModal('register'); }}>
+            Mock User: <b>user@test.com / 1234</b><br />
+            Mock Admin: <b>admin@test.com / 1234</b><br />
+            Mock Staff: <b>staff@test.com / 1234</b>
+          </div>
+
+          <div className="login-footer">
+            ยังไม่มีบัญชี Petopia?{' '}
+            <a href="#" onClick={(e) => { e.preventDefault(); register(); }}>
               สร้างบัญชีใหม่
             </a>
           </div>
@@ -92,11 +106,9 @@ export default function AuthModal() {
         <div className="auth-modal-box" onClick={(e) => e.stopPropagation()}>
           <button className="btn-close-modal" onClick={closeModal}>✕</button>
           <div className="login-icon">
-            <img src="/assets/public/logo.png" alt="EventFest." />
+            <img src="https://via.placeholder.com/48/D1FAE5/FFFFFF?text=+" alt="Icon" />
           </div>
-          <div className="login-subtitle" style={{ color: '#10B981' }}>
-            สมัครสมาชิก
-          </div>
+          <div className="login-subtitle" style={{ color: '#10B981' }}>สมัครสมาชิก</div>
           <h1 className="login-title">สร้างบัญชีของคุณ</h1>
 
           <form onSubmit={handleRegister}>
@@ -119,8 +131,7 @@ export default function AuthModal() {
 
           <div className="login-footer">
             มีบัญชีอยู่แล้ว?{' '}
-            {/* 🔹 แก้ตรงนี้ให้ใช้ switchModal */}
-            <a href="#" onClick={(e) => { e.preventDefault(); switchModal('login'); }}>
+            <a href="#" onClick={(e) => { e.preventDefault(); closeModal(); }}>
               เข้าสู่ระบบ
             </a>
           </div>

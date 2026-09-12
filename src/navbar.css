@@ -1,4 +1,19 @@
 /* =========================================
+   🎨 THEME VARIABLES (โทนสีฟ้าหลัก)
+========================================= */
+:root {
+  --primary-blue: #70C5FF;       /* 🌟 สีหลัก */
+  --primary-blue-hover: #38BDF8; /* สีตอน Hover */
+  --dark-blue: #0284C7;          /* สีฟ้าเข้มสำหรับเน้น */
+  --light-blue: #BAE6FD;         /* สีฟ้าอ่อนสำหรับเส้นขอบ */
+  --bg-color: #F8FAFC;           /* สีพื้นหลังเทาอมฟ้าอ่อน */
+  --bg-white: #ffffff;
+  --text-main: #1E1B4B;          /* สีข้อความหลัก */
+  --text-muted: #64748B;         /* สีข้อความรอง */
+  --border-light: #E2E8F0;
+}
+
+/* =========================================
    📌 NAVBAR STYLES
 ========================================= */
 
@@ -6,20 +21,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   width: 100%;
   padding: 12px 40px;
-
-  background: #ffffff;
-  border-bottom: 1px solid #E2E8F0;
-
+  background: var(--bg-white);
+  border-bottom: 1px solid var(--border-light);
   position: sticky;
   top: 0;
   z-index: 100;
-
   font-family: "Kanit", sans-serif;
 }
-
 
 /* =========================================
    📌 LEFT / CENTER / RIGHT
@@ -38,7 +48,6 @@
 
 .nav-center {
   gap: 32px;
-
   /* ให้เมนูอยู่ตรงกลาง */
   position: absolute;
   left: 50%;
@@ -49,7 +58,6 @@
   gap: 20px;
 }
 
-
 /* =========================================
    📌 LOGO
 ========================================= */
@@ -57,21 +65,16 @@
 .logo {
   display: flex;
   align-items: center;
-
   gap: 8px;
-
   text-decoration: none;
   color: inherit;
-
   flex-shrink: 0;
 }
 
 .logo img {
   display: block;
-
   height: 50px;
   width: auto;
-
   object-fit: contain;
 }
 
@@ -93,9 +96,8 @@
 
 .brand-sub {
   font-size: 10px;
-  color: var(--text-muted, #64748B);
+  color: var(--text-muted);
 }
-
 
 /* =========================================
    📌 SEARCH BOX
@@ -104,42 +106,37 @@
 .search-box {
   display: flex;
   align-items: center;
-
-  background: #F1F5F9;
-
+  background: var(--bg-color);
   padding: 8px 16px;
-
   border-radius: 8px;
-
   gap: 8px;
-
   width: 260px;
+  border: 1px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.search-box:focus-within {
+  border-color: var(--primary-blue);
 }
 
 .search-box svg {
   flex-shrink: 0;
-  color: #64748B;
+  color: var(--text-muted);
 }
 
 .search-box input {
   border: none;
-
   background: transparent;
-
   outline: none;
-
   width: 100%;
-
   font-family: "Kanit", sans-serif;
   font-size: 13px;
-
-  color: #111827;
+  color: var(--text-main);
 }
 
 .search-box input::placeholder {
   color: #94A3B8;
 }
-
 
 /* =========================================
    📌 NAVIGATION LINKS
@@ -147,51 +144,35 @@
 
 .nav-link {
   text-decoration: none;
-
-  color: #64748B;
-
+  color: var(--text-muted);
   font-size: 14px;
-
   font-weight: 500;
-
   position: relative;
-
   padding: 8px 0;
-
   white-space: nowrap;
-
   transition: color 0.2s ease;
 }
 
 .nav-link:hover {
-  color: #111827;
+  color: var(--text-main);
 }
 
 .nav-link.active {
-  color: #111827;
-
+  color: var(--text-main);
   font-weight: 600;
-
   text-transform: uppercase;
 }
 
 .nav-link.active::after {
   content: "";
-
   position: absolute;
-
   bottom: 0;
   left: 0;
-
   width: 100%;
   height: 3px;
-
-  /* 🔹 เปลี่ยนสีขีดเส้นใต้เป็นสีฟ้า */
-  background-color: var(--theme-blue, #2563EB);
-
+  background-color: var(--primary-blue); /* เปลี่ยนเป็นสีฟ้า */
   border-radius: 2px;
 }
-
 
 /* =========================================
    📌 USER PROFILE VIEW
@@ -200,42 +181,31 @@
 
 .user-profile {
   display: flex;
-
   align-items: center;
-
   gap: 10px;
-
   cursor: pointer;
 }
 
 .lang-text {
   font-size: 14px;
-  color: #64748B;
+  color: var(--text-muted);
 }
 
 .avatar {
   width: 36px;
   height: 36px;
-
-  /* 🔹 เปลี่ยนสีพื้นหลังรูปโปรไฟล์เป็นสีฟ้า และตัวหนังสือสีขาว */
-  background-color: var(--theme-blue, #2563EB);
+  background-color: var(--primary-blue); /* สีฟ้า */
   color: #ffffff;
-
   border-radius: 50%;
-
   display: flex;
-
   align-items: center;
   justify-content: center;
-
   font-weight: 700;
 }
 
 .user-info {
   display: flex;
-
   flex-direction: column;
-
   line-height: 1.3;
 }
 
@@ -245,15 +215,14 @@
 }
 
 .role {
-  color: #64748B;
+  color: var(--text-muted);
   font-size: 11px;
 }
 
 .dropdown-icon {
   font-size: 10px;
-  color: #64748B;
+  color: var(--text-muted);
 }
-
 
 /* =========================================
    📌 GUEST VIEW
@@ -262,12 +231,9 @@
 
 #nav-guest-view {
   display: flex;
-
   align-items: center;
-
   gap: 12px;
 }
-
 
 /* =========================================
    📌 LANGUAGE BUTTON
@@ -275,26 +241,18 @@
 
 .btn-lang-toggle {
   background: transparent;
-
   border: none;
-
   padding: 8px 4px;
-
   font-family: "Kanit", sans-serif;
-
   font-size: 14px;
-
   font-weight: 500;
-
-  color: #64748B;
-
+  color: var(--text-muted);
   cursor: pointer;
 }
 
 .btn-lang-toggle:hover {
-  color: #111827;
+  color: var(--text-main);
 }
-
 
 /* =========================================
    📌 REGISTER BUTTON
@@ -302,37 +260,26 @@
 
 .btn-nav-register {
   display: inline-flex;
-
   align-items: center;
   justify-content: center;
-
   padding: 8px 16px;
-
   border-radius: 8px;
-
   background: transparent;
-
-  border: 1px solid #E2E8F0;
-
-  color: #111827;
-
+  border: 1px solid var(--primary-blue); /* เปลี่ยนเป็นสีฟ้า */
+  color: var(--primary-blue); /* เปลี่ยนเป็นสีฟ้า */
   text-decoration: none;
-
   font-family: "Kanit", sans-serif;
-
   font-size: 14px;
-
   font-weight: 600;
-
   cursor: pointer;
-
   transition: all 0.2s ease;
 }
 
 .btn-nav-register:hover {
-  background: #F1F5F9;
+  background: var(--bg-color);
+  color: var(--primary-blue-hover);
+  border-color: var(--primary-blue-hover);
 }
-
 
 /* =========================================
    📌 LOGIN BUTTON
@@ -340,39 +287,27 @@
 
 .btn-nav-login {
   display: inline-flex;
-
   align-items: center;
   justify-content: center;
-
   padding: 8px 16px;
-
   border-radius: 8px;
-
-  /* 🔹 เปลี่ยนปุ่ม Login เป็นสีฟ้า */
-  background: var(--theme-blue, #2563EB);
-  border: 1px solid var(--theme-blue, #2563EB);
-
+  background: var(--primary-blue); /* เปลี่ยนเป็นสีฟ้า */
+  border: 1px solid var(--primary-blue);
   color: #ffffff;
-
   text-decoration: none;
-
   font-family: "Kanit", sans-serif;
-
   font-size: 14px;
-
-  font-weight: 600;
-
+  font-weight: 700;
   cursor: pointer;
-
   transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(112, 197, 255, 0.3);
 }
 
 .btn-nav-login:hover {
-  /* 🔹 เปลี่ยนสีเมื่อ Hover เป็นสีฟ้าเข้ม */
-  background: var(--theme-blue-hover, #1D4ED8);
-  border-color: var(--theme-blue-hover, #1D4ED8);
+  background: var(--primary-blue-hover);
+  border-color: var(--primary-blue-hover);
+  transform: translateY(-1px);
 }
-
 
 /* =========================================
    📌 AUTH MODAL
@@ -380,61 +315,42 @@
 
 .auth-modal-overlay {
   position: fixed;
-
   top: 0;
   left: 0;
-
   width: 100%;
   height: 100%;
-
-  background: rgba(0, 0, 0, 0.45);
-
+  background: rgba(15, 23, 42, 0.65); /* ปรับสี Overlay ให้ดูพรีเมียมขึ้น */
+  backdrop-filter: blur(4px);
   display: flex;
-
   align-items: center;
   justify-content: center;
-
   z-index: 9999;
 }
 
 .auth-modal-box {
   position: relative;
-
   width: 420px;
-
   max-width: calc(100% - 40px);
-
-  background: #ffffff;
-
+  background: var(--bg-white);
   border-radius: 16px;
-
   padding: 32px;
-
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
 }
 
 .btn-close-modal {
   position: absolute;
-
   top: 15px;
   right: 15px;
-
   border: none;
-
   background: transparent;
-
   font-size: 20px;
-
   cursor: pointer;
-
-  color: #64748B;
+  color: var(--text-muted);
 }
 
 .btn-close-modal:hover {
-  color: #111827;
+  color: var(--text-main);
 }
-
 
 /* =========================================
    📌 MODAL FORM
@@ -442,82 +358,60 @@
 
 .login-icon {
   display: flex;
-
   justify-content: center;
-
   margin-bottom: 15px;
 }
 
 .login-icon img {
   width: 48px;
   height: 48px;
-
   border-radius: 10px;
 }
 
 .login-subtitle {
   text-align: center;
-
-  color: var(--theme-blue, #2563EB);
-
+  color: var(--primary-blue); /* เปลี่ยนเป็นสีฟ้า */
   font-size: 14px;
-
   margin-bottom: 5px;
+  font-weight: 600;
 }
 
 .login-title {
   text-align: center;
-
   margin: 0 0 25px;
-
   font-size: 24px;
-
-  font-weight: 600;
-
-  color: #111827;
+  font-weight: 700;
+  color: var(--text-main);
 }
 
 .form-group {
   display: flex;
-
   flex-direction: column;
-
   gap: 6px;
-
   margin-bottom: 16px;
 }
 
 .form-group label {
   font-size: 14px;
-
   font-weight: 500;
-
-  color: #374151;
+  color: var(--text-main);
 }
 
 .form-group input {
   width: 100%;
-
   height: 42px;
-
   padding: 0 12px;
-
-  border: 1px solid #E2E8F0;
-
+  border: 1px solid var(--border-light);
   border-radius: 8px;
-
   outline: none;
-
   font-family: "Kanit", sans-serif;
-
   font-size: 14px;
+  transition: border-color 0.2s ease;
 }
 
 .form-group input:focus {
-  /* 🔹 เปลี่ยนสีกรอบ Input ตอนคลิกใช้งานเป็นสีฟ้า */
-  border-color: var(--theme-blue, #2563EB);
+  border-color: var(--primary-blue); /* เปลี่ยนเป็นสีฟ้าเวลาพิมพ์ */
 }
-
 
 /* =========================================
    📌 MODAL BUTTONS
@@ -526,46 +420,38 @@
 .btn-submit-login,
 .btn-submit-register {
   width: 100%;
-
   height: 44px;
-
   border: none;
-
   border-radius: 8px;
-
   font-family: "Kanit", sans-serif;
-
   font-size: 15px;
-
-  font-weight: 600;
-
+  font-weight: 700;
   cursor: pointer;
-
-  transition: 0.2s;
+  transition: 0.2s ease;
 }
 
 .btn-submit-login {
-  /* 🔹 เปลี่ยนปุ่มกดยืนยัน Login เป็นสีฟ้า */
-  background: var(--theme-blue, #2563EB);
-
+  background: var(--primary-blue); /* เปลี่ยนเป็นสีฟ้า */
   color: #ffffff;
+  margin-bottom: 12px; /* เผื่อระยะห่างถ้ามี 2 ปุ่ม */
 }
 
 .btn-submit-login:hover {
-  background: var(--theme-blue-hover, #1D4ED8);
+  background: var(--primary-blue-hover);
 }
 
+/* ปรับปุ่ม Register ใน Modal ให้เข้าธีมฟ้า (เป็นแบบ Outlined) */
 .btn-submit-register {
-  /* ปุ่มสมัครสมาชิกเก็บไว้เป็นสีเขียวเพื่อแยกแยะการกระทำที่ชัดเจน (หรือจะเปลี่ยนก็ได้ถ้าต้องการ) */
-  background: #10B981;
-
-  color: #ffffff;
+  background: var(--bg-white);
+  color: var(--primary-blue);
+  border: 1px solid var(--primary-blue);
 }
 
 .btn-submit-register:hover {
-  background: #059669;
+  background: var(--bg-color);
+  color: var(--primary-blue-hover);
+  border-color: var(--primary-blue-hover);
 }
-
 
 /* =========================================
    📌 MODAL FOOTER
@@ -573,157 +459,140 @@
 
 .login-footer {
   margin-top: 18px;
-
   text-align: center;
-
   font-size: 13px;
-
-  color: #64748B;
+  color: var(--text-muted);
 }
 
 .login-footer a {
-  /* 🔹 ปรับสีลิงก์ใน Footer เป็นสีฟ้า */
-  color: var(--theme-blue, #2563EB);
-
+  color: var(--primary-blue); /* เปลี่ยนเป็นสีฟ้า */
   text-decoration: none;
-
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .login-footer a:hover {
   text-decoration: underline;
 }
 
-
 /* =========================================
    📌 RESPONSIVE
 ========================================= */
 
 @media (max-width: 1000px) {
-
   .navbar {
     padding: 12px 20px;
   }
-
   .search-box {
     width: 200px;
   }
-
   .nav-center {
     gap: 20px;
   }
-
 }
-
 
 @media (max-width: 800px) {
-
   .navbar {
     flex-wrap: wrap;
-
-    gap: 15px;
+    gap: 12px;
+    padding: 12px 16px;
   }
-
   .nav-left {
     flex: 1;
+    gap: 12px;
   }
-
+  /* ปลด absolute ออก เพื่อให้ไม่ทับซ้อนและไม่หายไปบนจอเล็ก */
   .nav-center {
     position: static;
-
     transform: none;
-
     order: 3;
-
     width: 100%;
-
     justify-content: center;
+    border-top: 1px solid var(--border-light);
+    padding-top: 8px;
   }
-
+  .nav-right {
+    display: flex !important;
+    align-items: center;
+  }
 }
-
 
 @media (max-width: 600px) {
-
   .navbar {
-    padding: 12px 15px;
+    padding: 10px 12px;
   }
-
   .search-box {
-    display: none;
+    display: flex !important; /* บังคับให้แสดงช่องค้นหา */
+    width: 120px !important;  /* ย่อความกว้างให้พอดีกับจอมือถือ */
+    padding: 4px 8px;
   }
-
+  .search-box input {
+    font-size: 11px;
+  }
   .nav-right {
+    display: flex !important;
     gap: 8px;
   }
-
+  /* ย่อขนาดตัวหนังสือหรือปุ่มเล็กน้อยบนมือถือ */
   .btn-nav-register,
   .btn-nav-login {
-    padding: 7px 10px;
-
+    padding: 6px 10px;
     font-size: 12px;
   }
-
+  /* บนมือถือให้ซ่อน Sub-text ให้เหลือแค่ชื่อ เพื่อกันล้นจอ */
+  .user-info .role {
+    display: none;
+  }
+  .username {
+    font-size: 12px;
+  }
 }
 
-.nav-left .logo img {
-  display: block;
-  width: 50px;
-  height: auto;
-  object-fit: contain;
+/* =========================================
+   📌 ซ่อนและปรับแต่งหน้าตา Google Translate
+========================================= */
+
+.skiptranslate iframe,
+.goog-te-banner-frame {
+  display: none !important;
 }
 
-/* ตกแต่งกล่อง Dropdown */
-.profile-dropdown-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 8px;
-  background-color: #ffffff;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  padding: 6px;
-  min-width: 150px;
-  z-index: 1000;
+body {
+  top: 0px !important; 
 }
 
-.dropdown-item {
-  width: 100%;
-  padding: 10px 14px;
-  border: none;
-  background: transparent;
-  text-align: left;
-  font-size: 14px;
-  font-family: inherit;
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background-color 0.2s, color 0.2s;
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
 }
 
-.dropdown-item.logout-btn {
-  color: #EF4444; /* สีแดงสำหรับออกจากระบบ */
-}
-
-.dropdown-item.logout-btn:hover {
-  background-color: #FEF2F2;
-}
-
-/* ตกแต่งปุ่มภาษา */
-.btn-lang-toggle {
-  background: transparent;
-  border: 1px solid #E5E7EB;
+.goog-te-combo {
   padding: 6px 12px;
   border-radius: 6px;
+  border: 1px solid var(--border-light);
+  background-color: var(--bg-white);
+  font-family: "Kanit", sans-serif;
   font-size: 14px;
-  font-weight: 600;
-  color: #374151;
+  outline: none;
   cursor: pointer;
-  transition: all 0.2s;
+  color: var(--text-main);
+  transition: border-color 0.2s;
 }
 
-.btn-lang-toggle:hover {
-  background-color: #F3F4F6;
-  border-color: #D1D5DB;
+.goog-te-combo:focus {
+  border-color: var(--primary-blue);
+}
+
+.goog-te-gadget {
+  color: transparent !important;
+  font-size: 0px !important;
+}
+
+.goog-te-gadget .goog-logo-link {
+  display: none !important;
+}
+
+.skiptranslate, 
+.goog-te-banner-frame, 
+#google_translate_hidden_element {
+  display: none !important;
 }
