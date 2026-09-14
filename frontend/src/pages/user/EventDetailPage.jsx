@@ -83,32 +83,28 @@ const mockEventsDatabase = [
 
 export default function EventDetailPage() {
   const navigate = useNavigate();
-  const { eventId } = useParams(); // 🟢 ดึง ID มาจาก URL เช่น /event-detail/1
+  const { eventId } = useParams();
 
   // 🟢 1. STATE MANAGEMENT
   const [eventData, setEventData] = useState(null);
   const [selectedTicketIndex, setSelectedTicketIndex] = useState(0);
   const [qty, setQty] = useState(1);
-  const [showOrganizer, setShowOrganizer] = useState(false);
+  
+  const [showOrganizer, setShowOrganizer] = useState(true);
   const [showTickets, setShowTickets] = useState(true);
   
   const [activeModal, setActiveModal] = useState(null); 
   const [paymentTimeLeft, setPaymentTimeLeft] = useState(300);
   const [refCode, setRefCode] = useState('');
 
-  // 🟢 2. ค้นหาข้อมูลอีเวนต์เมื่อ Component โหลด หรือ URL เปลี่ยน
+  // 🟢 2. ค้นหาข้อมูลอีเวนต์
   useEffect(() => {
-    // แปลง eventId จาก URL เป็นตัวเลข แล้วไปหาใน mockDatabase
     const foundEvent = mockEventsDatabase.find(e => e.id === parseInt(eventId));
-    
     if (foundEvent) {
       setEventData(foundEvent);
     } else {
-      // ถ้าหาไม่เจอ (เช่น URL เป็น /event-detail เฉยๆ) ให้แสดงงานที่ 1 เป็นค่าเริ่มต้น
       setEventData(mockEventsDatabase[0]);
     }
-    
-    // รีเซ็ตค่าเมื่อเปลี่ยนหน้า
     setSelectedTicketIndex(0);
     setQty(1);
   }, [eventId]);
@@ -138,7 +134,6 @@ export default function EventDetailPage() {
   };
 
   // 🟢 4. HANDLERS
-  // ป้องกัน Error ระหว่างที่ eventData ยังโหลดไม่เสร็จ
   if (!eventData) return <div style={{textAlign: 'center', marginTop: '100px'}}>กำลังโหลดข้อมูล...</div>;
 
   const selectedTicket = eventData.tickets[selectedTicketIndex];
@@ -236,7 +231,7 @@ export default function EventDetailPage() {
                   {showOrganizer ? 'ซ่อนข้อมูลผู้จัด >' : 'แสดงข้อมูลผู้จัด >'}
                 </button>
               </div>
-              {!showOrganizer && (
+              {showOrganizer && (
                 <div className="org-profile">
                   <div className="org-avatar theme-bg">{eventData.organizer.avatarLetter}</div>
                   <div className="org-info">
@@ -251,45 +246,46 @@ export default function EventDetailPage() {
 
           {/* ================= ฝั่งขวา ================= */}
           <div className="event-sidebar">
-              <div className="ticket-card">
+              <div className="event-booking-card">
                 <span className="ticket-label">ที่นั่ง</span>
-                <h2 className="ticket-left theme-text">เหลือ 40 ที่นั่ง</h2>
-                <p className="ticket-reg">ลงทะเบียนแล้ว 10 / 50</p>
+                <h2 className="ticket-left theme-text">เหลือ {eventData.seatsLeft} ที่นั่ง</h2>
+                <p className="ticket-reg">ลงทะเบียนแล้ว {eventData.registeredSeats} / {eventData.totalSeats}</p>
                 
                 <div className="ticket-divider" />
 
-                <div className="ticket-types-toggle">
-                  <span>🎟️ ซ่อนประเภทบัตร</span>
-                  <span>›</span>
+                <div 
+                  className="ticket-types-toggle" 
+                  onClick={() => setShowTickets(!showTickets)}
+                  style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}
+                >
+                  <span>🎟️ {showTickets ? 'ซ่อนประเภทบัตร' : 'แสดงประเภทบัตร'}</span>
+                  <span>{showTickets ? '˅' : '›'}</span>
                 </div>
 
-                <div className="ticket-list">
-                  <div className="ticket-item">
-                    <div className="t-info">
-                      <div className="t-name">Student</div>
-                      <div className="t-desc">สำหรับนักศึกษา</div>
-                    </div>
-                    <div className="t-price theme-text">ฟรี</div>
+                {showTickets && (
+                  <div className="ticket-list">
+                    {eventData.tickets.map(t => (
+                      <div className="ticket-item" key={t.id}>
+                        <div className="t-info">
+                          <div className="t-name">{t.name}</div>
+                          <div className="t-desc">{t.desc}</div>
+                        </div>
+                        <div className="t-price theme-text">{t.priceText}</div>
+                      </div>
+                    ))}
                   </div>
-
-                  <div className="ticket-item">
-                    <div className="t-info">
-                      <div className="t-name">Public</div>
-                      <div className="t-desc">บุคคลทั่วไป</div>
-                    </div>
-                    <div className="t-price theme-text">฿290</div>
-                  </div>
-                </div>
+                )}
 
                 <button className="btn-register theme-bg" onClick={handleRegisterClick}>
                   ลงทะเบียน →
                 </button>
               </div>
-            </div>
+          </div>
         </div>
       </div>
 
       {/* ================= MODALS ================= */}
+      {/* 1. Modal เลือกบัตร */}
       {activeModal === 'booking' && (
         <div className="custom-modal-overlay">
           <div className="custom-modal-box">
@@ -329,66 +325,77 @@ export default function EventDetailPage() {
               <div className="total-section">
                 <span>รวมทั้งหมด</span>
                 <span className="theme-text" style={{ fontSize: '20px', fontWeight: 'bold' }}>
-                  {totalPrice === 0 ? 'ฟรี' : `฿${totalPrice.toLocaleString()}`}
+                  ฿{totalPrice.toLocaleString()}
                 </span>
               </div>
+            </div>
 
-              <button className="btn-register theme-bg" onClick={handleConfirmBooking} style={{ marginTop: '16px' }}>
-                {totalPrice === 0 ? 'ยืนยันการรับบัตรฟรี' : `ดำเนินการชำระเงิน ฿${totalPrice.toLocaleString()}`}
+            <div className="modal-footer">
+              <button 
+                className="btn-modal-confirm theme-bg" 
+                style={{ width: '100%', padding: '12px', fontSize: '16px', borderRadius: '8px', border: 'none', color: '#fff', cursor: 'pointer' }}
+                onClick={handleConfirmBooking}
+              >
+                ยืนยันการจอง
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* 2. Modal ชำระเงิน */}
       {activeModal === 'payment' && (
         <div className="custom-modal-overlay">
           <div className="custom-modal-box" style={{ textAlign: 'center' }}>
             <button className="btn-close-modal" onClick={() => setActiveModal(null)}>✕</button>
-            <h2 className="modal-title" style={{ marginTop: '16px' }}>ชำระเงิน</h2>
-            <div className="total-section" style={{ justifyContent: 'center', margin: '24px 0' }}>
-              <span className="theme-text" style={{ fontSize: '32px', fontWeight: 'bold' }}>฿{totalPrice.toLocaleString()}</span>
+            <div className="modal-header">
+              <h2 className="modal-title">ชำระเงิน</h2>
+              <p>สแกน QR Code ด้านล่างเพื่อชำระเงิน</p>
             </div>
             
-            <div style={{ 
-              margin: '0 auto 24px', 
-              width: '200px', 
-              height: '200px', 
-              background: 'white', 
-              padding: '12px',
-              borderRadius: '16px',
-              border: '1px solid #E5E7EB',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center' 
-            }}>
-              <img 
-                src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://promptpay.io/0812345678/290" 
-                alt="QR Code สำหรับชำระเงิน" 
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-              />
+            <div style={{ margin: '20px auto', width: '200px', height: '200px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '2px dashed #ccc' }}>
+              <span style={{ color: '#888' }}>QR Code ยอด ฿{totalPrice.toLocaleString()}</span>
             </div>
 
-            <div style={{ color: paymentTimeLeft === 0 ? 'red' : 'var(--theme-blue)', fontWeight: 'bold', marginBottom: '16px' }}>
-              {paymentTimeLeft > 0 ? `เวลาสแกนที่เหลือ: ${formatTimer(paymentTimeLeft)} นาที` : "หมดเวลาทำรายการ"}
-            </div>
+            <p className="theme-text" style={{ fontSize: '24px', fontWeight: 'bold', margin: '10px 0' }}>
+              {formatTimer(paymentTimeLeft)}
+            </p>
+            {paymentTimeLeft === 0 && <p style={{ color: 'red' }}>หมดเวลาทำรายการ กรุณาทำรายการใหม่</p>}
 
-            <button className="btn-register theme-bg" onClick={handleSimulatePayment} disabled={paymentTimeLeft === 0}>
-              จำลองว่าชำระเงินแล้ว ✓
+            <button 
+              className="btn-modal-confirm theme-bg" 
+              onClick={handleSimulatePayment}
+              disabled={paymentTimeLeft === 0}
+              style={{ width: '100%', padding: '12px', fontSize: '16px', borderRadius: '8px', border: 'none', color: '#fff', cursor: paymentTimeLeft === 0 ? 'not-allowed' : 'pointer', opacity: paymentTimeLeft === 0 ? 0.5 : 1 }}
+            >
+              จำลองว่าชำระเงินสำเร็จแล้ว
             </button>
           </div>
         </div>
       )}
 
+      {/* 3. Modal จองสำเร็จ */}
       {activeModal === 'success' && (
         <div className="custom-modal-overlay">
           <div className="custom-modal-box" style={{ textAlign: 'center' }}>
-            <h2 className="modal-title" style={{ marginTop: '16px', color: '#10B981' }}>🎉 จองสำเร็จแล้ว!</h2>
-            <p className="modal-subtitle">รหัสอ้างอิง: <strong>{refCode}</strong></p>
-            <p style={{ margin: '24px 0' }}>ตั๋วของคุณอยู่ในหน้า "ตั๋วของฉัน" พร้อม QR สำหรับเช็กอิน</p>
-            <button className="btn-register theme-bg" onClick={() => setActiveModal(null)}>
-              ปิดหน้านี้
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+            <h2 className="modal-title">ลงทะเบียนสำเร็จ!</h2>
+            <p style={{ marginTop: '8px', color: '#666' }}>ระบบได้ส่งรายละเอียดไปยังอีเมลของคุณแล้ว</p>
+            
+            <div style={{ backgroundColor: '#f9f9f9', padding: '16px', borderRadius: '8px', margin: '24px 0' }}>
+              <p style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>รหัสอ้างอิงการจอง (Ref Code)</p>
+              <h3 className="theme-text" style={{ margin: 0, letterSpacing: '1px' }}>{refCode}</h3>
+            </div>
+
+            <button 
+              className="btn-modal-confirm theme-bg" 
+              onClick={() => {
+                setActiveModal(null);
+                // navigate('/'); // เปิดใช้บรรทัดนี้ถ้าต้องการให้พากลับหน้าแรกทันที
+              }}
+              style={{ width: '100%', padding: '12px', fontSize: '16px', borderRadius: '8px', border: 'none', color: '#fff', cursor: 'pointer' }}
+            >
+              ปิดหน้าต่าง
             </button>
           </div>
         </div>

@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import Navbar from "../components/Navbar";
+import AdminNavbar from '../components/AdminNavbar.jsx';
+import EventDrawer from '../components/EventDrawer.jsx';
 import AttendeesDrawer from '../components/AttendeesDrawer.jsx';
 import { initialEvents } from '../data/events.js';
-import EventDrawer from '../components/EventDrawer.jsx';
 
 const CATEGORY_CLASS = {
   Design: 'design',
@@ -39,19 +39,45 @@ export default function ManageEventsPage() {
   };
 
   const handleSubmit = (form, isEdit) => {
+    const max = Number(form.max);
+    const requiredFields = [
+      ['name', 'ชื่ออีเวนต์'],
+      ['place', 'สถานที่'],
+      ['date', 'วันและเวลา'],
+    ];
+
+    const missing = requiredFields.find(([key]) => !String(form[key] ?? '').trim());
+    if (missing) {
+      alert(`กรุณากรอก${missing[1]}`);
+      return;
+    }
+
+    if (!Number.isInteger(max) || max <= 0) {
+      alert('จำนวนผู้เข้าร่วมสูงสุดต้องเป็นจำนวนเต็มบวก');
+      return;
+    }
+
+    const dateLabel = new Date(form.date).toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+
     if (isEdit) {
       setEvents((prev) =>
         prev.map((e) =>
           e.id === form.id
             ? {
                 ...e,
-                name: form.name,
+                name: form.name.trim(),
                 desc: form.desc,
-                place: form.place,
+                place: form.place.trim(),
                 category: form.category,
                 thumbClass: CATEGORY_CLASS[form.category] || 'design',
-                max: Number(form.max) || e.max,
-                date: form.date || e.date,
+                max,
+                date: form.date,
+                dateLabel,
+                coverIndex: form.coverIndex ?? e.coverIndex ?? 0,
               }
             : e
         )
@@ -60,15 +86,17 @@ export default function ManageEventsPage() {
     } else {
       const newEvent = {
         id: String(Date.now()),
-        name: form.name || 'อีเวนต์ใหม่',
+        name: form.name.trim(),
         desc: form.desc,
-        place: form.place,
+        place: form.place.trim(),
         category: form.category,
         thumbClass: CATEGORY_CLASS[form.category] || 'design',
-        dateLabel: form.date ? new Date(form.date).toLocaleDateString('th-TH') : '-',
+        dateLabel,
         date: form.date,
         seats: 0,
-        max: Number(form.max) || 30,
+        max,
+        coverIndex: form.coverIndex ?? 0,
+        coverUrl: form.coverUrl?.trim() || '',
         attendees: [],
       };
       setEvents((prev) => [newEvent, ...prev]);
@@ -79,7 +107,7 @@ export default function ManageEventsPage() {
 
   return (
     <>
-      <Navbar />
+      <AdminNavbar />
 
       <main className="page">
         <div className="crumb">
@@ -211,6 +239,8 @@ export default function ManageEventsPage() {
             category: drawer.event.category,
             date: drawer.event.date,
             max: drawer.event.max,
+            coverIndex: drawer.event.coverIndex,
+            coverUrl: drawer.event.coverUrl,
           }
         }
         onClose={closeDrawer}

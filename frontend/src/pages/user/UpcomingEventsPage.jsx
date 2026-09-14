@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react'; // 🌟 เพิ่ม useRef
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import './UpcomingEventsPage.css';
 
 /* ===================================================
-   📌 DATA MOCK
+   📌 DATA MOCK 
 =================================================== */
 const mockHeroData = {
+  id: "pet-expo-2027", // 🌟 เพิ่ม id ให้งานแนะนำ เพื่อใช้เปิดหน้า Detail
   badgeText: "แนะนำ",
   title: "Pet Expo\nงานสัตว์เลี้ยงที่ใหญ่ที่สุด",
   dateTimeLocation: "พุธ, 20 ส.ค., 2570 - Central ladprao, ชั้น 5",
@@ -15,6 +16,7 @@ const mockHeroData = {
 const mockEventsData = [
   {
     id: 1,
+    category: "ออกแบบ",
     statusBadge: "เปิดรับลงทะเบียน",
     bannerBg: "linear-gradient(135deg, #1e1b4b 0%, #311b92 100%)",
     bannerText: "DESIGN LAB\nMAKE IT CLEAR.",
@@ -28,6 +30,7 @@ const mockEventsData = [
   },
   {
     id: 2,
+    category: "เทคโนโลยี",
     statusBadge: "เปิดรับลงทะเบียน",
     bannerBg: "linear-gradient(135deg, #0f172a 0%, #0284c7 100%)",
     bannerText: "SPRING BOOT AT SCALE",
@@ -41,8 +44,9 @@ const mockEventsData = [
   },
   {
     id: 3,
+    category: "คอมมูนิตี้",
     statusBadge: "เปิดรับลงทะเบียน",
-    bannerBg: "linear-gradient(135deg, #172554 0%, #3b82f6 100%)", // ปรับเป็นโทนฟ้า
+    bannerBg: "linear-gradient(135deg, #172554 0%, #3b82f6 100%)",
     bannerText: "PRODUCT NIGHT",
     month: "ส.ค.",
     day: "31",
@@ -54,6 +58,7 @@ const mockEventsData = [
   },
   {
     id: 4,
+    category: "เทคโนโลยี",
     statusBadge: "เปิดรับลงทะเบียน",
     bannerBg: "linear-gradient(135deg, #064e3b 0%, #10b981 100%)",
     bannerText: "ACCESSIBILITY LAB",
@@ -72,14 +77,42 @@ export default function UpcomingEventsPage() {
   const [activeCategory, setActiveCategory] = useState("ทุกความสนใจ");
   const categories = ["ทุกความสนใจ", "เทคโนโลยี", "ออกแบบ", "อาชีพ", "คอมมูนิตี้"];
 
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // 🌟 1. State สำหรับจัดการการเปิด/ปิด ตั๋วของแต่ละการ์ด
+  const [expandedTickets, setExpandedTickets] = useState([]);
+  
+  // 🌟 2. Ref สำหรับให้หน้าจอเลื่อนลงมาตรงหมวดหมู่
+  const eventsSectionRef = useRef(null);
+
   const handleRegisterClick = (e, eventId) => {
     e.preventDefault();
     navigate(`/event-detail/${eventId}`);
   };
 
+  // 🌟 ฟังก์ชันเลื่อนหน้าจอ
+  const scrollToEvents = () => {
+    eventsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // 🌟 ฟังก์ชันสลับการแสดงผลประเภทบัตร
+  const toggleTicketExpand = (eventId) => {
+    setExpandedTickets((prev) => 
+      prev.includes(eventId) 
+        ? prev.filter(id => id !== eventId) // ถ้าเปิดอยู่ ให้เอาออก (ปิด)
+        : [...prev, eventId] // ถ้าปิดอยู่ ให้เพิ่มเข้าไป (เปิด)
+    );
+  };
+
+  const filteredEvents = mockEventsData.filter((event) => {
+    const matchSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchCategory = activeCategory === "ทุกความสนใจ" || event.category === activeCategory;
+    return matchSearch && matchCategory;
+  });
+
   return (
     <div className="page-wrapper">
-      <Navbar />
+      <Navbar onSearchChange={setSearchQuery} />
       
       <main className="events-home-container">
         {/* 🌟 Hero Section */}
@@ -88,7 +121,10 @@ export default function UpcomingEventsPage() {
             <p className="hero-subtitle">เหตุผลดี ๆ ที่จะได้มาเจอกัน</p>
             <h1 className="hero-title">ไอเดียที่ดี<br/>เริ่มต้นเมื่อเรา<br/>ออกมาเจอกัน</h1>
             <p className="hero-desc">ค้นหาเวิร์กช็อป ทอล์ก และกิจกรรมชุมชนที่คัดสรรมาเพื่อคนช่างสงสัย</p>
-            <button className="btn-all-events">ดูอีเวนต์ทั้งหมด →</button>
+            {/* 🌟 3. ใส่ onClick เพื่อเลื่อนหน้าจอลงมา */}
+            <button className="btn-all-events" onClick={scrollToEvents}>
+              ดูอีเวนต์ทั้งหมด →
+            </button>
           </div>
           
           <div className="hero-card-container">
@@ -101,12 +137,19 @@ export default function UpcomingEventsPage() {
               </h2>
               <p className="hero-card-info">📅 {mockHeroData.dateTimeLocation}</p>
             </div>
-            <button className="btn-circle-arrow">→</button>
+            {/* 🌟 4. ใส่ onClick เปิดหน้ารายละเอียดของ Pet Expo */}
+            <button 
+              className="btn-circle-arrow"
+              onClick={(e) => handleRegisterClick(e, mockHeroData.id)}
+            >
+              →
+            </button>
           </div>
         </section>
 
         {/* 🏷️ Category Selection */}
-        <section className="category-section">
+        {/* 🌟 5. ผูก Ref ไว้ที่นี่ เพื่อให้ปุ่มเลื่อนหน้าจอวิ่งมาหยุดตรงนี้ */}
+        <section className="category-section" ref={eventsSectionRef}>
           <p className="category-subtitle">เลือกตามความสนใจ</p>
           <h2 className="category-title">เลือกตามความสนใจ</h2>
           <div className="filter-pills">
@@ -131,47 +174,80 @@ export default function UpcomingEventsPage() {
           <span className="gather-arrow">→</span>
         </div>
 
-        {/* 📅 Events Grid (2 Columns) */}
+        {/* 📅 Events Grid */}
         <section className="events-grid">
-          {mockEventsData.map((event) => (
-            <div className="event-card" key={event.id}>
-              <div className="card-banner" style={{ background: event.bannerBg }}>
-                <span className="status-badge">{event.statusBadge}</span>
-                <div className="banner-text">
-                  {event.bannerText.split('\n').map((line, i) => (
-                    <React.Fragment key={i}>{line}<br/></React.Fragment>
-                  ))}
+          {filteredEvents.length > 0 ? (
+            filteredEvents.map((event) => (
+              <div className="event-card" key={event.id}>
+                <div className="card-banner" style={{ background: event.bannerBg }}>
+                  <span className="status-badge">{event.statusBadge}</span>
+                  <div className="banner-text">
+                    {event.bannerText.split('\n').map((line, i) => (
+                      <React.Fragment key={i}>{line}<br/></React.Fragment>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="card-body">
-                <div className="date-box">
-                  <span className="date-month">{event.month}</span>
-                  <span className="date-day">{event.day}</span>
-                </div>
-                
-                <div className="card-content">
-                  <h3 className="event-title">{event.title}</h3>
-                  <p className="event-description">{event.description}</p>
-                  
-                  <div className="meta-info">
-                    <span className="meta-item">🕒 {event.time}</span>
-                    <span className="meta-item">📍 {event.location}</span>
+                <div className="card-body">
+                  <div className="date-box">
+                    <span className="date-month">{event.month}</span>
+                    <span className="date-day">{event.day}</span>
                   </div>
                   
-                  <div className="card-footer">
-                    <span className="seats-count">{event.seatsLeft} ที่นั่งเหลือ</span>
-                    <button 
-                      onClick={(e) => handleRegisterClick(e, event.id)} 
-                      className="btn-register"
-                    >
-                      ดูรายละเอียด / ลงทะเบียน →
-                    </button>
+                  <div className="card-content">
+                    <h3 className="event-title">{event.title}</h3>
+                    <p className="event-description">{event.description}</p>
+                    
+                    <div className="meta-info">
+                      <span className="meta-item">🕒 {event.time}</span>
+                      <span className="meta-item">📍 {event.location}</span>
+                    </div>
+
+                    {/* 🌟 6. เพิ่มส่วนกดแสดง/ซ่อนประเภทบัตร (Student/Public) */}
+                    <div className="ticket-toggle-container" style={{ marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '0.8rem' }}>
+                      <button 
+                        onClick={() => toggleTicketExpand(event.id)}
+                        style={{ 
+                          background: 'none', border: 'none', color: '#3b82f6', 
+                          cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold', padding: 0
+                        }}
+                      >
+                        {expandedTickets.includes(event.id) ? "ซ่อนประเภทบัตร ▲" : "แสดงประเภทบัตร (Student / Public) ▼"}
+                      </button>
+                      
+                      {expandedTickets.includes(event.id) && (
+                        <div className="ticket-details" style={{ marginTop: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', background: '#f8fafc', padding: '0.5rem', borderRadius: '4px' }}>
+                            <span>🎓 Student Ticket (นักศึกษา)</span>
+                            <span style={{ color: '#10b981', fontWeight: 'bold' }}>เปิดจำหน่าย</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', background: '#f8fafc', padding: '0.5rem', borderRadius: '4px' }}>
+                            <span>🧑‍🤝‍🧑 Public Ticket (บุคคลทั่วไป)</span>
+                            <span style={{ color: '#10b981', fontWeight: 'bold' }}>เปิดจำหน่าย</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {/* 🌟 สิ้นสุดส่วนประเภทบัตร */}
+                    
+                    <div className="card-footer" style={{ marginTop: '1rem' }}>
+                      <span className="seats-count">{event.seatsLeft} ที่นั่งเหลือ</span>
+                      <button 
+                        onClick={(e) => handleRegisterClick(e, event.id)} 
+                        className="btn-register"
+                      >
+                        ดูรายละเอียด / ลงทะเบียน →
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div style={{ textAlign: "center", padding: "2rem", width: "100%", gridColumn: "1 / -1", color: "#666" }}>
+              ไม่พบอีเวนต์ที่ตรงกับเงื่อนไข
             </div>
-          ))}
+          )}
         </section>
       </main>
     </div>
