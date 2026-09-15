@@ -1,40 +1,40 @@
 :root {
-  /* Petopia Gold Token System */
+  /* Petopia Token System — mapped to the new brand palette (see global.css) */
 
-  --canvas: #F6F4FC;
-  --cream: #F6F4FC;
+  --canvas: var(--bg-color);
+  --cream: var(--bg-color);
   --card: #FFFFFF;
-  --ink: #2A231B;
-  --muted: #8D8175;
-  --line: #EBE1D2;
-  
-  /* Gold Accents */
-  --gold-100: #FFFBEF;
-  --gold-300: #FFE699;
-  --gold-500: #FFCB3D;
-  --gold-700: #E8A400;
-  --gold-900: #4A3600;
-  
+  --ink: var(--text-main);
+  --muted: var(--text-muted);
+  --line: var(--light-blue);
+
+  /* Accents (formerly "gold") */
+  --gold-100: var(--light-blue);
+  --gold-300: var(--primary-blue);
+  --gold-500: var(--primary-blue);
+  --gold-700: var(--primary-blue);
+  --gold-900: var(--dark-purple);
+
   /* Status & Category Colors */
-  --success: #2E7D32;
-  --success-soft: #E8F5E9;
+  --success: #5C7A00;
+  --success-soft: #EAFAA0;
   --danger: #C0472B;
   --danger-soft: #FBE9E4;
   --danger-line: #F0C7B8;
-  
-  --design: #6B5B95;
-  --eng: #3E6B8A;
-  --product: #C97A2B;
-  --access: #3E8F6C;
-  --register-accent: #10B981;
-  
+
+  --design: var(--dark-purple);
+  --eng: var(--primary-blue);
+  --product: var(--accent-orange);
+  --access: var(--lime-green);
+  --register-accent: var(--lime-green);
+
   /* Spacing & Radius */
-  --radius: 16px;
+  --radius: var(--card-radius);
   --radius-sm: 10px;
   --font-display: 'Kanit', sans-serif;
   --font-body: 'Sarabun', sans-serif;
 
-  --dashboard-background: #F6F4FC;
+  --dashboard-background: var(--bg-color);
 }
 
 
@@ -137,26 +137,43 @@ button {
 }
 
 /* ---------- Buttons ---------- */
+.page-head .btn-primary {
+  width: 150px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0 18px;
+  box-sizing: border-box;
+}
+
 .btn-primary {
   display: inline-flex;
-  align-items:flex-end;
+  align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, var(--gold-500), var(--gold-700));
-  color: var(--gold-900);
+  background: #70C5FF !important; /* บังคับให้เป็นสีนี้สีเดียวเด็ดขาด */
+  color: #ffffff !important;
   border-radius: var(--radius-sm);
   padding: 10px 20px;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 14px;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(245, 184, 0, 0.25);
+  box-shadow: none; /* เอาเงาออกหรือปรับลดได้ตามชอบ */
   transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(245, 184, 0, 0.35);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.3);
+}
+
+/* ---------- Seats Progress Bar (แก้ตรงนี้ให้เป็นสีเดียว) ---------- */
+.seats-fill {
+  height: 100%;
+  background: var(--gold-500); /* เปลี่ยนจาก linear-gradient เป็นสีเดียวทึบ */
+  border-radius: 3px;
+  width: var(--fill, 0%);
+  transition: width 0.3s ease;
 }
 
 /* ---------- Stats Cards ---------- */
@@ -208,17 +225,17 @@ button {
 }
 
 .stat-card.accent {
-  background: var(--ink);
+  background: #70C5FF;
   color: #fff;
-  border-color: var(--ink);
+  border-color: #70C5FF;
 }
 
 .stat-card.accent .stat-label {
-  color: #D8CFC2;
+  color: #fff;
 }
 
 .stat-card.accent .stat-num span {
-  color: #B9AD9C;
+  color: #fff;
 }
 
 /* ---------- Table Card ---------- */

@@ -1,26 +1,44 @@
-import React from 'react';
-import { useAuth } from '../context/AuthContext.jsx';
+import React, { useState } from 'react'; 
+import { NavLink, useNavigate } from 'react-router-dom'; 
+import { useAuth } from '../context/AuthContext.jsx'; 
 import AuthModal from './AuthModal.jsx';
+import logo from '../../assets/public/logo.png';
 
 export default function StaffNavbar() {
-  const { isLoggedIn, user, openModal } = useAuth();
+  const { isLoggedIn, user, openModal, logout } = useAuth();
+  const navigate = useNavigate();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  // State สำหรับสลับภาษา (ไทย / EN)
+  const [currentLang, setCurrentLang] = useState('ไทย');
+
+  const handleLogout = () => {
+    setIsDropdownOpen(false);
+    logout();
+    navigate('/');
+  };
+
+  const toggleLanguage = () => {
+    setCurrentLang((prev) => (prev === 'ไทย' ? 'EN' : 'ไทย'));
+  };
 
   return (
     <>
       <nav className="navbar">
-        <div className="nav-left">
-          <a className="logo" href="/admin/dashboard">
-            <img src="/logo.png" alt="EVentFast" />
-          </a>
-          <div className="search-box">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input type="text" placeholder="ค้นหาชื่อ สถานที่ หรือหัวข้อ" />
-          </div>
-        </div>
+              <div className="nav-left">
+                <NavLink to="/" className="logo" aria-label="หน้าหลักค้นหาอีเวนต์">
+                  <img src={logo} alt="EventFest." />
+                </NavLink>
+                <div className="search-box">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input type="text" placeholder="ค้นหาชื่อ สถานที่ หรือหัวข้อ" />
+                </div>
+              </div>
 
+        {/* หัวข้อกึ่งกลาง: แสดงหัวข้อปกติ ปรับขนาดให้รองรับมือถือ */}
         <div className="nav-center">
           <span className="nav-link active">เช็กอินหน้างาน</span>
         </div>
@@ -28,7 +46,9 @@ export default function StaffNavbar() {
         <div className="nav-right">
           {!isLoggedIn && (
             <div className="nav-auth-buttons">
-              <button className="btn-lang-toggle">EN</button>
+              <button className="btn-lang-toggle" onClick={toggleLanguage}>
+                {currentLang}
+              </button>
               <a href="#" className="btn-nav-register" onClick={(e) => { e.preventDefault(); openModal('register'); }}>
                 สมัครสมาชิก
               </a>
@@ -39,14 +59,39 @@ export default function StaffNavbar() {
           )}
 
           {isLoggedIn && (
-            <div className="user-profile">
-              <div className="lang-text">ไทย</div>
-              <div className="avatar">{user.avatarLetter}</div>
-              <div className="user-info">
-                <div className="username">{user.username}</div>
-                <div className="role">ผู้ดูแลระบบ</div>
+            <div className="user-profile flex items-center">
+              {/* ปุ่มสลับภาษาและเส้นกั้นแนวตั้ง */}
+              <button 
+                className="lang-text bg-transparent border-none cursor-pointer font-medium px-2"
+                onClick={toggleLanguage}
+              >
+                {currentLang}
+              </button>
+              <div className="lang-divider" style={{ width: '1px', height: '24px', backgroundColor: '#cbd5e1', margin: '0 8px' }} />
+
+              <div
+                className="user-profile"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="avatar" style={{ backgroundColor: '#bae6fd', color: '#0369a1' }}>
+                  {user?.avatarLetter || 'S'}
+                </div>
+                <div className="user-info">
+                {/* บังคับแสดงคำว่า Staff และ สตาฟหน้างาน สำหรับหน้า Staff โดยเฉพาะ */}
+                  <div className="username">{user?.username || 'Staff'}</div>
+                  <div className="role">{user?.roleLabel || 'ทีมหน้างาน'}</div>
+                </div>
+                <span className="dropdown-icon" style={{ transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }}>▼</span>
               </div>
-              <span className="dropdown-icon">▼</span>
+
+              {isDropdownOpen && (
+                <div className="profile-dropdown-menu">
+                  <button type="button" className="dropdown-item logout-btn" onClick={handleLogout}>
+                    🚪 ออกจากระบบ
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

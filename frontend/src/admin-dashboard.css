@@ -10,31 +10,31 @@
 
 :root {
 
-  --dashboard-gold-dark: #4A3600;
+  --dashboard-gold-dark: var(--dark-purple);
 
-  --dashboard-gold: #E8A400;
+  --dashboard-gold: var(--btn-purple);
 
-  --dashboard-gold-light: #F5B800;
+  --dashboard-gold-light: var(--primary-blue);
 
-  --dashboard-coral: #FF8A5B;
+  --dashboard-coral: var(--accent-orange);
 
-  --dashboard-text: #1E1B2E;
+  --dashboard-text: var(--text-main);
 
-  --dashboard-text-soft: #6B6580;
+  --dashboard-text-soft: var(--text-muted);
 
-  --dashboard-text-faint: #9C97AE;
+  --dashboard-text-faint: #94A3B8;
 
-  --dashboard-line: #E7E3F6;
+  --dashboard-line: var(--light-blue);
 
-  --dashboard-background: #F6F4FC;
+  --dashboard-background: var(--bg-color);
 
-  --dashboard-card: #FDFCFF;
+  --dashboard-card: #FFFFFF;
 
-  --dashboard-radius: 20px;
+  --dashboard-radius: var(--card-radius);
 
   --dashboard-shadow:
-    0 2px 4px rgba(36, 27, 69, 0.04),
-    0 12px 28px -12px rgba(36, 27, 69, 0.14);
+    0 2px 4px rgba(15, 23, 42, 0.04),
+    0 12px 28px -12px rgba(15, 23, 42, 0.14);
 
   --dashboard-display: 'Kanit', sans-serif;
 
@@ -132,7 +132,7 @@ body {
   font-weight: 700;
 
   color:
-    var(--dashboard-gold);
+    var(--primary-blue);
 
   margin-bottom: 9px;
 
@@ -216,7 +216,7 @@ body {
   border-radius: 10px;
 
   background:
-    linear-gradient(135deg, var(--dashboard-gold-light), var(--dashboard-gold));
+    var(--primary-blue);
 
   color: #FFFFFF;
 
@@ -230,8 +230,7 @@ body {
   cursor: pointer;
 
   box-shadow:
-    0 8px 18px -8px
-    rgba(232, 164, 0, 0.5);
+    none;
 
   transition:
     background 0.15s ease,
@@ -243,7 +242,7 @@ body {
 .dashboard-event-btn:hover {
 
   background:
-    var(--dashboard-gold-light);
+    var(--primary-blue);
 
   transform:
     translateY(-1px);
@@ -338,8 +337,8 @@ body {
   background:
     linear-gradient(
       160deg,
-      #E8A400 0%,
-      #4A3600 100%
+      var(--primary-blue) 0%,
+      #3FA0E8 100%
     );
 
   border-color:
