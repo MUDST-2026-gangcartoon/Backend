@@ -1,18 +1,70 @@
-name: Docker Image CI
-
+name: CI - Build and Test
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - 'feat/**'
+      - 'test/**'
+      - 'fix/**'
+      - 'ci/**'
   pull_request:
-    branches: [ "main" ]
-
+    branches:
+      - main
+      - 'feat/**'
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-
-  build:
-
-    runs-on: self-hosted
-
+  backend:
+    name: Backend - Test and Build
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Set up Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Make Maven wrapper executable
+        run: chmod +x mvnw
+      - name: Run backend tests
+        run: ./mvnw --batch-mode --no-transfer-progress clean test
+      - name: Build backend JAR
+        run: ./mvnw --batch-mode --no-transfer-progress package -DskipTests
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: eventhub-backend-${{ github.sha }}
+          path: target/*.jar
+          if-no-files-found: error
+          retention-days: 7
+  frontend:
+    name: Frontend - Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: eventhub-frontend-${{ github.sha }}
+          path: frontend/dist
+          if-no-files-found: error
+          retention-days: 7
