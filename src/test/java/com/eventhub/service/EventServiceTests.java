@@ -1839,4 +1839,192 @@ class EventServiceTests {
                 )
         );
     }
+    // ============================================================
+    // P1 — Delete Event
+    // ============================================================
+
+    // EVT-DELETE-001
+    @Test
+    void shouldDeleteRegistrationsBeforeDeletingEvent() {
+
+        Event event =
+                createEvent(
+                        100L,
+                        100,
+                        LocalDateTime.now()
+                                .plusDays(10)
+                );
+
+        when(
+                eventRepository.findById(
+                        event.getId()
+                )
+        ).thenReturn(Optional.of(event));
+
+        eventService.delete(
+                event.getId()
+        );
+
+        InOrder order =
+                inOrder(
+                        registrationRepository,
+                        eventRepository
+                );
+
+        order.verify(registrationRepository)
+                .deleteByEventId(
+                        event.getId()
+                );
+
+        order.verify(eventRepository)
+                .delete(event);
+    }
+
+
+    // EVT-DELETE-002
+    @Test
+    void shouldReturnNotFoundWhenDeletingMissingEvent() {
+
+        when(
+                eventRepository.findById(
+                        999L
+                )
+        ).thenReturn(Optional.empty());
+
+        assertStatus(
+                HttpStatus.NOT_FOUND,
+                () -> eventService.delete(
+                        999L
+                )
+        );
+
+        verify(
+                registrationRepository,
+                never()
+        ).deleteByEventId(anyLong());
+
+        verify(
+                eventRepository,
+                never()
+        ).delete(any(Event.class));
+    }
+
+
+    // ============================================================
+    // P1 — My Registrations
+    // ============================================================
+
+    // EVT-MINE-001
+    @Test
+    void shouldReturnCurrentUsersRegistrations() {
+
+        UserAccount user =
+                createUser(
+                        10L,
+                        "alice@example.test"
+                );
+
+        Principal principal =
+                principal(
+                        user.getEmail()
+                );
+
+        Event firstEvent =
+                createEvent(
+                        100L,
+                        100,
+                        LocalDateTime.now()
+                                .plusDays(5)
+                );
+
+        Event secondEvent =
+                createEvent(
+                        101L,
+                        100,
+                        LocalDateTime.now()
+                                .plusDays(10)
+                );
+
+        TicketType firstTicket =
+                createTicket(
+                        201L,
+                        firstEvent,
+                        "General",
+                        new BigDecimal("100.00"),
+                        100
+                );
+
+        TicketType secondTicket =
+                createTicket(
+                        202L,
+                        secondEvent,
+                        "VIP",
+                        new BigDecimal("250.00"),
+                        100
+                );
+
+        firstEvent.addTicketType(firstTicket);
+        secondEvent.addTicketType(secondTicket);
+
+        Registration firstRegistration =
+                createRegistration(
+                        501L,
+                        user,
+                        firstEvent,
+                        firstTicket,
+                        1
+                );
+
+        Registration secondRegistration =
+                createRegistration(
+                        502L,
+                        user,
+                        secondEvent,
+                        secondTicket,
+                        2
+                );
+
+        when(
+                userRepository.findByEmail(
+                        user.getEmail()
+                )
+        ).thenReturn(Optional.of(user));
+
+        when(
+                registrationRepository
+                        .findByUserIdOrderByEventStartsAtAsc(
+                                user.getId()
+                        )
+        ).thenReturn(
+                List.of(
+                        firstRegistration,
+                        secondRegistration
+                )
+        );
+
+        List<ApiDtos.RegistrationDto> result =
+                eventService.mine(
+                        principal
+                );
+
+        assertEquals(
+                2,
+                result.size()
+        );
+
+        assertEquals(
+                501L,
+                result.get(0).id()
+        );
+
+        assertEquals(
+                502L,
+                result.get(1).id()
+        );
+
+        verify(registrationRepository)
+                .findByUserIdOrderByEventStartsAtAsc(
+                        user.getId()
+                );
+    }
 }
