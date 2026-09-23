@@ -1107,4 +1107,93 @@ class EventServiceTests {
                 existing.getCapacity()
         );
     }
+    // ============================================================
+    // P0 — Cancel Registration
+    // ============================================================
+
+    // EVT-CANCEL-001 ยกเลิก Registration ของตัวเอง - ลบเฉพาะ User + Event ที่ถูกต้อง
+    @Test
+    void shouldCancelCurrentUsersRegistration() {
+
+        UserAccount user =
+                createUser(
+                        10L,
+                        "alice@example.test"
+                );
+
+        Principal principal =
+                principal(
+                        user.getEmail()
+                );
+
+        when(
+                userRepository.findByEmail(
+                        user.getEmail()
+                )
+        ).thenReturn(Optional.of(user));
+
+        when(
+                registrationRepository
+                        .deleteByUserIdAndEventId(
+                                user.getId(),
+                                100L
+                        )
+        ).thenReturn(1L);
+
+        eventService.cancel(
+                100L,
+                principal
+        );
+
+        verify(registrationRepository)
+                .deleteByUserIdAndEventId(
+                        user.getId(),
+                        100L
+                );
+    }
+
+
+    // EVT-CANCEL-002 ไม่มี Registration ให้ยกเลิก - Not Found
+    @Test
+    void shouldReturnNotFoundWhenCancellingMissingRegistration() {
+
+        UserAccount user =
+                createUser(
+                        10L,
+                        "alice@example.test"
+                );
+
+        Principal principal =
+                principal(
+                        user.getEmail()
+                );
+
+        when(
+                userRepository.findByEmail(
+                        user.getEmail()
+                )
+        ).thenReturn(Optional.of(user));
+
+        when(
+                registrationRepository
+                        .deleteByUserIdAndEventId(
+                                user.getId(),
+                                100L
+                        )
+        ).thenReturn(0L);
+
+        ResponseStatusException exception =
+                assertStatus(
+                        HttpStatus.NOT_FOUND,
+                        () -> eventService.cancel(
+                                100L,
+                                principal
+                        )
+                );
+
+        assertEquals(
+                "Registration not found",
+                exception.getReason()
+        );
+    }
 }
