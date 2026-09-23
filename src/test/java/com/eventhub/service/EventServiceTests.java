@@ -1196,4 +1196,186 @@ class EventServiceTests {
                 exception.getReason()
         );
     }
+    // ============================================================
+    // P1 — Authentication
+    // ============================================================
+
+    // EVT-AUTH-001 — Register
+    @Test
+    void shouldRejectRegisterWithoutAuthentication() {
+
+        ApiDtos.PurchaseRequest request =
+                new ApiDtos.PurchaseRequest(
+                        200L,
+                        1
+                );
+
+        assertStatus(
+                HttpStatus.UNAUTHORIZED,
+                () -> eventService.register(
+                        100L,
+                        request,
+                        null
+                )
+        );
+
+        verifyNoInteractions(
+                eventRepository,
+                registrationRepository,
+                ticketTypeRepository
+        );
+    }
+
+
+    // EVT-AUTH-001 — Cancel
+    @Test
+    void shouldRejectCancelWithoutAuthentication() {
+
+        assertStatus(
+                HttpStatus.UNAUTHORIZED,
+                () -> eventService.cancel(
+                        100L,
+                        null
+                )
+        );
+
+        verifyNoInteractions(
+                eventRepository,
+                registrationRepository,
+                ticketTypeRepository
+        );
+    }
+
+
+    // EVT-AUTH-001 — Mine
+    @Test
+    void shouldRejectMineWithoutAuthentication() {
+
+        assertStatus(
+                HttpStatus.UNAUTHORIZED,
+                () -> eventService.mine(null)
+        );
+
+        verifyNoInteractions(
+                eventRepository,
+                registrationRepository,
+                ticketTypeRepository
+        );
+    }
+
+
+    // EVT-AUTH-002
+    @Test
+    void shouldReturnNotFoundWhenAuthenticatedUserDoesNotExist() {
+
+        Principal principal =
+                principal(
+                        "missing@example.test"
+                );
+
+        when(
+                userRepository.findByEmail(
+                        "missing@example.test"
+                )
+        ).thenReturn(Optional.empty());
+
+        assertStatus(
+                HttpStatus.NOT_FOUND,
+                () -> eventService.mine(
+                        principal
+                )
+        );
+
+        verifyNoInteractions(
+                eventRepository,
+                registrationRepository,
+                ticketTypeRepository
+        );
+    }
+
+
+    // ============================================================
+    // P1 — Total Price
+    // ============================================================
+
+    // EVT-REG-010
+    @Test
+    void shouldCalculateTotalPriceFromTicketPriceAndQuantity() {
+
+        RegistrationFixture f =
+                registrationFixture();
+
+        f.ticket().setPrice(
+                new BigDecimal("250.00")
+        );
+
+        ApiDtos.PurchaseRequest request =
+                new ApiDtos.PurchaseRequest(
+                        f.ticket().getId(),
+                        3
+                );
+
+        when(
+                userRepository.findByEmail(
+                        f.user().getEmail()
+                )
+        ).thenReturn(Optional.of(f.user()));
+
+        when(
+                eventRepository.findByIdForUpdate(
+                        f.event().getId()
+                )
+        ).thenReturn(Optional.of(f.event()));
+
+        when(
+                registrationRepository
+                        .existsByUserIdAndEventId(
+                                f.user().getId(),
+                                f.event().getId()
+                        )
+        ).thenReturn(false);
+
+        when(
+                ticketTypeRepository.findById(
+                        f.ticket().getId()
+                )
+        ).thenReturn(Optional.of(f.ticket()));
+
+        when(
+                registrationRepository
+                        .seatsReservedByEventId(
+                                f.event().getId()
+                        )
+        ).thenReturn(10L);
+
+        when(
+                registrationRepository
+                        .seatsReservedByTicketTypeId(
+                                f.ticket().getId()
+                        )
+        ).thenReturn(5L);
+
+        when(
+                registrationRepository.save(
+                        any(Registration.class)
+                )
+        ).thenAnswer(invocation ->
+                invocation.getArgument(0)
+        );
+
+        ApiDtos.RegistrationDto result =
+                eventService.register(
+                        f.event().getId(),
+                        request,
+                        f.principal()
+                );
+
+        assertEquals(
+                0,
+                new BigDecimal("750.00")
+                        .compareTo(
+                                result.totalPrice()
+                        )
+        );
+    }
 }
