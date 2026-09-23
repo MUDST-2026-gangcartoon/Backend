@@ -886,4 +886,225 @@ class EventServiceTests {
         order.verify(registrationRepository)
                 .save(any(Registration.class));
     }
+    // ============================================================
+    // P0 — Create Event
+    // ============================================================
+
+    // EVT-CREATE-001 สร้าง Event สำเร็จ - Save ทุก field และเชื่อม TicketType กับ Event ถูกต้อง
+    @Test
+    void shouldCreateEventSuccessfully() {
+
+        ApiDtos.EventRequest request =
+                eventRequest(
+                        "KBTG Tech Event",
+                        100,
+                        List.of(
+                                ticketRequest(
+                                        null,
+                                        "General",
+                                        "100.00",
+                                        60
+                                ),
+                                ticketRequest(
+                                        null,
+                                        "VIP",
+                                        "250.00",
+                                        40
+                                )
+                        )
+                );
+
+        when(
+                eventRepository.save(
+                        any(Event.class)
+                )
+        ).thenAnswer(invocation -> {
+
+            Event event =
+                    invocation.getArgument(0);
+
+            ReflectionTestUtils.setField(
+                    event,
+                    "id",
+                    100L
+            );
+
+            return event;
+        });
+
+        ApiDtos.EventDto result =
+                eventService.create(request);
+
+        ArgumentCaptor<Event> captor =
+                ArgumentCaptor.forClass(
+                        Event.class
+                );
+
+        verify(eventRepository)
+                .save(captor.capture());
+
+        Event saved =
+                captor.getValue();
+
+        assertEquals(
+                request.title(),
+                saved.getTitle()
+        );
+
+        assertEquals(
+                request.description(),
+                saved.getDescription()
+        );
+
+        assertEquals(
+                request.location(),
+                saved.getLocation()
+        );
+
+        assertEquals(
+                request.startsAt(),
+                saved.getStartsAt()
+        );
+
+        assertEquals(
+                100,
+                saved.getCapacity()
+        );
+
+        assertEquals(
+                "TECH",
+                saved.getCategory()
+        );
+
+        assertEquals(
+                request.imageUrl(),
+                saved.getImageUrl()
+        );
+
+        assertEquals(
+                1,
+                saved.getDetailImages().size()
+        );
+
+        assertEquals(
+                2,
+                saved.getTicketTypes().size()
+        );
+
+        for (TicketType ticket :
+                saved.getTicketTypes()) {
+
+            assertSame(
+                    saved,
+                    ticket.getEvent()
+            );
+        }
+
+        assertNotNull(result);
+    }
+
+
+    // EVT-CREATE-002 ผลรวม Ticket capacity ไม่เท่า Event capacity - Conflict, ไม่ Save
+    @Test
+    void shouldRejectCreateWhenTicketCapacitiesDoNotMatchEventCapacity() {
+
+        ApiDtos.EventRequest request =
+                eventRequest(
+                        "Invalid Ticket Plan",
+                        100,
+                        List.of(
+                                ticketRequest(
+                                        null,
+                                        "General",
+                                        "100.00",
+                                        50
+                                ),
+                                ticketRequest(
+                                        null,
+                                        "VIP",
+                                        "250.00",
+                                        30
+                                )
+                        )
+                );
+
+        assertStatus(
+                HttpStatus.CONFLICT,
+                () -> eventService.create(request)
+        );
+
+        verify(
+                eventRepository,
+                never()
+        ).save(any(Event.class));
+    }
+
+
+    // ============================================================
+    // P0 — Update Event Capacity
+    // ============================================================
+
+    // EVT-UPDATE-003 ลด Event capacity ต่ำกว่าที่ขายแล้ว - ลด Event capacity ต่ำกว่าที่ขายแล้ว
+    @Test
+    void shouldRejectReducingEventCapacityBelowSeatsAlreadySold() {
+
+        Event existing =
+                createEvent(
+                        100L,
+                        100,
+                        LocalDateTime.now()
+                                .plusDays(10)
+                );
+
+        TicketType ticket =
+                createTicket(
+                        200L,
+                        existing,
+                        "General",
+                        new BigDecimal("100.00"),
+                        100
+                );
+
+        existing.addTicketType(ticket);
+
+        ApiDtos.EventRequest request =
+                eventRequest(
+                        "Updated Event",
+                        20,
+                        List.of(
+                                ticketRequest(
+                                        ticket.getId(),
+                                        "General",
+                                        "100.00",
+                                        20
+                                )
+                        )
+                );
+
+        when(
+                eventRepository.findByIdForUpdate(
+                        existing.getId()
+                )
+        ).thenReturn(Optional.of(existing));
+
+        when(
+                registrationRepository
+                        .seatsReservedByEventId(
+                                existing.getId()
+                        )
+        ).thenReturn(30L);
+
+        assertStatus(
+                HttpStatus.CONFLICT,
+                () -> eventService.update(
+                        existing.getId(),
+                        request
+                )
+        );
+
+        assertEquals(
+                100,
+                existing.getCapacity()
+        );
+    }
 }
