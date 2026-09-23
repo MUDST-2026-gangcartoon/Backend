@@ -1378,4 +1378,465 @@ class EventServiceTests {
                         )
         );
     }
+    // ============================================================
+    // P1 — Update Event
+    // ============================================================
+
+    // EVT-UPDATE-001
+    @Test
+    void shouldUpdateExistingEventSuccessfully() {
+
+        Event existing =
+                createEvent(
+                        100L,
+                        100,
+                        LocalDateTime.now()
+                                .plusDays(20)
+                );
+
+        TicketType general =
+                createTicket(
+                        201L,
+                        existing,
+                        "General",
+                        new BigDecimal("100.00"),
+                        60
+                );
+
+        TicketType vip =
+                createTicket(
+                        202L,
+                        existing,
+                        "VIP",
+                        new BigDecimal("250.00"),
+                        40
+                );
+
+        existing.addTicketType(general);
+        existing.addTicketType(vip);
+
+        ApiDtos.EventRequest request =
+                eventRequest(
+                        "Updated Event Name",
+                        120,
+                        List.of(
+                                ticketRequest(
+                                        general.getId(),
+                                        "General",
+                                        "120.00",
+                                        70
+                                ),
+                                ticketRequest(
+                                        vip.getId(),
+                                        "VIP",
+                                        "300.00",
+                                        50
+                                )
+                        )
+                );
+
+        when(
+                eventRepository.findByIdForUpdate(
+                        existing.getId()
+                )
+        ).thenReturn(Optional.of(existing));
+
+        when(
+                registrationRepository
+                        .seatsReservedByEventId(
+                                existing.getId()
+                        )
+        ).thenReturn(20L);
+
+        lenient().when(
+                registrationRepository
+                        .seatsReservedByTicketTypeId(
+                                general.getId()
+                        )
+        ).thenReturn(10L);
+
+        lenient().when(
+                registrationRepository
+                        .seatsReservedByTicketTypeId(
+                                vip.getId()
+                        )
+        ).thenReturn(5L);
+
+        lenient().when(
+                ticketTypeRepository.findById(
+                        general.getId()
+                )
+        ).thenReturn(Optional.of(general));
+
+        lenient().when(
+                ticketTypeRepository.findById(
+                        vip.getId()
+                )
+        ).thenReturn(Optional.of(vip));
+
+        ApiDtos.EventDto result =
+                eventService.update(
+                        existing.getId(),
+                        request
+                );
+
+        assertEquals(
+                "Updated Event Name",
+                existing.getTitle()
+        );
+
+        assertEquals(
+                120,
+                existing.getCapacity()
+        );
+
+        assertNotNull(result);
+
+        verify(eventRepository)
+                .findByIdForUpdate(
+                        existing.getId()
+                );
+    }
+
+
+    // EVT-UPDATE-002
+    @Test
+    void shouldReturnNotFoundWhenUpdatingMissingEvent() {
+
+        ApiDtos.EventRequest request =
+                eventRequest(
+                        "Missing Event",
+                        100,
+                        List.of(
+                                ticketRequest(
+                                        null,
+                                        "General",
+                                        "100.00",
+                                        100
+                                )
+                        )
+                );
+
+        when(
+                eventRepository.findByIdForUpdate(
+                        999L
+                )
+        ).thenReturn(Optional.empty());
+
+        assertStatus(
+                HttpStatus.NOT_FOUND,
+                () -> eventService.update(
+                        999L,
+                        request
+                )
+        );
+    }
+
+
+    // EVT-UPDATE-004
+    @Test
+    void shouldRejectReducingTicketCapacityBelowSeatsSold() {
+
+        Event event =
+                createEvent(
+                        100L,
+                        100,
+                        LocalDateTime.now()
+                                .plusDays(10)
+                );
+
+        TicketType vip =
+                createTicket(
+                        201L,
+                        event,
+                        "VIP",
+                        new BigDecimal("250.00"),
+                        20
+                );
+
+        TicketType general =
+                createTicket(
+                        202L,
+                        event,
+                        "General",
+                        new BigDecimal("100.00"),
+                        80
+                );
+
+        event.addTicketType(vip);
+        event.addTicketType(general);
+
+        ApiDtos.EventRequest request =
+                eventRequest(
+                        "Updated Event",
+                        100,
+                        List.of(
+                                ticketRequest(
+                                        vip.getId(),
+                                        "VIP",
+                                        "250.00",
+                                        10
+                                ),
+                                ticketRequest(
+                                        general.getId(),
+                                        "General",
+                                        "100.00",
+                                        90
+                                )
+                        )
+                );
+
+        when(
+                eventRepository.findByIdForUpdate(
+                        event.getId()
+                )
+        ).thenReturn(Optional.of(event));
+
+        when(
+                registrationRepository
+                        .seatsReservedByEventId(
+                                event.getId()
+                        )
+        ).thenReturn(20L);
+
+        lenient().when(
+                registrationRepository
+                        .seatsReservedByTicketTypeId(
+                                vip.getId()
+                        )
+        ).thenReturn(15L);
+
+        assertStatus(
+                HttpStatus.CONFLICT,
+                () -> eventService.update(
+                        event.getId(),
+                        request
+                )
+        );
+
+        assertEquals(
+                20,
+                vip.getCapacity()
+        );
+    }
+
+
+    // EVT-UPDATE-005
+    @Test
+    void shouldRejectRemovingTicketTypeThatHasSales() {
+
+        Event event =
+                createEvent(
+                        100L,
+                        100,
+                        LocalDateTime.now()
+                                .plusDays(10)
+                );
+
+        TicketType vip =
+                createTicket(
+                        201L,
+                        event,
+                        "VIP",
+                        new BigDecimal("250.00"),
+                        20
+                );
+
+        TicketType general =
+                createTicket(
+                        202L,
+                        event,
+                        "General",
+                        new BigDecimal("100.00"),
+                        80
+                );
+
+        event.addTicketType(vip);
+        event.addTicketType(general);
+
+        ApiDtos.EventRequest request =
+                eventRequest(
+                        "Updated Event",
+                        100,
+                        List.of(
+                                ticketRequest(
+                                        general.getId(),
+                                        "General",
+                                        "100.00",
+                                        100
+                                )
+                        )
+                );
+
+        when(
+                eventRepository.findByIdForUpdate(
+                        event.getId()
+                )
+        ).thenReturn(Optional.of(event));
+
+        when(
+                registrationRepository
+                        .seatsReservedByEventId(
+                                event.getId()
+                        )
+        ).thenReturn(2L);
+
+        lenient().when(
+                registrationRepository
+                        .seatsReservedByTicketTypeId(
+                                vip.getId()
+                        )
+        ).thenReturn(2L);
+
+        assertStatus(
+                HttpStatus.CONFLICT,
+                () -> eventService.update(
+                        event.getId(),
+                        request
+                )
+        );
+
+        assertTrue(
+                event.getTicketTypes()
+                        .contains(vip)
+        );
+    }
+
+
+    // EVT-UPDATE-006
+    @Test
+    void shouldRejectTicketTypeIdBelongingToAnotherEvent() {
+
+        Event eventA =
+                createEvent(
+                        100L,
+                        100,
+                        LocalDateTime.now()
+                                .plusDays(10)
+                );
+
+        Event eventB =
+                createEvent(
+                        101L,
+                        100,
+                        LocalDateTime.now()
+                                .plusDays(10)
+                );
+
+        TicketType eventATicket =
+                createTicket(
+                        201L,
+                        eventA,
+                        "General",
+                        new BigDecimal("100.00"),
+                        100
+                );
+
+        TicketType eventBTicket =
+                createTicket(
+                        999L,
+                        eventB,
+                        "Foreign Ticket",
+                        new BigDecimal("999.00"),
+                        100
+                );
+
+        eventA.addTicketType(eventATicket);
+        eventB.addTicketType(eventBTicket);
+
+        ApiDtos.EventRequest request =
+                eventRequest(
+                        "Updated A",
+                        100,
+                        List.of(
+                                ticketRequest(
+                                        eventBTicket.getId(),
+                                        "Foreign Ticket",
+                                        "999.00",
+                                        100
+                                )
+                        )
+                );
+
+        when(
+                eventRepository.findByIdForUpdate(
+                        eventA.getId()
+                )
+        ).thenReturn(Optional.of(eventA));
+
+        lenient().when(
+                ticketTypeRepository.findById(
+                        eventBTicket.getId()
+                )
+        ).thenReturn(
+                Optional.of(eventBTicket)
+        );
+
+        assertStatus(
+                HttpStatus.CONFLICT,
+                () -> eventService.update(
+                        eventA.getId(),
+                        request
+                )
+        );
+    }
+
+
+    // EVT-UPDATE-007
+    @Test
+    void shouldRejectDuplicateTicketTypeIdsInUpdateRequest() {
+
+        Event event =
+                createEvent(
+                        100L,
+                        100,
+                        LocalDateTime.now()
+                                .plusDays(10)
+                );
+
+        TicketType ticket =
+                createTicket(
+                        201L,
+                        event,
+                        "General",
+                        new BigDecimal("100.00"),
+                        100
+                );
+
+        event.addTicketType(ticket);
+
+        ApiDtos.EventRequest request =
+                eventRequest(
+                        "Updated Event",
+                        100,
+                        List.of(
+                                ticketRequest(
+                                        ticket.getId(),
+                                        "General A",
+                                        "100.00",
+                                        50
+                                ),
+                                ticketRequest(
+                                        ticket.getId(),
+                                        "General B",
+                                        "100.00",
+                                        50
+                                )
+                        )
+                );
+
+        when(
+                eventRepository.findByIdForUpdate(
+                        event.getId()
+                )
+        ).thenReturn(Optional.of(event));
+
+        assertStatus(
+                HttpStatus.CONFLICT,
+                () -> eventService.update(
+                        event.getId(),
+                        request
+                )
+        );
+    }
 }
