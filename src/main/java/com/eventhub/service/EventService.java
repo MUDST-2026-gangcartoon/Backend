@@ -695,6 +695,27 @@ public class EventService {
                 .map(this::registrationDto)
                 .toList();
     }
+// ============================================================
+// Branch 7 — Staff Service Contract
+// ============================================================
+
+    @Transactional(readOnly = true)
+    public List<ApiDtos.AttendeeDto> attendees(Long eventId) {
+        throw notImplemented();
+    }
+
+    @Transactional
+    public ApiDtos.CheckInDto checkIn(
+            Long eventId,
+            String ticketCode
+    ) {
+        throw notImplemented();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ApiDtos.AttendeeDto> recentCheckIns(Long eventId) {
+        throw notImplemented();
+    }
 
     private UnsupportedOperationException notImplemented() {
         return new UnsupportedOperationException(
