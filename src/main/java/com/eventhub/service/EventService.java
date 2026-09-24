@@ -449,7 +449,22 @@ public class EventService {
             Long eventId,
             Principal principal
     ) {
-        throw notImplemented();
+        UserAccount user =
+                currentUser(principal);
+
+        long deleted =
+                registrationRepository
+                        .deleteByUserIdAndEventId(
+                                user.getId(),
+                                eventId
+                        );
+
+        if (deleted == 0L) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Registration not found"
+            );
+        }
     }
 
     @Transactional(readOnly = true)
