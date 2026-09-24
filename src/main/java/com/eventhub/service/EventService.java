@@ -71,7 +71,97 @@ public class EventService {
     public ApiDtos.EventDto create(
             ApiDtos.EventRequest request
     ) {
-        throw notImplemented();
+        validateTicketCapacityPlan(
+                request.capacity(),
+                request.ticketTypes()
+        );
+
+        Event event = new Event();
+
+        applyEventFields(
+                event,
+                request
+        );
+
+        replaceDetailImages(
+                event,
+                request.detailImages()
+        );
+
+        for (ApiDtos.TicketTypeRequest ticketRequest
+                : request.ticketTypes()) {
+
+            TicketType ticket =
+                    new TicketType(
+                            event,
+                            ticketRequest.name(),
+                            ticketRequest.description(),
+                            ticketRequest.price(),
+                            ticketRequest.capacity()
+                    );
+
+            event.addTicketType(ticket);
+        }
+
+        Event saved =
+                eventRepository.save(event);
+
+        return eventDto(
+                saved,
+                false
+        );
+    }
+    private void validateTicketCapacityPlan(
+            int eventCapacity,
+            List<ApiDtos.TicketTypeRequest> ticketTypes
+    ) {
+        long total = 0L;
+
+        for (ApiDtos.TicketTypeRequest ticket
+                : ticketTypes) {
+
+            total += ticket.capacity();
+        }
+
+        if (total != eventCapacity) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Ticket capacities must equal event capacity"
+            );
+        }
+    }
+    private void applyEventFields(
+            Event event,
+            ApiDtos.EventRequest request
+    ) {
+        event.setTitle(request.title());
+        event.setDescription(request.description());
+        event.setLocation(request.location());
+        event.setStartsAt(request.startsAt());
+        event.setCapacity(request.capacity());
+        event.setCategory(request.category());
+        event.setImageUrl(request.imageUrl());
+    }
+    private void replaceDetailImages(
+            Event event,
+            List<ApiDtos.DetailImageRequest> requests
+    ) {
+        event.getDetailImages().clear();
+
+        if (requests == null) {
+            return;
+        }
+
+        for (ApiDtos.DetailImageRequest request
+                : requests) {
+
+            event.getDetailImages().add(
+                    new DetailImage(
+                            request.url(),
+                            request.placement()
+                    )
+            );
+        }
     }
 
     @Transactional
@@ -79,7 +169,32 @@ public class EventService {
             Long eventId,
             ApiDtos.EventRequest request
     ) {
-        throw notImplemented();
+        Event event =
+                eventRepository
+                        .findByIdForUpdate(eventId)
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "Event not found"
+                                )
+                        );
+
+        long seatsSold =
+                registrationRepository
+                        .seatsReservedByEventId(
+                                event.getId()
+                        );
+
+        if (request.capacity() < seatsSold) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Event capacity cannot be lower than seats already sold"
+            );
+        }
+
+        throw new UnsupportedOperationException(
+                "Remaining update rules are not implemented yet"
+        );
     }
 
     @Transactional
