@@ -64,7 +64,46 @@ public class EventService {
             Long eventId,
             Principal principal
     ) {
-        throw notImplemented();
+        Event event =
+                eventRepository
+                        .findById(eventId)
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "Event not found"
+                                )
+                        );
+
+        boolean registered = false;
+
+        if (principal != null
+                && principal.getName() != null
+                && !principal.getName().isBlank()) {
+
+            String email =
+                    principal.getName()
+                            .trim()
+                            .toLowerCase(Locale.ROOT);
+
+            UserAccount user =
+                    userRepository
+                            .findByEmail(email)
+                            .orElse(null);
+
+            if (user != null) {
+                registered =
+                        registrationRepository
+                                .existsByUserIdAndEventId(
+                                        user.getId(),
+                                        event.getId()
+                                );
+            }
+        }
+
+        return eventDto(
+                event,
+                registered
+        );
     }
 
     @Transactional
@@ -353,7 +392,20 @@ public class EventService {
     public void delete(
             Long eventId
     ) {
-        throw notImplemented();
+        Event event =
+                eventRepository
+                        .findById(eventId)
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "Event not found"
+                                )
+                        );
+
+        registrationRepository
+                .deleteByEventId(eventId);
+
+        eventRepository.delete(event);
     }
 
     @Transactional
@@ -632,7 +684,16 @@ public class EventService {
     public List<ApiDtos.RegistrationDto> mine(
             Principal principal
     ) {
-        throw notImplemented();
+        UserAccount user =
+                currentUser(principal);
+
+        return registrationRepository
+                .findByUserIdOrderByEventStartsAtAsc(
+                        user.getId()
+                )
+                .stream()
+                .map(this::registrationDto)
+                .toList();
     }
 
     private UnsupportedOperationException notImplemented() {
