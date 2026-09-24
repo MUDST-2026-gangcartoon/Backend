@@ -1,5 +1,10 @@
 # ข้อกำหนดการทดสอบ Business Logic ของ EventService
 
+> **ฉบับปรับปรุงสำหรับ Branch 7 — Staff Check-in**  
+> ส่วนที่ 1–15 ด้านล่างเป็นข้อกำหนดของ Branch 6 ตามเอกสารเดิม ไม่ได้แปลว่า test ทุกข้อผ่านแล้วโดยอัตโนมัติ; ให้ดูผล CI ที่ merge เข้า `main` จริง  
+> ส่วนที่ 16 เป็นต้นไปเป็นข้อกำหนด **งานใหม่** สำหรับ `feat/backend-staff` และต้องให้ QA เขียน test ก่อน Backend implement  
+> เอกสารนี้เป็น specification/test contract ไม่ใช่รายงานผลทดสอบหรือหลักฐานว่า API ได้ deploy แล้ว
+
 ## 1. วัตถุประสงค์
 
 เอกสารนี้กำหนดพฤติกรรมที่คาดหวังของ EventService สำหรับระบบ Event,
@@ -31,7 +36,7 @@ EventServiceTests ในรอบนี้ครอบคลุม:
 
 ไม่อยู่ในขอบเขตรอบนี้:
 
-- Staff Check-in
+- Staff Check-in (ไม่อยู่ใน Branch 6; กำหนดเพิ่มเติมในส่วนที่ 16 สำหรับ Branch 7)
 - Upload
 - Analytics
 - Payment Gateway
@@ -794,3 +799,137 @@ Testing phase นี้ถือว่าเสร็จเมื่อ:
 - ใช้เฉพาะข้อมูล Test จำลอง
 - ไม่มี Password/API Key/Token/ข้อมูลจริงอยู่ใน Test
 - หลัง Backend implement เสร็จ Test ชุดเดิมต้องผ่าน
+
+
+---
+
+# 16. ส่วนเพิ่มเติมสำหรับ Branch 7 — Staff Check-in (ข้อกำหนดใหม่)
+
+## 16.1 วัตถุประสงค์และขอบเขต
+
+สร้างความสามารถฝั่ง Backend สำหรับให้ STAFF/ADMIN ดูรายชื่อผู้ลงทะเบียนของงาน เช็กอินด้วย Ticket Code และดูรายการเช็กอินล่าสุดของงาน โดยใช้ Registration ที่บันทึกจาก Branch 6 ไม่สร้างระบบชำระเงินจริงหรือการออกบัตรใหม่ใน Staff flow
+
+ขอบเขต Branch 7: Service logic ของ `attendees(eventId)`, `checkIn(eventId,ticketCode)`, `recentCheckIns(eventId)` และ Automated Tests ที่เกี่ยวข้อง; **การเพิ่ม/เชื่อม HTTP Controller ตามแผนเดิมอยู่ Branch 8** หากทีมเปลี่ยนลำดับต้องบันทึกและตกลงร่วมกันก่อน การมี Service เพียงอย่างเดียวยังไม่ได้แปลว่า Frontend สามารถเรียก API เหล่านี้ได้แล้ว
+
+ก่อน QA เขียน test ให้ Backend ตรวจ public contract, DTO, Entity และ Repository ใน `main` เวอร์ชันล่าสุด แล้ว commit **เฉพาะ signature/skeleton** ที่ตกลงกันลง Branch 7; อย่าสมมติว่า method ทั้งสามมีอยู่แล้วหรือเขียน Test ให้เกิดแค่ compile error
+
+## 16.2 ข้อมูลและ contract ที่ QA/Backend ต้องตรวจให้ตรงกับโค้ดจริง
+
+- `RegistrationRepository`: `findByEventIdOrderByRegisteredAtAsc(eventId)`, `findByTicketCode(ticketCode)`, `findTop8ByEventIdAndCheckedInAtIsNotNullOrderByCheckedInAtDesc(eventId)`; ตรวจ signature และ return type จริงก่อนเขียน mock
+- `EventRepository`: `findById(eventId)` สำหรับตรวจ event ที่ร้องขอ
+- `Registration`: `user`, `event`, `ticketType`, `quantity`, `registeredAt`, `ticketCode`, `checkedInAt` และกลไก `checkIn()` ที่ต้องตรวจจริงก่อนเลือก assert
+- `ApiDtos.AttendeeDto`: `id` (ใน contract เดิมคือ **user id**), `name`, `email`, `registeredAt`, `ticketType`, `quantity`, `ticketCode`, `checkedInAt`
+- `ApiDtos.CheckInRequest`: `ticketCode` (ไม่รับ `userId`/`role` จาก Client)
+- `ApiDtos.CheckInDto`: `ticketCode`, `attendeeName`, `eventTitle`, `ticketType`, `quantity`, `checkedIn`, `checkedInAt`
+- Code จากการลงทะเบียนมีหนึ่ง Code ต่อหนึ่ง Registration แม้ quantity มากกว่า 1; ไม่สมมติว่ามี Code แยกทุกที่นั่ง
+
+## 16.3 P0 — Unit Tests ของ Service (QA เขียนก่อน implementation)
+
+### EVT-STAFF-001 — ดูรายชื่อผู้ลงทะเบียนของงานที่มีอยู่
+
+Given: Event A มีผู้ลงทะเบียนหลายรายการ แต่ละรายการมี User, TicketType, quantity และสถานะเช็กอินต่างกัน
+
+When: เรียก `attendees(eventAId)`
+
+Then: คืน `List<AttendeeDto>` เฉพาะงาน A ตามลำดับ `registeredAt` ที่ Repository จัดให้; แต่ละรายการมี user id/name/email, registeredAt, ชื่อ TicketType, quantity, ticketCode, checkedInAt ที่ตรงกับข้อมูลต้นทาง; ไม่ส่ง Entity หรือ password/hash ออกไป
+
+### EVT-STAFF-002 — Event ไม่มีอยู่เมื่อขอรายชื่อ
+
+When: เรียก `attendees(unknownEventId)`
+
+Then: ตอบ Not Found (404); ไม่ส่งข้อมูลผู้ลงทะเบียนของ Event อื่น
+
+### EVT-STAFF-003 — Check-in สำเร็จด้วย Ticket Code ของงานที่ร้องขอ
+
+Given: มี Registration ของ Event A ที่ยังไม่เช็กอิน และมี Ticket Code ที่ตรงกัน
+
+When: เรียก `checkIn(eventAId, code)`
+
+Then: เช็กอิน Registration นั้นโดยกำหนด `checkedInAt` เมื่อเช็กอินครั้งแรก และคืน `CheckInDto` ซึ่งระบุ ticketCode, attendeeName, eventTitle, ticketType, quantity, checkedIn=true และ checkedInAt เดียวกับ Registration; ไม่สร้าง Registration ใหม่หรือเปลี่ยนจำนวนที่นั่ง
+
+### EVT-STAFF-004 — ไม่พบ Ticket Code
+
+When: เรียก `checkIn(eventAId, unknownCode)`
+
+Then: ตอบ 404 และไม่มี Registration ใดเปลี่ยนสถานะ
+
+### EVT-STAFF-005 — Ticket Code เป็นของ Event อื่น
+
+Given: Ticket Code เป็นของ Event B แต่ Request ระบุ Event A
+
+Then: ตอบ 409; ห้ามเช็กอินหรือเผยข้อมูลผู้เข้าร่วมของ Event B
+
+### EVT-STAFF-006 — เช็กอินรหัสเดิมซ้ำตามลำดับ
+
+Given: Registration มี checkedInAt อยู่แล้ว
+
+When: เรียก checkIn อีกครั้งด้วย Code และ Event เดิม
+
+Then: คืนสถานะสำเร็จ (HTTP contract ภายหลังคือ 200) พร้อม `checkedInAt` ค่าเดิม; ห้ามเปลี่ยน timestamp หรือนับว่าเป็นการเช็กอินคนใหม่ ทดสอบการเรียกซ้ำ **ตามลำดับ** เท่านั้น อย่าอ้างว่าพิสูจน์ concurrent exactly-once แล้ว
+
+### EVT-STAFF-007 — Normalize Ticket Code
+
+Given: Ticket Code ที่บันทึกมีรูป `GTH-...`
+
+When: ส่ง code ที่มีช่องว่างหัวท้าย/ตัวพิมพ์เล็ก
+
+Then: trim และแปลงเป็นตัวพิมพ์ใหญ่ก่อนค้นหา; คืนผลสำหรับ Registration เดียวกัน
+
+### EVT-STAFF-008 — ดูรายการเช็กอินล่าสุด
+
+Given: มีทั้ง Registration ที่เช็กอินแล้วและยังไม่เช็กอินสำหรับ Event A
+
+When: เรียก `recentCheckIns(eventAId)`
+
+Then: คืน `List<AttendeeDto>` เฉพาะรายการที่เช็กอินแล้ว สูงสุด 8 รายการ เรียง `checkedInAt` ล่าสุดก่อน; ไม่ปะปน Event B; คง quantity และเวลาจาก Registration จริง
+
+## 16.4 P1 — API/Security & Edge Cases (ร่วมกับ Branch 8 หรือเมื่อ Controller พร้อม)
+
+### EVT-STAFF-009 — สิทธิ์ HTTP ตาม Role
+
+- Anonymous เรียก staff endpoints → 401
+- USER เรียก staff endpoints → 403
+- STAFF และ ADMIN เรียก staff endpoints ได้ ภายใต้ Spring Security Session/CSRF เดิม
+- ไม่ใช้ `role` หรือ `userId` จาก request body เพื่อเพิ่มสิทธิ์
+- ทดสอบ GET และ POST จริงบน HTTP layer ไม่ใช้ Unit Test ของ Service เพียงอย่างเดียวเป็นหลักฐาน Authorization
+
+### EVT-STAFF-010 — คำขอ Check-in ไม่ถูกต้อง
+
+`CheckInRequest.ticketCode` ว่าง/null/เกิน 32 ตัวอักษร → 400 ตาม DTO/HTTP validation; ตัว Service Unit Test ไม่ควรสมมติว่า `@Valid` รันเองโดยไม่มี Controller/Validator
+
+### EVT-STAFF-011 — Recent Check-ins ของ Event ที่ไม่มีอยู่
+
+คู่มือ render-v2 บันทึกพฤติกรรมเก่า `recentCheckIns(unknownId)` คืน `[]` ขณะที่ `attendees(unknownId)` คืน 404; **คงแนวทางนี้ชั่วคราวเพื่อเข้ากันกับคู่มือ** แต่ PM/QA/Frontend ต้องตกลงก่อนเขียน Test ว่าจะคง `200 []` หรือปรับให้สม่ำเสมอเป็น 404 แล้วบันทึก decision ในเอกสาร ไม่เขียน test สองแบบขัดกัน
+
+### EVT-STAFF-012 — ความถูกต้องเมื่อมีการสแกนพร้อมกัน
+
+Unit Test การสแกนซ้ำแบบ sequential **ไม่เพียงพอ** ที่จะอ้างว่าเช็กอินได้ครั้งเดียวภายใต้ concurrency ต้องกำหนดนโยบาย lock/atomic update หรือ optimistic version และทดสอบแบบ Integration บนฐานข้อมูลที่ใช้จริงก่อนกล่าวอ้าง exactly-once ห้ามสร้าง false-green จาก Mockito Test
+
+### EVT-STAFF-013 — ความเป็นเอกลักษณ์ของ Ticket Code
+
+ก่อนเปิดใช้จุดตรวจจริง ต้องตรวจว่ามี unique constraint/index ของ `ticketCode` ใน schema ปลายทาง และมีวิธีรับมือ code collision และข้อมูลเก่าที่ code เป็น null/ซ้ำ; การทดสอบ service แบบ mock เพียงอย่างเดียวพิสูจน์เรื่องนี้ไม่ได้ หากยังไม่มี ให้บันทึกเป็น Blocker/ข้อจำกัด ไม่อ้างว่าระบบปลอดภัยสมบูรณ์
+
+### EVT-STAFF-014 — กฎการยกเลิก Registration หลัง Check-in
+
+ระบบก่อนหน้าอาจยอมยกเลิกหลังเช็กอิน; PM ต้องยืนยันว่าจะอนุญาตหรือปฏิเสธก่อน QA สร้าง Test ใหม่สำหรับ `cancel()` อย่าคิดกฎเองหรือแก้ test Branch 6 โดยไม่มี change request
+
+## 16.5 HTTP Contract สำหรับ Frontend (ใช้เมื่อ Controller ถูกสร้างและทดสอบแล้ว)
+
+| Method | Route | สิทธิ์ | Request | Success |
+| --- | --- | --- | --- | --- |
+| GET | `/api/staff/events/{eventId}/attendees` | STAFF/ADMIN | ไม่มี body | 200 `AttendeeDto[]` |
+| POST | `/api/staff/events/{eventId}/check-in` | STAFF/ADMIN | `{"ticketCode":"GTH-XXXXXXXXXX"}` | 200 `CheckInDto` |
+| GET | `/api/staff/events/{eventId}/recent-check-ins` | STAFF/ADMIN | ไม่มี body | 200 `AttendeeDto[]` (สูงสุด 8) |
+| GET | `/api/admin/events/{eventId}/attendees` | ADMIN | ไม่มี body | 200 `AttendeeDto[]` (อยู่ Branch 8 ตามแผน) |
+
+Backend ใช้ Session Cookie + CSRF ของระบบเดิม; Frontend ต้องใช้ `credentials: 'include'` และแนบ `X-CSRF-TOKEN` ใน POST หลังขอ token ล่าสุด ห้ามสร้าง ticket code หรือเช็กอินจริงเฉพาะใน React state
+
+## 16.6 วิธีส่งงาน Git/Test-first
+
+1. หลัง PR Branch 6 ถูกรวมเข้า `main` และตรวจผล CI จริงแล้ว Backend แตก `feat/backend-staff` จาก `origin/main`; เพิ่มเอกสารนี้และ **Service Contract/Skeleton ที่ตกลงกับ QA เท่านั้น** และ push
+2. QA แตก `test/backend-staff` จาก `origin/feat/backend-staff` สร้าง `src/test/java/com/eventhub/service/EventStaffServiceTests.java` หรือชื่อที่ทีมตกลง, เขียน P0 โดยไม่แก้ production logic, push เพื่อให้ CI ได้ Red Build ที่เกิดจาก assertion/behavior ไม่ใช่ compile error
+3. QA เปิด PR `test/backend-staff` → `feat/backend-staff`; review และรวมบน GitHub ตาม branch policy (ไม่ต้อง local merge) ก่อน Backend implement
+4. Backend implement ทีละ rule, commit/push เพื่อให้ CI ทดสอบซ้ำจน Green; QA review หลักฐานและเติม edge cases เมื่อพบช่องว่าง
+5. เมื่อ `mvnw.cmd clean test` และ CI ผ่าน, QA/Backend review, PR `feat/backend-staff` → `main` และ merge บน GitHub
+
+**อย่าใช้เอกสารนี้แทนผลตรวจ repository ล่าสุด:** ตรวจ method/constructor, package, DB mapping, workflow และ CI run จริงก่อนเริ่มทุก phase; หาก API ยังไม่มี Controller ให้บอก Frontend ว่ายังเป็น contract เป้าหมาย ไม่ใช่ endpoint ที่ใช้งานได้แล้ว
