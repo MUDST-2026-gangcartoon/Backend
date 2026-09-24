@@ -329,6 +329,16 @@ public class EventService {
         TicketType ticket =
                 registration.getTicketType();
 
+        BigDecimal totalPrice =
+                ticket == null
+                        ? BigDecimal.ZERO
+                        : ticket.getPrice()
+                        .multiply(
+                                BigDecimal.valueOf(
+                                        registration.getQuantity()
+                                )
+                        );
+
         return new ApiDtos.RegistrationDto(
                 registration.getId(),
                 registration.getRegisteredAt(),
@@ -337,16 +347,15 @@ public class EventService {
                 ticket == null
                         ? null
                         : ticket.getName(),
-
-                // P1 จะมาแก้ตรงนี้ภายหลัง
-                BigDecimal.ZERO,
-
+                totalPrice,
                 eventDto(
                         registration.getEvent(),
                         true
                 )
         );
     }
+
+
     private ApiDtos.EventDto eventDto(
             Event event,
             boolean registered
