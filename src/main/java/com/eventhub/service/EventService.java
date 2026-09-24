@@ -169,6 +169,11 @@ public class EventService {
             Long eventId,
             ApiDtos.EventRequest request
     ) {
+        validateTicketCapacityPlan(
+                request.capacity(),
+                request.ticketTypes()
+        );
+
         Event event =
                 eventRepository
                         .findByIdForUpdate(eventId)
@@ -179,21 +184,168 @@ public class EventService {
                                 )
                         );
 
-        long seatsSold =
+        long eventSeatsSold =
                 registrationRepository
                         .seatsReservedByEventId(
                                 event.getId()
                         );
 
-        if (request.capacity() < seatsSold) {
+        if (request.capacity() < eventSeatsSold) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Event capacity cannot be lower than seats already sold"
             );
         }
 
-        throw new UnsupportedOperationException(
-                "Remaining update rules are not implemented yet"
+        java.util.Map<Long, TicketType> existingById =
+                new java.util.HashMap<>();
+
+        for (TicketType ticket
+                : event.getTicketTypes()) {
+
+            if (ticket.getId() != null) {
+                existingById.put(
+                        ticket.getId(),
+                        ticket
+                );
+            }
+        }
+
+        java.util.Set<Long> requestIds =
+                new java.util.HashSet<>();
+
+        for (ApiDtos.TicketTypeRequest ticketRequest
+                : request.ticketTypes()) {
+
+            Long ticketId =
+                    ticketRequest.id();
+
+            if (ticketId == null) {
+                continue;
+            }
+
+            if (!requestIds.add(ticketId)) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Duplicate ticket type ID"
+                );
+            }
+
+            TicketType existingTicket =
+                    existingById.get(ticketId);
+
+            if (existingTicket == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Ticket type does not belong to this event"
+                );
+            }
+
+            long sold =
+                    registrationRepository
+                            .seatsReservedByTicketTypeId(
+                                    existingTicket.getId()
+                            );
+
+            if (ticketRequest.capacity() < sold) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Ticket capacity cannot be lower than seats already sold"
+                );
+            }
+        }
+
+        // ตรวจ TicketType ที่กำลังจะถูกลบ
+        for (TicketType existingTicket
+                : event.getTicketTypes()) {
+
+            Long ticketId =
+                    existingTicket.getId();
+
+            if (ticketId == null
+                    || requestIds.contains(ticketId)) {
+
+                continue;
+            }
+
+            long sold =
+                    registrationRepository
+                            .seatsReservedByTicketTypeId(
+                                    ticketId
+                            );
+
+            if (sold > 0L) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Cannot remove a ticket type that already has sales"
+                );
+            }
+        }
+
+        // ผ่าน validation ทั้งหมดก่อน
+        // จึงค่อย mutate entity
+        applyEventFields(
+                event,
+                request
+        );
+
+        replaceDetailImages(
+                event,
+                request.detailImages()
+        );
+
+        event.getTicketTypes()
+                .removeIf(ticket ->
+                        ticket.getId() != null
+                                && !requestIds.contains(
+                                ticket.getId()
+                        )
+                );
+
+        for (ApiDtos.TicketTypeRequest ticketRequest
+                : request.ticketTypes()) {
+
+            if (ticketRequest.id() == null) {
+
+                TicketType newTicket =
+                        new TicketType(
+                                event,
+                                ticketRequest.name(),
+                                ticketRequest.description(),
+                                ticketRequest.price(),
+                                ticketRequest.capacity()
+                        );
+
+                event.addTicketType(newTicket);
+
+                continue;
+            }
+
+            TicketType ticket =
+                    existingById.get(
+                            ticketRequest.id()
+                    );
+
+            ticket.setName(
+                    ticketRequest.name()
+            );
+
+            ticket.setDescription(
+                    ticketRequest.description()
+            );
+
+            ticket.setPrice(
+                    ticketRequest.price()
+            );
+
+            ticket.setCapacity(
+                    ticketRequest.capacity()
+            );
+        }
+
+        return eventDto(
+                event,
+                false
         );
     }
 
