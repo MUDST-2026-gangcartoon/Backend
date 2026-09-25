@@ -377,4 +377,276 @@ class EventStaffServiceTests {
                 registrationRepository
         );
     }
+    // ============================================================
+    // Check-in
+    // ============================================================
+
+    // EVT-STAFF-003 Check-in สำเร็จ
+    @Test
+    void shouldCheckInRegistrationSuccessfully() {
+
+        // Arrange
+        Event eventA = createEvent(
+                100L,
+                "Event A"
+        );
+
+        UserAccount alice = createUser(
+                10L,
+                "Alice",
+                "alice@example.test"
+        );
+
+        TicketType general = createTicket(
+                eventA,
+                "General"
+        );
+
+        Registration registration =
+                createRegistration(
+                        501L,
+                        alice,
+                        eventA,
+                        general,
+                        2,
+                        LocalDateTime.of(
+                                2027, 5, 1, 9, 0
+                        ),
+                        null
+                );
+
+        String ticketCode =
+                registration.getTicketCode();
+
+        // Event lookup อาจถูกใช้โดย implementation
+        // จึงเตรียม Event ที่ร้องขอไว้ให้
+        lenient()
+                .when(
+                        eventRepository.findById(
+                                eventA.getId()
+                        )
+                )
+                .thenReturn(
+                        Optional.of(eventA)
+                );
+
+        when(
+                registrationRepository.findByTicketCode(
+                        ticketCode
+                )
+        ).thenReturn(
+                Optional.of(registration)
+        );
+
+        // ก่อน Check-in ต้องยังไม่มีเวลา
+        assertNull(
+                registration.getCheckedInAt()
+        );
+
+        // Act
+        ApiDtos.CheckInDto result =
+                eventService.checkIn(
+                        eventA.getId(),
+                        ticketCode
+                );
+
+        // Assert
+        assertNotNull(
+                registration.getCheckedInAt()
+        );
+
+        assertNotNull(result);
+
+        assertEquals(
+                ticketCode,
+                result.ticketCode()
+        );
+
+        assertEquals(
+                "Alice",
+                result.attendeeName()
+        );
+
+        assertEquals(
+                "Event A",
+                result.eventTitle()
+        );
+
+        assertEquals(
+                "General",
+                result.ticketType()
+        );
+
+        assertEquals(
+                2,
+                result.quantity()
+        );
+
+        assertTrue(
+                result.checkedIn()
+        );
+
+        assertEquals(
+                registration.getCheckedInAt(),
+                result.checkedInAt()
+        );
+
+        verify(registrationRepository)
+                .findByTicketCode(
+                        ticketCode
+                );
+    }
+    // EVT-STAFF-004 ไม่พบ Ticket Code
+    @Test
+    void shouldReturnNotFoundWhenTicketCodeDoesNotExist() {
+
+        // Arrange
+        Event eventA = createEvent(
+                100L,
+                "Event A"
+        );
+
+        String unknownCode =
+                "GTH-UNKNOWN001";
+
+        lenient()
+                .when(
+                        eventRepository.findById(
+                                eventA.getId()
+                        )
+                )
+                .thenReturn(
+                        Optional.of(eventA)
+                );
+
+        when(
+                registrationRepository.findByTicketCode(
+                        unknownCode
+                )
+        ).thenReturn(
+                Optional.empty()
+        );
+
+        // Act
+        ResponseStatusException exception =
+                assertThrows(
+                        ResponseStatusException.class,
+                        () -> eventService.checkIn(
+                                eventA.getId(),
+                                unknownCode
+                        )
+                );
+
+        // Assert
+        assertEquals(
+                HttpStatus.NOT_FOUND.value(),
+                exception
+                        .getStatusCode()
+                        .value()
+        );
+
+        verify(registrationRepository)
+                .findByTicketCode(
+                        unknownCode
+                );
+    }
+    // EVT-STAFF-005 Ticket Code ของ Event อื่น
+    @Test
+    void shouldRejectTicketCodeFromDifferentEvent() {
+
+        // Arrange
+        Event eventA = createEvent(
+                100L,
+                "Event A"
+        );
+
+        Event eventB = createEvent(
+                200L,
+                "Event B"
+        );
+
+        UserAccount bob = createUser(
+                11L,
+                "Bob",
+                "bob@example.test"
+        );
+
+        TicketType eventBTicket =
+                createTicket(
+                        eventB,
+                        "VIP"
+                );
+
+        Registration eventBRegistration =
+                createRegistration(
+                        502L,
+                        bob,
+                        eventB,
+                        eventBTicket,
+                        1,
+                        LocalDateTime.of(
+                                2027, 5, 1, 10, 0
+                        ),
+                        null
+                );
+
+        String ticketCode =
+                eventBRegistration
+                        .getTicketCode();
+
+        lenient()
+                .when(
+                        eventRepository.findById(
+                                eventA.getId()
+                        )
+                )
+                .thenReturn(
+                        Optional.of(eventA)
+                );
+
+        when(
+                registrationRepository.findByTicketCode(
+                        ticketCode
+                )
+        ).thenReturn(
+                Optional.of(
+                        eventBRegistration
+                )
+        );
+
+        assertNull(
+                eventBRegistration
+                        .getCheckedInAt()
+        );
+
+        // Act
+        ResponseStatusException exception =
+                assertThrows(
+                        ResponseStatusException.class,
+                        () -> eventService.checkIn(
+                                eventA.getId(),
+                                ticketCode
+                        )
+                );
+
+        // Assert
+        assertEquals(
+                HttpStatus.CONFLICT.value(),
+                exception
+                        .getStatusCode()
+                        .value()
+        );
+
+        // สำคัญ:
+        // Registration ของ Event B ต้องยังไม่ถูก Check-in
+        assertNull(
+                eventBRegistration
+                        .getCheckedInAt()
+        );
+
+        verify(registrationRepository)
+                .findByTicketCode(
+                        ticketCode
+                );
+    }
 }
