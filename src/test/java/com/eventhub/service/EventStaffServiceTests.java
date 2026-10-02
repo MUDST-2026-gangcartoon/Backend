@@ -649,4 +649,178 @@ class EventStaffServiceTests {
                         ticketCode
                 );
     }
+    // EVT-STAFF-006 Check-in รหัสเดิมซ้ำ
+    @Test
+    void shouldKeepOriginalCheckedInAtWhenCheckingInAgain() {
+
+        // Arrange
+        Event eventA = createEvent(
+                100L,
+                "Event A"
+        );
+
+        UserAccount alice = createUser(
+                10L,
+                "Alice",
+                "alice@example.test"
+        );
+
+        TicketType general =
+                createTicket(
+                        eventA,
+                        "General"
+                );
+
+        LocalDateTime originalCheckedInAt =
+                LocalDateTime.of(
+                        2027, 6, 1, 8, 45
+                );
+
+        Registration registration =
+                createRegistration(
+                        501L,
+                        alice,
+                        eventA,
+                        general,
+                        1,
+                        LocalDateTime.of(
+                                2027, 5, 1, 9, 0
+                        ),
+                        originalCheckedInAt
+                );
+
+        String ticketCode =
+                registration.getTicketCode();
+
+        lenient()
+                .when(
+                        eventRepository.findById(
+                                eventA.getId()
+                        )
+                )
+                .thenReturn(
+                        Optional.of(eventA)
+                );
+
+        when(
+                registrationRepository.findByTicketCode(
+                        ticketCode
+                )
+        ).thenReturn(
+                Optional.of(registration)
+        );
+
+        // Act
+        ApiDtos.CheckInDto result =
+                eventService.checkIn(
+                        eventA.getId(),
+                        ticketCode
+                );
+
+        // Assert
+        assertEquals(
+                originalCheckedInAt,
+                registration.getCheckedInAt()
+        );
+
+        assertTrue(
+                result.checkedIn()
+        );
+
+        assertEquals(
+                originalCheckedInAt,
+                result.checkedInAt()
+        );
+    }
+    // EVT-STAFF-007 Normalize Ticket Code
+    @Test
+    void shouldTrimAndUppercaseTicketCodeBeforeLookup() {
+
+        // Arrange
+        Event eventA = createEvent(
+                100L,
+                "Event A"
+        );
+
+        UserAccount alice = createUser(
+                10L,
+                "Alice",
+                "alice@example.test"
+        );
+
+        TicketType general =
+                createTicket(
+                        eventA,
+                        "General"
+                );
+
+        Registration registration =
+                createRegistration(
+                        501L,
+                        alice,
+                        eventA,
+                        general,
+                        1,
+                        LocalDateTime.of(
+                                2027, 5, 1, 9, 0
+                        ),
+                        null
+                );
+
+        // Registration constructor สร้าง code
+        // ในรูป GTH-XXXXXXXXXX อยู่แล้ว
+        String storedCode =
+                registration.getTicketCode();
+
+        String requestCode =
+                "   "
+                        + storedCode.toLowerCase(
+                        java.util.Locale.ROOT
+                )
+                        + "   ";
+
+        lenient()
+                .when(
+                        eventRepository.findById(
+                                eventA.getId()
+                        )
+                )
+                .thenReturn(
+                        Optional.of(eventA)
+                );
+
+        when(
+                registrationRepository.findByTicketCode(
+                        storedCode
+                )
+        ).thenReturn(
+                Optional.of(registration)
+        );
+
+        // Act
+        ApiDtos.CheckInDto result =
+                eventService.checkIn(
+                        eventA.getId(),
+                        requestCode
+                );
+
+        // Assert
+        verify(registrationRepository)
+                .findByTicketCode(
+                        storedCode
+                );
+
+        assertTrue(
+                result.checkedIn()
+        );
+
+        assertEquals(
+                storedCode,
+                result.ticketCode()
+        );
+
+        assertNotNull(
+                result.checkedInAt()
+        );
+    }
 }
