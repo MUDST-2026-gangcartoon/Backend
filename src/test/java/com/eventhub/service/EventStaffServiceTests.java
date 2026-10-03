@@ -649,4 +649,429 @@ class EventStaffServiceTests {
                         ticketCode
                 );
     }
+    // EVT-STAFF-006 Check-in รหัสเดิมซ้ำ
+    @Test
+    void shouldKeepOriginalCheckedInAtWhenCheckingInAgain() {
+
+        // Arrange
+        Event eventA = createEvent(
+                100L,
+                "Event A"
+        );
+
+        UserAccount alice = createUser(
+                10L,
+                "Alice",
+                "alice@example.test"
+        );
+
+        TicketType general =
+                createTicket(
+                        eventA,
+                        "General"
+                );
+
+        LocalDateTime originalCheckedInAt =
+                LocalDateTime.of(
+                        2027, 6, 1, 8, 45
+                );
+
+        Registration registration =
+                createRegistration(
+                        501L,
+                        alice,
+                        eventA,
+                        general,
+                        1,
+                        LocalDateTime.of(
+                                2027, 5, 1, 9, 0
+                        ),
+                        originalCheckedInAt
+                );
+
+        String ticketCode =
+                registration.getTicketCode();
+
+        lenient()
+                .when(
+                        eventRepository.findById(
+                                eventA.getId()
+                        )
+                )
+                .thenReturn(
+                        Optional.of(eventA)
+                );
+
+        when(
+                registrationRepository.findByTicketCode(
+                        ticketCode
+                )
+        ).thenReturn(
+                Optional.of(registration)
+        );
+
+        // Act
+        ApiDtos.CheckInDto result =
+                eventService.checkIn(
+                        eventA.getId(),
+                        ticketCode
+                );
+
+        // Assert
+        assertEquals(
+                originalCheckedInAt,
+                registration.getCheckedInAt()
+        );
+
+        assertTrue(
+                result.checkedIn()
+        );
+
+        assertEquals(
+                originalCheckedInAt,
+                result.checkedInAt()
+        );
+    }
+    // EVT-STAFF-007 Normalize Ticket Code
+    @Test
+    void shouldTrimAndUppercaseTicketCodeBeforeLookup() {
+
+        // Arrange
+        Event eventA = createEvent(
+                100L,
+                "Event A"
+        );
+
+        UserAccount alice = createUser(
+                10L,
+                "Alice",
+                "alice@example.test"
+        );
+
+        TicketType general =
+                createTicket(
+                        eventA,
+                        "General"
+                );
+
+        Registration registration =
+                createRegistration(
+                        501L,
+                        alice,
+                        eventA,
+                        general,
+                        1,
+                        LocalDateTime.of(
+                                2027, 5, 1, 9, 0
+                        ),
+                        null
+                );
+
+        // Registration constructor สร้าง code
+        // ในรูป GTH-XXXXXXXXXX อยู่แล้ว
+        String storedCode =
+                registration.getTicketCode();
+
+        String requestCode =
+                "   "
+                        + storedCode.toLowerCase(
+                        java.util.Locale.ROOT
+                )
+                        + "   ";
+
+        lenient()
+                .when(
+                        eventRepository.findById(
+                                eventA.getId()
+                        )
+                )
+                .thenReturn(
+                        Optional.of(eventA)
+                );
+
+        when(
+                registrationRepository.findByTicketCode(
+                        storedCode
+                )
+        ).thenReturn(
+                Optional.of(registration)
+        );
+
+        // Act
+        ApiDtos.CheckInDto result =
+                eventService.checkIn(
+                        eventA.getId(),
+                        requestCode
+                );
+
+        // Assert
+        verify(registrationRepository)
+                .findByTicketCode(
+                        storedCode
+                );
+
+        assertTrue(
+                result.checkedIn()
+        );
+
+        assertEquals(
+                storedCode,
+                result.ticketCode()
+        );
+
+        assertNotNull(
+                result.checkedInAt()
+        );
+    }
+    // ============================================================
+    // Recent Check-ins
+    // ============================================================
+
+    // EVT-STAFF-008
+    @Test
+    void shouldReturnRecentCheckInsNewestFirstForRequestedEvent() {
+
+        // Arrange
+        Event eventA = createEvent(
+                100L,
+                "Event A"
+        );
+
+        Event eventB = createEvent(
+                200L,
+                "Event B"
+        );
+
+        UserAccount alice = createUser(
+                10L,
+                "Alice",
+                "alice@example.test"
+        );
+
+        UserAccount bob = createUser(
+                11L,
+                "Bob",
+                "bob@example.test"
+        );
+
+        UserAccount charlie = createUser(
+                12L,
+                "Charlie",
+                "charlie@example.test"
+        );
+
+        UserAccount otherUser = createUser(
+                13L,
+                "Other",
+                "other@example.test"
+        );
+
+        TicketType general =
+                createTicket(
+                        eventA,
+                        "General"
+                );
+
+        TicketType vip =
+                createTicket(
+                        eventA,
+                        "VIP"
+                );
+
+        TicketType otherTicket =
+                createTicket(
+                        eventB,
+                        "Other Ticket"
+                );
+
+        LocalDateTime latestTime =
+                LocalDateTime.of(
+                        2027, 6, 1, 11, 30
+                );
+
+        LocalDateTime middleTime =
+                LocalDateTime.of(
+                        2027, 6, 1, 10, 30
+                );
+
+        LocalDateTime oldestTime =
+                LocalDateTime.of(
+                        2027, 6, 1, 9, 30
+                );
+
+        Registration latest =
+                createRegistration(
+                        501L,
+                        alice,
+                        eventA,
+                        general,
+                        2,
+                        LocalDateTime.of(
+                                2027, 5, 1, 9, 0
+                        ),
+                        latestTime
+                );
+
+        Registration middle =
+                createRegistration(
+                        502L,
+                        bob,
+                        eventA,
+                        vip,
+                        1,
+                        LocalDateTime.of(
+                                2027, 5, 1, 9, 30
+                        ),
+                        middleTime
+                );
+
+        Registration oldest =
+                createRegistration(
+                        503L,
+                        charlie,
+                        eventA,
+                        general,
+                        3,
+                        LocalDateTime.of(
+                                2027, 5, 1, 10, 0
+                        ),
+                        oldestTime
+                );
+
+        // Registration ที่ยังไม่ Check-in
+        // ไม่ควรอยู่ใน Repository result นี้
+        Registration notCheckedIn =
+                createRegistration(
+                        504L,
+                        alice,
+                        eventA,
+                        general,
+                        1,
+                        LocalDateTime.of(
+                                2027, 5, 1, 10, 30
+                        ),
+                        null
+                );
+
+        // Registration ของ Event B
+        Registration eventBRegistration =
+                createRegistration(
+                        505L,
+                        otherUser,
+                        eventB,
+                        otherTicket,
+                        1,
+                        LocalDateTime.of(
+                                2027, 5, 1, 11, 0
+                        ),
+                        latestTime
+                );
+
+        // Fixture sanity checks
+        assertNull(
+                notCheckedIn.getCheckedInAt()
+        );
+
+        assertEquals(
+                eventB,
+                eventBRegistration.getEvent()
+        );
+
+        // Repository contract ตัวนี้
+        // ควรคืนเฉพาะ checked-in ของ Event A,
+        // สูงสุด 8 และ latest first
+        when(
+                registrationRepository
+                        .findTop8ByEventIdAndCheckedInAtIsNotNullOrderByCheckedInAtDesc(
+                                eventA.getId()
+                        )
+        ).thenReturn(
+                List.of(
+                        latest,
+                        middle,
+                        oldest
+                )
+        );
+
+        // Act
+        List<ApiDtos.AttendeeDto> result =
+                eventService.recentCheckIns(
+                        eventA.getId()
+                );
+
+        // Assert
+        assertEquals(
+                3,
+                result.size()
+        );
+
+        // latest
+        assertEquals(
+                alice.getId(),
+                result.get(0).id()
+        );
+
+        assertEquals(
+                latestTime,
+                result.get(0).checkedInAt()
+        );
+
+        assertEquals(
+                2,
+                result.get(0).quantity()
+        );
+
+        // middle
+        assertEquals(
+                bob.getId(),
+                result.get(1).id()
+        );
+
+        assertEquals(
+                middleTime,
+                result.get(1).checkedInAt()
+        );
+
+        // oldest
+        assertEquals(
+                charlie.getId(),
+                result.get(2).id()
+        );
+
+        assertEquals(
+                oldestTime,
+                result.get(2).checkedInAt()
+        );
+
+        // ตรวจลำดับล่าสุด → เก่าสุด
+        assertTrue(
+                result.get(0)
+                        .checkedInAt()
+                        .isAfter(
+                                result.get(1)
+                                        .checkedInAt()
+                        )
+        );
+
+        assertTrue(
+                result.get(1)
+                        .checkedInAt()
+                        .isAfter(
+                                result.get(2)
+                                        .checkedInAt()
+                        )
+        );
+
+        // Service ต้องใช้ Repository Contract
+        // ที่จำกัดสูงสุด 8 และ sort จาก query
+        verify(registrationRepository)
+                .findTop8ByEventIdAndCheckedInAtIsNotNullOrderByCheckedInAtDesc(
+                        eventA.getId()
+                );
+
+        verify(registrationRepository, never())
+                .findTop8ByEventIdAndCheckedInAtIsNotNullOrderByCheckedInAtDesc(
+                        eventB.getId()
+                );
+    }
 }
