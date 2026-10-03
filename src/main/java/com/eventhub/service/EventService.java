@@ -746,9 +746,14 @@ public class EventService {
             Long eventId,
             String ticketCode
     ) {
+        String normalizedTicketCode =
+                ticketCode
+                        .trim()
+                        .toUpperCase(Locale.ROOT);
+
         Registration registration =
                 registrationRepository
-                        .findByTicketCode(ticketCode)
+                        .findByTicketCode(normalizedTicketCode)
                         .orElseThrow(() ->
                                 new ResponseStatusException(
                                         HttpStatus.NOT_FOUND,
