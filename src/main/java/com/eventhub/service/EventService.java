@@ -746,7 +746,58 @@ public class EventService {
             Long eventId,
             String ticketCode
     ) {
-        throw notImplemented();
+        Registration registration =
+                registrationRepository
+                        .findByTicketCode(ticketCode)
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "Ticket code not found"
+                                )
+                        );
+
+        Event event =
+                registration.getEvent();
+
+        if (event == null
+                || !Objects.equals(
+                event.getId(),
+                eventId
+        )) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Ticket code does not belong to this event"
+            );
+        }
+
+        registration.checkIn();
+
+        return checkInDto(registration);
+    }
+    private ApiDtos.CheckInDto checkInDto(
+            Registration registration
+    ) {
+        UserAccount user =
+                registration.getUser();
+
+        Event event =
+                registration.getEvent();
+
+        TicketType ticket =
+                registration.getTicketType();
+
+        return new ApiDtos.CheckInDto(
+                registration.getTicketCode(),
+                user.getName(),
+                event.getTitle(),
+                ticket == null
+                        ? null
+                        : ticket.getName(),
+                registration.getQuantity(),
+                registration.getCheckedInAt() != null,
+                registration.getCheckedInAt()
+        );
     }
 
     @Transactional(readOnly = true)
