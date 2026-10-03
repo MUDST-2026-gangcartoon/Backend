@@ -794,3 +794,218 @@ Testing phase นี้ถือว่าเสร็จเมื่อ:
 - ใช้เฉพาะข้อมูล Test จำลอง
 - ไม่มี Password/API Key/Token/ข้อมูลจริงอยู่ใน Test
 - หลัง Backend implement เสร็จ Test ชุดเดิมต้องผ่าน
+
+# 17. Branch 8 — REST Controller / HTTP API
+
+Branch 8 ทำหน้าที่เปิด Business Logic จาก EventService
+ผ่าน HTTP API และทดสอบ Security, Validation และ Response Contract
+
+## EVT-API-001 — Public Event Detail
+
+GET /api/events/{eventId}
+
+Anonymous, USER, STAFF และ ADMIN สามารถเรียกได้
+
+Controller ต้องส่ง eventId และ Principal ไปยัง EventService.get(...)
+และคืน EventDto
+
+---
+
+## EVT-API-002 — Register ผ่าน HTTP
+
+POST /api/events/{eventId}/registrations
+
+ต้อง Authentication
+
+Request:
+PurchaseRequest
+
+Success:
+200 RegistrationDto
+
+Anonymous:
+401
+
+Request ที่ไม่ผ่าน Bean Validation:
+400
+
+---
+
+## EVT-API-003 — Cancel Registration
+
+DELETE /api/events/{eventId}/registrations
+
+ต้อง Authentication
+
+Success:
+204 No Content
+
+Controller ต้องใช้ Principal ปัจจุบัน
+ไม่รับ userId จาก Client
+
+---
+
+## EVT-API-004 — My Registrations
+
+GET /api/registrations/me
+
+ต้อง Authentication
+
+Success:
+200 RegistrationDto[]
+
+Anonymous:
+401
+
+---
+
+## EVT-API-005 — Admin Create Event
+
+POST /api/admin/events
+
+ADMIN เท่านั้น
+
+USER / STAFF:
+403
+
+Anonymous:
+401
+
+Request ใช้ @Valid EventRequest
+
+---
+
+## EVT-API-006 — Admin Update Event
+
+PUT /api/admin/events/{eventId}
+
+ADMIN เท่านั้น
+
+Success:
+200 EventDto
+
+---
+
+## EVT-API-007 — Admin Delete Event
+
+DELETE /api/admin/events/{eventId}
+
+ADMIN เท่านั้น
+
+Success:
+204 No Content
+
+---
+
+## EVT-API-008 — Admin Attendees
+
+GET /api/admin/events/{eventId}/attendees
+
+ADMIN เท่านั้น
+
+Success:
+200 AttendeeDto[]
+
+---
+
+## EVT-STAFF-009 — Staff HTTP Authorization
+
+เส้นทาง /api/staff/**:
+
+Anonymous → 401
+USER → 403
+STAFF → Allowed
+ADMIN → Allowed
+
+ต้องทดสอบผ่าน Spring Security / HTTP Layer
+ไม่ใช้ Service Unit Test เป็นหลักฐาน
+
+---
+
+## EVT-STAFF-010 — Check-in Request Validation
+
+POST /api/staff/events/{eventId}/check-in
+
+Request:
+{
+"ticketCode": "GTH-XXXXXXXXXX"
+}
+
+ticketCode:
+- null → 400
+- blank → 400
+- ยาวเกิน 32 ตัว → 400
+
+Request ที่ถูกต้องต้อง delegate ไป EventService.checkIn(...)
+
+---
+
+## EVT-API-009 — Staff Attendees
+
+GET /api/staff/events/{eventId}/attendees
+
+STAFF และ ADMIN เท่านั้น
+
+Success:
+200 AttendeeDto[]
+
+---
+
+## EVT-API-010 — Staff Check-in
+
+POST /api/staff/events/{eventId}/check-in
+
+STAFF และ ADMIN เท่านั้น
+
+Success:
+200 CheckInDto
+
+POST ต้องอยู่ภายใต้ CSRF protection เดิม
+
+---
+
+## EVT-API-011 — Recent Check-ins
+
+GET /api/staff/events/{eventId}/recent-check-ins
+
+STAFF และ ADMIN เท่านั้น
+
+Success:
+200 AttendeeDto[]
+
+ไม่เพิ่ม Event existence rule ใหม่ใน Controller
+ให้ยึด behavior ของ EventService
+
+---
+
+## 17.1 Testing Strategy
+
+QA ใช้ Spring Boot HTTP/Security tests เช่น MockMvc
+เพื่อทดสอบ:
+
+- URL
+- HTTP method
+- request body
+- Bean Validation
+- authentication
+- authorization
+- status code
+- JSON response
+- Controller → Service delegation
+
+ห้ามใช้ Pure Mockito Service Test
+เพื่ออ้างว่า 401/403/CSRF ทำงานจริง
+
+---
+
+## 17.2 Test-first Workflow
+
+1. Backend สร้าง Controller Contract/Skeleton
+2. QA แตก test/backend-api-controllers
+3. QA เขียน HTTP tests
+4. CI เก็บ Initial Red Build
+5. QA PR เข้า feat/backend-api-controllers
+6. Backend implement Controllers ทีละกลุ่ม
+7. QA ตรวจ Green Build
+8. Full Regression
+9. PR Branch 8 → main
