@@ -700,8 +700,45 @@ public class EventService {
 // ============================================================
 
     @Transactional(readOnly = true)
-    public List<ApiDtos.AttendeeDto> attendees(Long eventId) {
-        throw notImplemented();
+    public List<ApiDtos.AttendeeDto> attendees(
+            Long eventId
+    ) {
+        eventRepository
+                .findById(eventId)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Event not found"
+                        )
+                );
+
+        return registrationRepository
+                .findByEventIdOrderByRegisteredAtAsc(eventId)
+                .stream()
+                .map(this::attendeeDto)
+                .toList();
+    }
+    private ApiDtos.AttendeeDto attendeeDto(
+            Registration registration
+    ) {
+        UserAccount user =
+                registration.getUser();
+
+        TicketType ticket =
+                registration.getTicketType();
+
+        return new ApiDtos.AttendeeDto(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                registration.getRegisteredAt(),
+                ticket == null
+                        ? null
+                        : ticket.getName(),
+                registration.getQuantity(),
+                registration.getTicketCode(),
+                registration.getCheckedInAt()
+        );
     }
 
     @Transactional
