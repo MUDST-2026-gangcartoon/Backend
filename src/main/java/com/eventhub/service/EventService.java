@@ -695,6 +695,128 @@ public class EventService {
                 .map(this::registrationDto)
                 .toList();
     }
+// ============================================================
+// Branch 7 — Staff Service Contract
+// ============================================================
+
+    @Transactional(readOnly = true)
+    public List<ApiDtos.AttendeeDto> attendees(
+            Long eventId
+    ) {
+        eventRepository
+                .findById(eventId)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Event not found"
+                        )
+                );
+
+        return registrationRepository
+                .findByEventIdOrderByRegisteredAtAsc(eventId)
+                .stream()
+                .map(this::attendeeDto)
+                .toList();
+    }
+    private ApiDtos.AttendeeDto attendeeDto(
+            Registration registration
+    ) {
+        UserAccount user =
+                registration.getUser();
+
+        TicketType ticket =
+                registration.getTicketType();
+
+        return new ApiDtos.AttendeeDto(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                registration.getRegisteredAt(),
+                ticket == null
+                        ? null
+                        : ticket.getName(),
+                registration.getQuantity(),
+                registration.getTicketCode(),
+                registration.getCheckedInAt()
+        );
+    }
+
+    @Transactional
+    public ApiDtos.CheckInDto checkIn(
+            Long eventId,
+            String ticketCode
+    ) {
+        String normalizedTicketCode =
+                ticketCode
+                        .trim()
+                        .toUpperCase(Locale.ROOT);
+
+        Registration registration =
+                registrationRepository
+                        .findByTicketCode(normalizedTicketCode)
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "Ticket code not found"
+                                )
+                        );
+
+        Event event =
+                registration.getEvent();
+
+        if (event == null
+                || !Objects.equals(
+                event.getId(),
+                eventId
+        )) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Ticket code does not belong to this event"
+            );
+        }
+
+        registration.checkIn();
+
+        return checkInDto(registration);
+    }
+    private ApiDtos.CheckInDto checkInDto(
+            Registration registration
+    ) {
+        UserAccount user =
+                registration.getUser();
+
+        Event event =
+                registration.getEvent();
+
+        TicketType ticket =
+                registration.getTicketType();
+
+        return new ApiDtos.CheckInDto(
+                registration.getTicketCode(),
+                user.getName(),
+                event.getTitle(),
+                ticket == null
+                        ? null
+                        : ticket.getName(),
+                registration.getQuantity(),
+                registration.getCheckedInAt() != null,
+                registration.getCheckedInAt()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<ApiDtos.AttendeeDto> recentCheckIns(
+            Long eventId
+    ) {
+        return registrationRepository
+                .findTop8ByEventIdAndCheckedInAtIsNotNullOrderByCheckedInAtDesc(
+                        eventId
+                )
+                .stream()
+                .map(this::attendeeDto)
+                .toList();
+    }
 
     private UnsupportedOperationException notImplemented() {
         return new UnsupportedOperationException(
