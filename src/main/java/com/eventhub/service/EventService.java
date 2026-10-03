@@ -806,8 +806,16 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
-    public List<ApiDtos.AttendeeDto> recentCheckIns(Long eventId) {
-        throw notImplemented();
+    public List<ApiDtos.AttendeeDto> recentCheckIns(
+            Long eventId
+    ) {
+        return registrationRepository
+                .findTop8ByEventIdAndCheckedInAtIsNotNullOrderByCheckedInAtDesc(
+                        eventId
+                )
+                .stream()
+                .map(this::attendeeDto)
+                .toList();
     }
 
     private UnsupportedOperationException notImplemented() {
