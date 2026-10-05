@@ -410,4 +410,272 @@ class EventControllerHttpTests {
 
         verifyNoInteractions(eventService);
     }
+    private ApiDtos.EventPageDto eventPageDto() {
+
+        return new ApiDtos.EventPageDto(
+                List.of(
+                        eventDto()
+                ),
+                0,
+                20,
+                1L,
+                1,
+                false,
+                false,
+                1L,
+                10L
+        );
+    }
+    // ============================================================
+    // EVT-API-012 — Public Event List
+    // ============================================================
+
+    @Test
+    void eventListShouldBePublicAndUseDefaultParameters()
+            throws Exception {
+
+        when(
+                eventService.list(
+                        isNull(),
+                        eq(0),
+                        eq(20),
+                        isNull(),
+                        isNull(),
+                        isNull()
+                )
+        ).thenReturn(
+                eventPageDto()
+        );
+
+        mockMvc.perform(
+                        get("/api/events")
+                )
+                .andExpect(
+                        status().isOk()
+                )
+                .andExpect(
+                        jsonPath("$.page")
+                                .value(0)
+                )
+                .andExpect(
+                        jsonPath("$.size")
+                                .value(20)
+                )
+                .andExpect(
+                        jsonPath("$.totalElements")
+                                .value(1)
+                )
+                .andExpect(
+                        jsonPath("$.items[0].id")
+                                .value(100)
+                )
+                .andExpect(
+                        jsonPath("$.items[0].title")
+                                .value(
+                                        "EventHub Workshop"
+                                )
+                );
+
+        verify(eventService)
+                .list(
+                        isNull(),
+                        eq(0),
+                        eq(20),
+                        isNull(),
+                        isNull(),
+                        isNull()
+                );
+    }
+    @Test
+    void eventListShouldForwardExplicitQueryParameters()
+            throws Exception {
+
+        ApiDtos.EventPageDto response =
+                new ApiDtos.EventPageDto(
+                        List.of(
+                                eventDto()
+                        ),
+                        2,
+                        5,
+                        11L,
+                        3,
+                        true,
+                        true,
+                        4L,
+                        25L
+                );
+
+        when(
+                eventService.list(
+                        isNull(),
+                        eq(2),
+                        eq(5),
+                        eq("java"),
+                        eq("TECH"),
+                        eq("OPEN")
+                )
+        ).thenReturn(
+                response
+        );
+
+        mockMvc.perform(
+                        get("/api/events")
+                                .param(
+                                        "page",
+                                        "2"
+                                )
+                                .param(
+                                        "size",
+                                        "5"
+                                )
+                                .param(
+                                        "search",
+                                        "java"
+                                )
+                                .param(
+                                        "category",
+                                        "TECH"
+                                )
+                                .param(
+                                        "status",
+                                        "OPEN"
+                                )
+                )
+                .andExpect(
+                        status().isOk()
+                )
+                .andExpect(
+                        jsonPath("$.page")
+                                .value(2)
+                )
+                .andExpect(
+                        jsonPath("$.size")
+                                .value(5)
+                )
+                .andExpect(
+                        jsonPath("$.totalElements")
+                                .value(11)
+                );
+
+        verify(eventService)
+                .list(
+                        isNull(),
+                        eq(2),
+                        eq(5),
+                        eq("java"),
+                        eq("TECH"),
+                        eq("OPEN")
+                );
+    }
+    @Test
+    void eventListShouldAllowUserStaffAndAdmin()
+            throws Exception {
+
+        when(
+                eventService.list(
+                        any(Principal.class),
+                        eq(0),
+                        eq(20),
+                        isNull(),
+                        isNull(),
+                        isNull()
+                )
+        ).thenReturn(
+                eventPageDto()
+        );
+
+        mockMvc.perform(
+                        get("/api/events")
+                                .with(
+                                        user(
+                                                "user@example.test"
+                                        ).roles("USER")
+                                )
+                )
+                .andExpect(
+                        status().isOk()
+                );
+
+        mockMvc.perform(
+                        get("/api/events")
+                                .with(
+                                        user(
+                                                "staff@example.test"
+                                        ).roles("STAFF")
+                                )
+                )
+                .andExpect(
+                        status().isOk()
+                );
+
+        mockMvc.perform(
+                        get("/api/events")
+                                .with(
+                                        user(
+                                                "admin@example.test"
+                                        ).roles("ADMIN")
+                                )
+                )
+                .andExpect(
+                        status().isOk()
+                );
+
+        verify(
+                eventService,
+                times(3)
+        ).list(
+                any(Principal.class),
+                eq(0),
+                eq(20),
+                isNull(),
+                isNull(),
+                isNull()
+        );
+    }
+    @Test
+    void eventListShouldForwardAuthenticatedPrincipal()
+            throws Exception {
+
+        when(
+                eventService.list(
+                        any(Principal.class),
+                        eq(0),
+                        eq(20),
+                        isNull(),
+                        isNull(),
+                        isNull()
+                )
+        ).thenReturn(
+                eventPageDto()
+        );
+
+        mockMvc.perform(
+                        get("/api/events")
+                                .with(
+                                        user(
+                                                "alice@example.test"
+                                        ).roles("USER")
+                                )
+                )
+                .andExpect(
+                        status().isOk()
+                );
+
+        verify(eventService)
+                .list(
+                        argThat(principal ->
+                                principal != null
+                                        &&
+                                        principal.getName()
+                                                .equals(
+                                                        "alice@example.test"
+                                                )
+                        ),
+                        eq(0),
+                        eq(20),
+                        isNull(),
+                        isNull(),
+                        isNull()
+                );
+    }
 }
