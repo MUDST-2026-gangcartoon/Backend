@@ -1048,6 +1048,61 @@ Success:
 
 ---
 
+## EVT-API-012 — Public Event List
+
+GET /api/events
+
+เป็น Public Endpoint
+
+Anonymous, USER, STAFF และ ADMIN สามารถเรียกได้
+
+Query Parameters:
+
+- page ค่า default = 0
+- size ค่า default = 20
+- search เป็น optional
+- category เป็น optional
+- status เป็น optional
+
+Controller ต้องส่ง:
+
+- Principal
+- page
+- size
+- search
+- category
+- status
+
+ไปยัง:
+
+`EventService.list(...)`
+
+Success:
+
+200 `EventPageDto`
+
+Controller Test ต้องตรวจเฉพาะ:
+
+- Route และ HTTP Method
+- Public access
+- Default query parameter
+- Explicit query parameter
+- Principal forwarding
+- Response contract
+- Controller → EventService delegation
+
+Controller Test ต้องไม่กำหนด Business Logic ของ:
+
+- search
+- category normalization
+- status OPEN/FULL/ENDED
+- pagination calculation ภายใน Service
+
+Business Logic ของ `EventService.list()` ต้องมี Requirement
+และ Service Test แยกก่อน Backend implement
+
+---
+
 ## 17.1 Testing Strategy
 
 QA ใช้ Spring Boot HTTP/Security tests เช่น MockMvc
