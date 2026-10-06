@@ -609,4 +609,674 @@ class EventListServiceTests {
                         any(Pageable.class)
                 );
     }
+    // ============================================================
+    // EVT-LIST-006 — Pagination
+    // ============================================================
+
+    @Test
+    void shouldUseRequestedPageAndSize() {
+
+        when(
+                eventRepository.search(
+                        isNull(),
+                        isNull(),
+                        eq("ALL"),
+                        eq("ALL"),
+                        any(LocalDateTime.class),
+                        any(Pageable.class)
+                )
+        ).thenReturn(
+                emptyPage(
+                        2,
+                        5
+                )
+        );
+
+        stubGlobalTotals(
+                0L,
+                0L
+        );
+
+        eventService.list(
+                null,
+                2,
+                5,
+                null,
+                null,
+                null
+        );
+
+        ArgumentCaptor<Pageable> captor =
+                ArgumentCaptor.forClass(
+                        Pageable.class
+                );
+
+        verify(eventRepository)
+                .search(
+                        isNull(),
+                        isNull(),
+                        eq("ALL"),
+                        eq("ALL"),
+                        any(LocalDateTime.class),
+                        captor.capture()
+                );
+
+        Pageable pageable =
+                captor.getValue();
+
+        assertEquals(
+                2,
+                pageable.getPageNumber()
+        );
+
+        assertEquals(
+                5,
+                pageable.getPageSize()
+        );
+    }
+    @Test
+    void shouldReturnMetadataFromFilteredRepositoryPage() {
+
+        EventListRow row =
+                eventRow(
+                        100L,
+                        100,
+                        10L,
+                        false
+                );
+
+        Page<EventListRow> repositoryPage =
+                new PageImpl<>(
+                        List.of(row),
+                        PageRequest.of(
+                                2,
+                                5
+                        ),
+                        13L
+                );
+
+        when(
+                eventRepository.search(
+                        isNull(),
+                        eq("java"),
+                        eq("TECH"),
+                        eq("OPEN"),
+                        any(LocalDateTime.class),
+                        any(Pageable.class)
+                )
+        ).thenReturn(
+                repositoryPage
+        );
+
+        when(
+                ticketTypeRepository
+                        .summariesForEventIds(
+                                List.of(100L)
+                        )
+        ).thenReturn(
+                List.of()
+        );
+
+        stubGlobalTotals(
+                9L,
+                42L
+        );
+
+        ApiDtos.EventPageDto result =
+                eventService.list(
+                        null,
+                        2,
+                        5,
+                        "java",
+                        "TECH",
+                        "OPEN"
+                );
+
+        assertEquals(
+                13L,
+                result.totalElements()
+        );
+
+        assertEquals(
+                3,
+                result.totalPages()
+        );
+
+        assertFalse(
+                result.hasNext()
+        );
+
+        assertTrue(
+                result.hasPrevious()
+        );
+    }
+    // ============================================================
+    // EVT-LIST-007 — Event Mapping
+    // ============================================================
+
+    @Test
+    void shouldMapEventListRowToEventDto() {
+
+        EventListRow row =
+                eventRow(
+                        100L,
+                        100,
+                        25L,
+                        true
+                );
+
+        when(
+                eventRepository.search(
+                        isNull(),
+                        isNull(),
+                        eq("ALL"),
+                        eq("ALL"),
+                        any(LocalDateTime.class),
+                        any(Pageable.class)
+                )
+        ).thenReturn(
+                new PageImpl<>(
+                        List.of(row),
+                        PageRequest.of(
+                                0,
+                                20
+                        ),
+                        1
+                )
+        );
+
+        when(
+                ticketTypeRepository
+                        .summariesForEventIds(
+                                List.of(100L)
+                        )
+        ).thenReturn(
+                List.of()
+        );
+
+        stubGlobalTotals(
+                1L,
+                25L
+        );
+
+        ApiDtos.EventPageDto result =
+                eventService.list(
+                        null,
+                        0,
+                        20,
+                        null,
+                        null,
+                        null
+                );
+
+        assertEquals(
+                1,
+                result.items().size()
+        );
+
+        ApiDtos.EventDto event =
+                result.items().get(0);
+
+        assertEquals(
+                100L,
+                event.id()
+        );
+
+        assertEquals(
+                "Event 100",
+                event.title()
+        );
+
+        assertEquals(
+                "Event description",
+                event.description()
+        );
+
+        assertEquals(
+                "Bangkok",
+                event.location()
+        );
+
+        assertEquals(
+                100,
+                event.capacity()
+        );
+
+        assertEquals(
+                "TECH",
+                event.category()
+        );
+
+        assertEquals(
+                25L,
+                event.registeredCount()
+        );
+
+        assertEquals(
+                75L,
+                event.spotsLeft()
+        );
+
+        assertTrue(
+                event.registered()
+        );
+    }
+    @Test
+    void spotsLeftShouldNeverBeNegative() {
+
+        EventListRow row =
+                eventRow(
+                        100L,
+                        100,
+                        120L,
+                        false
+                );
+
+        when(
+                eventRepository.search(
+                        any(),
+                        any(),
+                        anyString(),
+                        anyString(),
+                        any(LocalDateTime.class),
+                        any(Pageable.class)
+                )
+        ).thenReturn(
+                new PageImpl<>(
+                        List.of(row),
+                        PageRequest.of(
+                                0,
+                                20
+                        ),
+                        1
+                )
+        );
+
+        when(
+                ticketTypeRepository
+                        .summariesForEventIds(
+                                List.of(100L)
+                        )
+        ).thenReturn(
+                List.of()
+        );
+
+        stubGlobalTotals(
+                0L,
+                120L
+        );
+
+        ApiDtos.EventPageDto result =
+                eventService.list(
+                        null,
+                        0,
+                        20,
+                        null,
+                        null,
+                        null
+                );
+
+        assertEquals(
+                0L,
+                result.items()
+                        .get(0)
+                        .spotsLeft()
+        );
+    }
+    @Test
+    void shouldLoadTicketSummariesInSingleBatchForCurrentPage() {
+
+        EventListRow eventA =
+                eventRow(
+                        100L,
+                        100,
+                        10L,
+                        false
+                );
+
+        EventListRow eventB =
+                eventRow(
+                        101L,
+                        50,
+                        5L,
+                        true
+                );
+
+        when(
+                eventRepository.search(
+                        any(),
+                        any(),
+                        anyString(),
+                        anyString(),
+                        any(LocalDateTime.class),
+                        any(Pageable.class)
+                )
+        ).thenReturn(
+                new PageImpl<>(
+                        List.of(
+                                eventA,
+                                eventB
+                        ),
+                        PageRequest.of(
+                                0,
+                                20
+                        ),
+                        2
+                )
+        );
+
+        when(
+                ticketTypeRepository
+                        .summariesForEventIds(
+                                argThat(ids ->
+                                        ids.size() == 2
+                                                &&
+                                                ids.contains(100L)
+                                                &&
+                                                ids.contains(101L)
+                                )
+                        )
+        ).thenReturn(
+                List.of(
+                        ticketRow(
+                                100L,
+                                200L,
+                                100,
+                                10L
+                        ),
+                        ticketRow(
+                                101L,
+                                201L,
+                                50,
+                                5L
+                        )
+                )
+        );
+
+        stubGlobalTotals(
+                2L,
+                15L
+        );
+
+        ApiDtos.EventPageDto result =
+                eventService.list(
+                        null,
+                        0,
+                        20,
+                        null,
+                        null,
+                        null
+                );
+
+        verify(
+                ticketTypeRepository,
+                times(1)
+        ).summariesForEventIds(
+                argThat(ids ->
+                        ids.size() == 2
+                                &&
+                                ids.contains(100L)
+                                &&
+                                ids.contains(101L)
+                )
+        );
+
+        assertEquals(
+                1,
+                result.items()
+                        .get(0)
+                        .ticketTypes()
+                        .size()
+        );
+
+        assertEquals(
+                1,
+                result.items()
+                        .get(1)
+                        .ticketTypes()
+                        .size()
+        );
+
+        ApiDtos.TicketTypeDto firstTicket =
+                result.items()
+                        .get(0)
+                        .ticketTypes()
+                        .get(0);
+
+        assertEquals(
+                200L,
+                firstTicket.id()
+        );
+
+        assertEquals(
+                "General",
+                firstTicket.name()
+        );
+
+        assertEquals(
+                100,
+                firstTicket.capacity()
+        );
+
+        assertEquals(
+                10L,
+                firstTicket.sold()
+        );
+
+        assertEquals(
+                90L,
+                firstTicket.remaining()
+        );
+    }
+    @Test
+    void ticketRemainingShouldNeverBeNegative() {
+
+        EventListRow row =
+                eventRow(
+                        100L,
+                        100,
+                        100L,
+                        false
+                );
+
+        when(
+                eventRepository.search(
+                        any(),
+                        any(),
+                        anyString(),
+                        anyString(),
+                        any(LocalDateTime.class),
+                        any(Pageable.class)
+                )
+        ).thenReturn(
+                new PageImpl<>(
+                        List.of(row),
+                        PageRequest.of(
+                                0,
+                                20
+                        ),
+                        1
+                )
+        );
+
+        when(
+                ticketTypeRepository
+                        .summariesForEventIds(
+                                List.of(100L)
+                        )
+        ).thenReturn(
+                List.of(
+                        ticketRow(
+                                100L,
+                                200L,
+                                100,
+                                120L
+                        )
+                )
+        );
+
+        stubGlobalTotals(
+                0L,
+                120L
+        );
+
+        ApiDtos.EventPageDto result =
+                eventService.list(
+                        null,
+                        0,
+                        20,
+                        null,
+                        null,
+                        null
+                );
+
+        assertEquals(
+                0L,
+                result.items()
+                        .get(0)
+                        .ticketTypes()
+                        .get(0)
+                        .remaining()
+        );
+    }
+    @Test
+    void shouldNotLoadTicketSummariesWhenEventPageIsEmpty() {
+
+        when(
+                eventRepository.search(
+                        isNull(),
+                        isNull(),
+                        eq("ALL"),
+                        eq("ALL"),
+                        any(LocalDateTime.class),
+                        any(Pageable.class)
+                )
+        ).thenReturn(
+                emptyPage(
+                        0,
+                        20
+                )
+        );
+
+        stubGlobalTotals(
+                0L,
+                0L
+        );
+
+        ApiDtos.EventPageDto result =
+                eventService.list(
+                        null,
+                        0,
+                        20,
+                        null,
+                        null,
+                        null
+                );
+
+        assertTrue(
+                result.items().isEmpty()
+        );
+
+        verify(
+                ticketTypeRepository,
+                never()
+        ).summariesForEventIds(
+                anyCollection()
+        );
+    }
+    // ============================================================
+    // EVT-LIST-008 — Global Summary
+    // ============================================================
+
+    @Test
+    void shouldReturnGlobalOpenEventAndRegistrationTotals() {
+
+        EventListRow filteredEvent =
+                eventRow(
+                        100L,
+                        100,
+                        3L,
+                        false
+                );
+
+        when(
+                eventRepository.search(
+                        isNull(),
+                        eq("spring"),
+                        eq("TECH"),
+                        eq("FULL"),
+                        any(LocalDateTime.class),
+                        any(Pageable.class)
+                )
+        ).thenReturn(
+                new PageImpl<>(
+                        List.of(filteredEvent),
+                        PageRequest.of(
+                                3,
+                                10
+                        ),
+                        21L
+                )
+        );
+
+        when(
+                ticketTypeRepository
+                        .summariesForEventIds(
+                                List.of(100L)
+                        )
+        ).thenReturn(
+                List.of()
+        );
+
+        // Global ทั้งระบบ
+        when(
+                eventRepository.countOpen(
+                        any(LocalDateTime.class)
+                )
+        ).thenReturn(
+                9L
+        );
+
+        // จำนวน Registration records
+        // ไม่ใช่ quantity
+        when(
+                registrationRepository.count()
+        ).thenReturn(
+                42L
+        );
+
+        ApiDtos.EventPageDto result =
+                eventService.list(
+                        null,
+                        3,
+                        10,
+                        "spring",
+                        "TECH",
+                        "FULL"
+                );
+
+        assertEquals(
+                9L,
+                result.totalOpenEvents()
+        );
+
+        assertEquals(
+                42L,
+                result.totalRegistrations()
+        );
+
+        // filtered page total
+        assertEquals(
+                21L,
+                result.totalElements()
+        );
+
+        verify(eventRepository)
+                .countOpen(
+                        any(LocalDateTime.class)
+                );
+
+        verify(registrationRepository)
+                .count();
+    }
 }
