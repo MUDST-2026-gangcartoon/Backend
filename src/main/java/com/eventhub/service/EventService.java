@@ -27,6 +27,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
+import com.eventhub.dto.EventListRow;
+import com.eventhub.dto.TicketTypeRow;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 @Service
 public class EventService {
 
@@ -56,7 +66,134 @@ public class EventService {
             String category,
             String status
     ) {
-        throw notImplemented();
+        String normalizedCategory =
+                normalizeListCategory(category);
+
+        String normalizedStatus =
+                normalizeListStatus(status);
+
+        Long userId =
+                resolveListUserId(principal);
+
+        LocalDateTime now =
+                LocalDateTime.now();
+
+        Pageable pageable =
+                PageRequest.of(
+                        page,
+                        size
+                );
+
+        Page<EventListRow> eventPage =
+                eventRepository.search(
+                        userId,
+                        search,
+                        normalizedCategory,
+                        normalizedStatus,
+                        now,
+                        pageable
+                );
+
+        List<EventListRow> rows =
+                eventPage.getContent();
+
+        Map<Long, List<ApiDtos.TicketTypeDto>>
+                ticketTypesByEvent =
+                loadTicketTypeSummaries(rows);
+
+        List<ApiDtos.EventDto> items =
+                rows.stream()
+                        .map(row ->
+                                eventListDto(
+                                        row,
+                                        ticketTypesByEvent
+                                                .getOrDefault(
+                                                        row.id(),
+                                                        List.of()
+                                                ),
+                                        now
+                                )
+                        )
+                        .toList();
+
+        long totalOpenEvents =
+                eventRepository.countOpen(now);
+
+        long totalRegistrations =
+                registrationRepository.count();
+
+        return new ApiDtos.EventPageDto(
+                items,
+                eventPage.getNumber(),
+                eventPage.getSize(),
+                eventPage.getTotalElements(),
+                eventPage.getTotalPages(),
+                eventPage.hasNext(),
+                eventPage.hasPrevious(),
+                totalOpenEvents,
+                totalRegistrations
+        );
+    }
+
+    private String normalizeListCategory(
+            String category
+    ) {
+        if (category == null
+                || category.isBlank()) {
+
+            return "ALL";
+        }
+
+        String normalized =
+                category
+                        .trim()
+                        .toUpperCase(Locale.ROOT);
+
+        if (!List.of(
+                "ALL",
+                "TECH",
+                "DESIGN",
+                "CAREER",
+                "COMMUNITY"
+        ).contains(normalized)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Unsupported event category"
+            );
+        }
+
+        return normalized;
+    }
+    private String normalizeListStatus(
+            String status
+    ) {
+        if (status == null
+                || status.isBlank()) {
+
+            return "ALL";
+        }
+
+        String normalized =
+                status
+                        .trim()
+                        .toUpperCase(Locale.ROOT);
+
+        if (!List.of(
+                "ALL",
+                "OPEN",
+                "FULL",
+                "ENDED",
+                "REGISTERED"
+        ).contains(normalized)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Unsupported event status"
+            );
+        }
+
+        return normalized;
     }
 
     @Transactional(readOnly = true)
