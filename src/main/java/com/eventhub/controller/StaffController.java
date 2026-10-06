@@ -23,7 +23,7 @@ public class StaffController {
     public List<ApiDtos.AttendeeDto> attendees(
             @PathVariable Long eventId
     ) {
-        throw notImplemented();
+        return eventService.attendees(eventId);
     }
 
     @PostMapping("/{eventId}/check-in")
@@ -31,14 +31,17 @@ public class StaffController {
             @PathVariable Long eventId,
             @Valid @RequestBody ApiDtos.CheckInRequest body
     ) {
-        throw notImplemented();
+        return eventService.checkIn(
+                eventId,
+                body.ticketCode()
+        );
     }
 
     @GetMapping("/{eventId}/recent-check-ins")
     public List<ApiDtos.AttendeeDto> recentCheckIns(
             @PathVariable Long eventId
     ) {
-        throw notImplemented();
+        return eventService.recentCheckIns(eventId);
     }
 
     private UnsupportedOperationException notImplemented() {
