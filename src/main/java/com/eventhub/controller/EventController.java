@@ -29,7 +29,14 @@ public class EventController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String status
     ) {
-        throw notImplemented();
+        return eventService.list(
+                principal,
+                page,
+                size,
+                search,
+                category,
+                status
+        );
     }
 
     @GetMapping("/api/events/{eventId}")
@@ -37,7 +44,10 @@ public class EventController {
             @PathVariable Long eventId,
             Principal principal
     ) {
-        throw notImplemented();
+        return eventService.get(
+                eventId,
+                principal
+        );
     }
 
     @PostMapping("/api/events/{eventId}/registrations")
@@ -46,7 +56,11 @@ public class EventController {
             @Valid @RequestBody ApiDtos.PurchaseRequest body,
             Principal principal
     ) {
-        throw notImplemented();
+        return eventService.register(
+                eventId,
+                body,
+                principal
+        );
     }
 
     @DeleteMapping("/api/events/{eventId}/registrations")
@@ -55,14 +69,17 @@ public class EventController {
             @PathVariable Long eventId,
             Principal principal
     ) {
-        throw notImplemented();
+        eventService.cancel(
+                eventId,
+                principal
+        );
     }
 
     @GetMapping("/api/registrations/me")
     public List<ApiDtos.RegistrationDto> mine(
             Principal principal
     ) {
-        throw notImplemented();
+        return eventService.mine(principal);
     }
 
     private UnsupportedOperationException notImplemented() {
