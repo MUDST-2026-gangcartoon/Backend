@@ -53,8 +53,7 @@ jobs:
         run: ./mvnw --batch-mode --no-transfer-progress package -DskipTests
 
       - name: Generate JaCoCo report
-        if: always()
-        run: ./mvnw --batch-mode --no-transfer-progress -DskipTests jacoco:report
+        run: ./mvnw --batch-mode --no-transfer-progress -DskipTests org.jacoco:jacoco-maven-plugin:report
 
       - name: Upload backend test reports
         if: always()
