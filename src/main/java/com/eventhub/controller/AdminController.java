@@ -24,7 +24,7 @@ public class AdminController {
     public ApiDtos.EventDto create(
             @Valid @RequestBody ApiDtos.EventRequest body
     ) {
-        throw notImplemented();
+        return eventService.create(body);
     }
 
     @PutMapping("/events/{eventId}")
@@ -32,7 +32,10 @@ public class AdminController {
             @PathVariable Long eventId,
             @Valid @RequestBody ApiDtos.EventRequest body
     ) {
-        throw notImplemented();
+        return eventService.update(
+                eventId,
+                body
+        );
     }
 
     @DeleteMapping("/events/{eventId}")
@@ -40,14 +43,14 @@ public class AdminController {
     public void delete(
             @PathVariable Long eventId
     ) {
-        throw notImplemented();
+        eventService.delete(eventId);
     }
 
     @GetMapping("/events/{eventId}/attendees")
     public List<ApiDtos.AttendeeDto> attendees(
             @PathVariable Long eventId
     ) {
-        throw notImplemented();
+        return eventService.attendees(eventId);
     }
 
     private UnsupportedOperationException notImplemented() {

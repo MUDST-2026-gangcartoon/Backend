@@ -21,12 +21,22 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.security.Principal;
+
 import java.time.LocalDateTime;
-import java.util.List;
+
 import java.util.Locale;
 import java.util.Objects;
 
+import com.eventhub.dto.EventListRow;
+import com.eventhub.dto.TicketTypeRow;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 @Service
 public class EventService {
 
@@ -56,7 +66,268 @@ public class EventService {
             String category,
             String status
     ) {
-        throw notImplemented();
+        String normalizedCategory =
+                normalizeListCategory(category);
+
+        String normalizedStatus =
+                normalizeListStatus(status);
+
+        Long userId =
+                resolveListUserId(principal);
+
+        LocalDateTime now =
+                LocalDateTime.now();
+
+        Pageable pageable =
+                PageRequest.of(
+                        page,
+                        size
+                );
+
+        Page<EventListRow> eventPage =
+                eventRepository.search(
+                        userId,
+                        search,
+                        normalizedCategory,
+                        normalizedStatus,
+                        now,
+                        pageable
+                );
+
+        List<EventListRow> rows =
+                eventPage.getContent();
+
+        Map<Long, List<ApiDtos.TicketTypeDto>>
+                ticketTypesByEvent =
+                loadTicketTypeSummaries(rows);
+
+        List<ApiDtos.EventDto> items =
+                rows.stream()
+                        .map(row ->
+                                eventListDto(
+                                        row,
+                                        ticketTypesByEvent
+                                                .getOrDefault(
+                                                        row.id(),
+                                                        List.of()
+                                                ),
+                                        now
+                                )
+                        )
+                        .toList();
+
+        long totalOpenEvents =
+                eventRepository.countOpen(now);
+
+        long totalRegistrations =
+                registrationRepository.count();
+
+        return new ApiDtos.EventPageDto(
+                items,
+                eventPage.getNumber(),
+                eventPage.getSize(),
+                eventPage.getTotalElements(),
+                eventPage.getTotalPages(),
+                eventPage.hasNext(),
+                eventPage.hasPrevious(),
+                totalOpenEvents,
+                totalRegistrations
+        );
+
+    }
+
+    private String normalizeListCategory(
+            String category
+    ) {
+        if (category == null
+                || category.isBlank()) {
+
+            return "ALL";
+        }
+
+        String normalized =
+                category
+                        .trim()
+                        .toUpperCase(Locale.ROOT);
+
+        if (!List.of(
+                "ALL",
+                "TECH",
+                "DESIGN",
+                "CAREER",
+                "COMMUNITY"
+        ).contains(normalized)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Unsupported event category"
+            );
+        }
+
+        return normalized;
+    }
+    private String normalizeListStatus(
+            String status
+    ) {
+        if (status == null
+                || status.isBlank()) {
+
+            return "ALL";
+        }
+
+        String normalized =
+                status
+                        .trim()
+                        .toUpperCase(Locale.ROOT);
+
+        if (!List.of(
+                "ALL",
+                "OPEN",
+                "FULL",
+                "ENDED",
+                "REGISTERED"
+        ).contains(normalized)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Unsupported event status"
+            );
+        }
+
+        return normalized;
+    }
+    private Long resolveListUserId(
+            Principal principal
+    ) {
+        if (principal == null
+                || principal.getName() == null
+                || principal.getName().isBlank()) {
+
+            return null;
+        }
+
+        String email =
+                principal
+                        .getName()
+                        .trim()
+                        .toLowerCase(Locale.ROOT);
+
+        return userRepository
+                .findByEmail(email)
+                .map(UserAccount::getId)
+                .orElse(null);
+    }
+    private Map<Long, List<ApiDtos.TicketTypeDto>>
+    loadTicketTypeSummaries(
+            List<EventListRow> rows
+    ) {
+        if (rows.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> eventIds =
+                rows.stream()
+                        .map(EventListRow::id)
+                        .toList();
+
+        List<TicketTypeRow> ticketRows =
+                ticketTypeRepository
+                        .summariesForEventIds(
+                                eventIds
+                        );
+
+        Map<Long, List<ApiDtos.TicketTypeDto>>
+                result =
+                new HashMap<>();
+
+        for (TicketTypeRow row
+                : ticketRows) {
+
+            result
+                    .computeIfAbsent(
+                            row.eventId(),
+                            ignored ->
+                                    new ArrayList<>()
+                    )
+                    .add(
+                            ticketTypeDto(row)
+                    );
+        }
+
+        return result;
+    }
+    private ApiDtos.TicketTypeDto ticketTypeDto(
+            TicketTypeRow row
+    ) {
+        long remaining =
+                Math.max(
+                        0L,
+                        (long) row.capacity()
+                                - row.sold()
+                );
+
+        return new ApiDtos.TicketTypeDto(
+                row.id(),
+                row.name(),
+                row.description(),
+                row.price(),
+                row.capacity(),
+                row.sold(),
+                remaining
+        );
+    }
+    private ApiDtos.EventDto eventListDto(
+            EventListRow row,
+            List<ApiDtos.TicketTypeDto> ticketTypes,
+            LocalDateTime now
+    ) {
+        long spotsLeft =
+                Math.max(
+                        0L,
+                        (long) row.capacity()
+                                - row.registeredCount()
+                );
+
+        String eventStatus =
+                eventListStatus(
+                        row,
+                        now
+                );
+
+        return new ApiDtos.EventDto(
+                row.id(),
+                row.title(),
+                row.description(),
+                row.location(),
+                row.startsAt(),
+                row.capacity(),
+                row.category(),
+                row.imageUrl(),
+                List.of(),
+                row.registeredCount(),
+                spotsLeft,
+                eventStatus,
+                row.registered(),
+                ticketTypes
+        );
+    }
+    private String eventListStatus(
+            EventListRow row,
+            LocalDateTime now
+    ) {
+        if (!row.startsAt()
+                .isAfter(now)) {
+
+            return "ENDED";
+        }
+
+        if (row.registeredCount()
+                >= row.capacity()) {
+
+            return "FULL";
+        }
+
+        return "OPEN";
     }
 
     @Transactional(readOnly = true)
