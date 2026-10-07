@@ -53,8 +53,7 @@ jobs:
         run: ./mvnw --batch-mode --no-transfer-progress package -DskipTests
 
       - name: Generate JaCoCo report
-        if: always()
-        run: ./mvnw --batch-mode --no-transfer-progress -DskipTests jacoco:report
+        run: ./mvnw --batch-mode --no-transfer-progress -DskipTests org.jacoco:jacoco-maven-plugin:report
 
       - name: Upload backend test reports
         if: always()
@@ -117,7 +116,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
     
-    integration:
+  integration:
     name: Backend - Integration
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
