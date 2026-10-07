@@ -256,7 +256,26 @@ public class EventService {
 
         return result;
     }
+    private ApiDtos.TicketTypeDto ticketTypeDto(
+            TicketTypeRow row
+    ) {
+        long remaining =
+                Math.max(
+                        0L,
+                        (long) row.capacity()
+                                - row.sold()
+                );
 
+        return new ApiDtos.TicketTypeDto(
+                row.id(),
+                row.name(),
+                row.description(),
+                row.price(),
+                row.capacity(),
+                row.sold(),
+                remaining
+        );
+    }
 
     @Transactional(readOnly = true)
     public ApiDtos.EventDto get(
