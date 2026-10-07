@@ -133,6 +133,7 @@ public class EventService {
                 totalOpenEvents,
                 totalRegistrations
         );
+
     }
 
     private String normalizeListCategory(
@@ -216,6 +217,46 @@ public class EventService {
                 .map(UserAccount::getId)
                 .orElse(null);
     }
+    private Map<Long, List<ApiDtos.TicketTypeDto>>
+    loadTicketTypeSummaries(
+            List<EventListRow> rows
+    ) {
+        if (rows.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> eventIds =
+                rows.stream()
+                        .map(EventListRow::id)
+                        .toList();
+
+        List<TicketTypeRow> ticketRows =
+                ticketTypeRepository
+                        .summariesForEventIds(
+                                eventIds
+                        );
+
+        Map<Long, List<ApiDtos.TicketTypeDto>>
+                result =
+                new HashMap<>();
+
+        for (TicketTypeRow row
+                : ticketRows) {
+
+            result
+                    .computeIfAbsent(
+                            row.eventId(),
+                            ignored ->
+                                    new ArrayList<>()
+                    )
+                    .add(
+                            ticketTypeDto(row)
+                    );
+        }
+
+        return result;
+    }
+
 
     @Transactional(readOnly = true)
     public ApiDtos.EventDto get(
