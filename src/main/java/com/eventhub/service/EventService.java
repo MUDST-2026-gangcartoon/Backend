@@ -195,6 +195,27 @@ public class EventService {
 
         return normalized;
     }
+    private Long resolveListUserId(
+            Principal principal
+    ) {
+        if (principal == null
+                || principal.getName() == null
+                || principal.getName().isBlank()) {
+
+            return null;
+        }
+
+        String email =
+                principal
+                        .getName()
+                        .trim()
+                        .toLowerCase(Locale.ROOT);
+
+        return userRepository
+                .findByEmail(email)
+                .map(UserAccount::getId)
+                .orElse(null);
+    }
 
     @Transactional(readOnly = true)
     public ApiDtos.EventDto get(
