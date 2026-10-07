@@ -466,4 +466,331 @@ class AnalyticsServiceTests {
                 never()
         ).save(any());
     }
+    // ============================================================
+    // EVT-AN-004 — Global Analytics Summary
+    // ============================================================
+
+    @Test
+    void shouldReturnGlobalAnalyticsSummary() {
+
+        when(
+                registrationRepository.count()
+        ).thenReturn(
+                10L
+        );
+
+        when(
+                eventRepository.count()
+        ).thenReturn(
+                4L
+        );
+
+        when(
+                eventRepository.countOpen(
+                        any(LocalDateTime.class)
+                )
+        ).thenReturn(
+                3L
+        );
+
+        when(
+                pageViewRepository.countByType(
+                        "SITE"
+                )
+        ).thenReturn(
+                50L
+        );
+
+        when(
+                pageViewRepository.countByType(
+                        "EVENT"
+                )
+        ).thenReturn(
+                20L
+        );
+
+        when(
+                pageViewRepository.uniqueSessions(
+                        "SITE"
+                )
+        ).thenReturn(
+                15L
+        );
+
+        ApiDtos.AnalyticsSummaryDto result =
+                analyticsService.summary();
+
+        assertEquals(
+                10L,
+                result.totalRegistrations()
+        );
+
+        assertEquals(
+                4L,
+                result.totalEvents()
+        );
+
+        assertEquals(
+                3L,
+                result.totalOpenEvents()
+        );
+
+        assertEquals(
+                50L,
+                result.siteViews()
+        );
+
+        assertEquals(
+                20L,
+                result.eventDetailViews()
+        );
+
+        assertEquals(
+                15L,
+                result.uniqueVisitors()
+        );
+
+        verify(registrationRepository)
+                .count();
+
+        verify(eventRepository)
+                .count();
+
+        verify(eventRepository)
+                .countOpen(
+                        any(LocalDateTime.class)
+                );
+
+        verify(pageViewRepository)
+                .countByType("SITE");
+
+        verify(pageViewRepository)
+                .countByType("EVENT");
+
+        verify(pageViewRepository)
+                .uniqueSessions("SITE");
+    }
+    // ============================================================
+    // EVT-AN-008 — Raw Views vs Unique Visitors
+    // ============================================================
+
+    @Test
+    void shouldKeepRawSiteViewsSeparateFromUniqueVisitors() {
+
+        when(
+                registrationRepository.count()
+        ).thenReturn(0L);
+
+        when(
+                eventRepository.count()
+        ).thenReturn(0L);
+
+        when(
+                eventRepository.countOpen(
+                        any(LocalDateTime.class)
+                )
+        ).thenReturn(0L);
+
+        // session เดิมเข้ามา 3 ครั้ง
+        when(
+                pageViewRepository.countByType(
+                        "SITE"
+                )
+        ).thenReturn(
+                3L
+        );
+
+        when(
+                pageViewRepository.countByType(
+                        "EVENT"
+                )
+        ).thenReturn(
+                0L
+        );
+
+        // distinct session = 1
+        when(
+                pageViewRepository.uniqueSessions(
+                        "SITE"
+                )
+        ).thenReturn(
+                1L
+        );
+
+        ApiDtos.AnalyticsSummaryDto result =
+                analyticsService.summary();
+
+        assertEquals(
+                3L,
+                result.siteViews()
+        );
+
+        assertEquals(
+                1L,
+                result.uniqueVisitors()
+        );
+    }
+    // ============================================================
+    // EVT-AN-005 — Per-Event Analytics
+    // ============================================================
+
+    @Test
+    void shouldReturnAnalyticsForExistingEvent() {
+
+        Event existing =
+                event(
+                        123L,
+                        "Spring Boot Workshop",
+                        50
+                );
+
+        when(
+                eventRepository.findById(
+                        123L
+                )
+        ).thenReturn(
+                Optional.of(existing)
+        );
+
+        when(
+                pageViewRepository
+                        .countByTypeAndEventId(
+                                "EVENT",
+                                123L
+                        )
+        ).thenReturn(
+                25L
+        );
+
+        when(
+                registrationRepository.countByEventId(
+                        123L
+                )
+        ).thenReturn(
+                4L
+        );
+
+        when(
+                registrationRepository
+                        .seatsReservedByEventId(
+                                123L
+                        )
+        ).thenReturn(
+                7L
+        );
+
+        ApiDtos.EventAnalyticsDto result =
+                analyticsService.eventSummary(
+                        123L
+                );
+
+        assertEquals(
+                123L,
+                result.eventId()
+        );
+
+        assertEquals(
+                "Spring Boot Workshop",
+                result.title()
+        );
+
+        assertEquals(
+                25L,
+                result.views()
+        );
+
+        assertEquals(
+                4L,
+                result.registrations()
+        );
+
+        assertEquals(
+                7L,
+                result.registeredSeats()
+        );
+
+        assertEquals(
+                50,
+                result.capacity()
+        );
+
+        assertEquals(
+                43L,
+                result.spotsLeft()
+        );
+    }
+    @Test
+    void shouldReturnNotFoundForUnknownEventAnalytics() {
+
+        when(
+                eventRepository.findById(
+                        999L
+                )
+        ).thenReturn(
+                Optional.empty()
+        );
+
+        assertStatus(
+                HttpStatus.NOT_FOUND,
+                () -> analyticsService.eventSummary(
+                        999L
+                )
+        );
+
+        verifyNoInteractions(
+                pageViewRepository,
+                registrationRepository
+        );
+    }
+    @Test
+    void eventAnalyticsSpotsLeftShouldNeverBeNegative() {
+
+        Event existing =
+                event(
+                        123L,
+                        "Oversold Fixture",
+                        50
+                );
+
+        when(
+                eventRepository.findById(
+                        123L
+                )
+        ).thenReturn(
+                Optional.of(existing)
+        );
+
+        when(
+                pageViewRepository
+                        .countByTypeAndEventId(
+                                "EVENT",
+                                123L
+                        )
+        ).thenReturn(10L);
+
+        when(
+                registrationRepository.countByEventId(
+                        123L
+                )
+        ).thenReturn(5L);
+
+        when(
+                registrationRepository
+                        .seatsReservedByEventId(
+                                123L
+                        )
+        ).thenReturn(
+                60L
+        );
+
+        ApiDtos.EventAnalyticsDto result =
+                analyticsService.eventSummary(
+                        123L
+                );
+
+        assertEquals(
+                0L,
+                result.spotsLeft()
+        );
+    }
 }
