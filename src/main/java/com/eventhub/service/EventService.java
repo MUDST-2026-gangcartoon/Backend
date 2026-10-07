@@ -311,6 +311,24 @@ public class EventService {
                 ticketTypes
         );
     }
+    private String eventListStatus(
+            EventListRow row,
+            LocalDateTime now
+    ) {
+        if (!row.startsAt()
+                .isAfter(now)) {
+
+            return "ENDED";
+        }
+
+        if (row.registeredCount()
+                >= row.capacity()) {
+
+            return "FULL";
+        }
+
+        return "OPEN";
+    }
 
     @Transactional(readOnly = true)
     public ApiDtos.EventDto get(
