@@ -345,7 +345,7 @@ public final class ApiDtos {
             String message
     ) {
     }
-}
+
 // =========================
 // Analytics
 // =========================
@@ -389,4 +389,5 @@ public record EventAnalyticsDto(
         int capacity,
         long spotsLeft
 ) {
+}
 }
