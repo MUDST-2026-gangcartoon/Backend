@@ -1048,6 +1048,308 @@ Success:
 
 ---
 
+## EVT-API-012 — Public Event List
+
+GET /api/events
+
+เป็น Public Endpoint
+
+Anonymous, USER, STAFF และ ADMIN สามารถเรียกได้
+
+Query Parameters:
+
+- page ค่า default = 0
+- size ค่า default = 20
+- search เป็น optional
+- category เป็น optional
+- status เป็น optional
+
+Controller ต้องส่ง:
+
+- Principal
+- page
+- size
+- search
+- category
+- status
+
+ไปยัง:
+
+`EventService.list(...)`
+
+Success:
+
+200 `EventPageDto`
+
+Controller Test ต้องตรวจเฉพาะ:
+
+- Route และ HTTP Method
+- Public access
+- Default query parameter
+- Explicit query parameter
+- Principal forwarding
+- Response contract
+- Controller → EventService delegation
+
+Controller Test ต้องไม่กำหนด Business Logic ของ:
+
+- search
+- category normalization
+- status OPEN/FULL/ENDED
+- pagination calculation ภายใน Service
+
+Business Logic ของ `EventService.list()` ต้องมี Requirement
+และ Service Test แยกก่อน Backend implement
+
+---
+
+# 18. EventService.list() — Business Requirements
+
+ส่วนนี้กำหนด Business Logic ของ `EventService.list(...)`
+แยกจาก HTTP Contract ของ `GET /api/events`
+
+Controller Test ของ EVT-API-012 ตรวจเฉพาะ HTTP Layer
+ส่วน Requirement ด้านล่างต้องทดสอบด้วย Pure Service Unit Tests
+
+## EVT-LIST-001 — Anonymous Event List
+
+Given:
+
+ไม่มี authenticated Principal
+
+When:
+
+เรียก `EventService.list(...)`
+
+Then:
+
+- การเรียกต้องทำงานในโหมด Anonymous
+- Service ต้องค้นหา Event โดยใช้ `userId = null`
+- ไม่ต้อง resolve User จาก UserRepository
+- ค่า `registered` ของ Event ให้ใช้ค่าจากผลของ EventRepository
+- ต้องคืน `EventPageDto`
+
+---
+
+## EVT-LIST-002 — Authenticated User Event List
+
+Given:
+
+Principal มี email และพบ UserAccount ใน UserRepository
+
+When:
+
+เรียก `EventService.list(...)`
+
+Then:
+
+- Service ต้อง resolve Principal ไปยัง UserAccount
+- ต้องส่ง User ID ไปยัง `EventRepository.search(...)`
+- ค่า `registered` ของแต่ละ Event ต้องอ้างอิงผลจาก Repository
+  สำหรับ User ปัจจุบัน
+
+---
+
+## EVT-LIST-003 — Principal ที่ไม่พบ User
+
+Given:
+
+มี Principal และ email
+แต่ไม่พบ UserAccount ในฐานข้อมูล
+
+When:
+
+เรียก `EventService.list(...)`
+
+Then:
+
+- ห้ามตอบ 404
+- ให้ทำงานเหมือน Anonymous
+- ต้องส่ง `userId = null` ไปยัง EventRepository
+- `registered` ต้องเป็น false ตามผล Repository
+- ถ้าใช้ status `REGISTERED` จะไม่มี Event ของ User นั้นถูกพบ
+
+Public Event Listing ต้องไม่ล้มเหลวเพียงเพราะ
+authenticated identity ไม่สามารถ resolve เป็น UserAccount ได้
+
+---
+
+## EVT-LIST-004 — Category Normalization
+
+Category normalization:
+
+- null → `ALL`
+- blank → `ALL`
+- trim ก่อนใช้งาน
+- แปลงเป็น uppercase
+
+Allowed values:
+
+- `ALL`
+- `TECH`
+- `DESIGN`
+- `CAREER`
+- `COMMUNITY`
+
+`ALL` หมายถึงไม่กรอง Category
+
+Category อื่นนอกเหนือจากรายการข้างต้น
+ต้องถูกปฏิเสธเป็น `400 Bad Request`
+
+---
+
+## EVT-LIST-005 — Status Normalization
+
+Status normalization:
+
+- null → `ALL`
+- blank → `ALL`
+- trim ก่อนใช้งาน
+- แปลงเป็น uppercase
+
+Allowed values:
+
+- `ALL`
+- `OPEN`
+- `FULL`
+- `ENDED`
+- `REGISTERED`
+
+Status อื่นนอกเหนือจากรายการข้างต้น
+ต้องถูกปฏิเสธเป็น `400 Bad Request`
+
+Service Unit Test ไม่ต้องทดสอบ JPQL ภายใน Repository
+แต่ต้องตรวจว่า normalized status ถูกส่งเข้า Repository ถูกต้อง
+
+---
+
+## EVT-LIST-006 — Pagination
+
+`page` และ `size` ที่ Service รับมา
+ต้องถูกใช้สร้าง Pageable สำหรับ `EventRepository.search(...)`
+
+Response metadata:
+
+- `totalElements`
+- `totalPages`
+- `hasNext`
+- `hasPrevious`
+
+ต้องมาจาก filtered `Page<EventListRow>`
+ที่ `EventRepository.search(...)` คืนมา
+
+Requirement รอบนี้ยังไม่กำหนด Behavior
+สำหรับ page/size ที่ติดลบหรือเกินขอบเขต
+ดังนั้น QA ห้ามสร้างกฎเพิ่มเอง
+
+---
+
+## EVT-LIST-007 — Event และ Ticket Summary Mapping
+
+Event ในหน้าปัจจุบันต้องถูกแปลงจาก `EventListRow`
+ไปเป็น `EventDto`
+
+ข้อมูลสำคัญต้องคงค่าจาก source row เช่น:
+
+- id
+- title
+- description
+- location
+- startsAt
+- capacity
+- category
+- imageUrl
+- registeredCount
+- registered
+
+`spotsLeft` ต้องไม่ติดลบ
+
+Ticket Type ของ Events ในหน้าปัจจุบัน
+ต้องโหลดแบบ batch ผ่าน:
+
+`TicketTypeRepository.summariesForEventIds(...)`
+
+แต่ละ `TicketTypeRow` ต้องถูกแปลงเป็น `TicketTypeDto`
+พร้อม:
+
+- id
+- name
+- description
+- price
+- capacity
+- sold
+- remaining
+
+`remaining` ต้องไม่ติดลบ
+
+ถ้าหน้าปัจจุบันไม่มี Event
+ไม่จำเป็นต้อง query Ticket Type summary
+
+Requirement นี้ไม่เพิ่มกฎใหม่เกี่ยวกับ
+การคำนวณ Event status นอกเหนือจาก behavior
+ที่ระบบมีอยู่แล้ว
+
+---
+
+## EVT-LIST-008 — Global Summary
+
+`EventPageDto.totalOpenEvents`
+
+ต้องเป็นจำนวน Event ที่ยัง OPEN ทั้งระบบ
+โดยไม่ขึ้นกับ search/category/status/page ปัจจุบัน
+
+ใช้:
+
+`EventRepository.countOpen(now)`
+
+`EventPageDto.totalRegistrations`
+
+ต้องเป็นจำนวน Registration records ทั้งระบบ
+
+ใช้:
+
+`RegistrationRepository.count()`
+
+ค่าดังกล่าว:
+
+- ไม่เปลี่ยนตาม filter
+- ไม่เปลี่ยนตาม page
+- `totalRegistrations` ไม่ใช่ผลรวม quantity
+
+ส่วน:
+
+- totalElements
+- totalPages
+- hasNext
+- hasPrevious
+
+ยังคงมาจาก filtered Page ของ `EventRepository.search(...)`
+
+---
+
+## 18.1 Test Scope
+
+QA ต้องสร้าง Pure Unit Test สำหรับ EventService.list()
+แยกจาก Controller HTTP Tests
+
+ไฟล์แนะนำ:
+
+`src/test/java/com/eventhub/service/EventListServiceTests.java`
+
+ใช้:
+
+- JUnit 5
+- Mockito
+- Mock Repository dependencies
+
+QA ห้ามแก้ EventControllerHttpTests
+เพื่อทดสอบ Business Logic ของ EventService.list()
+
+Initial Service Test Run ต้อง Compile ได้
+และ Failure ต้องเกิดจาก `EventService.list()` ยังไม่ implement
+ไม่ใช่จาก Java compilation error
+---
+
 ## 17.1 Testing Strategy
 
 QA ใช้ Spring Boot HTTP/Security tests เช่น MockMvc
