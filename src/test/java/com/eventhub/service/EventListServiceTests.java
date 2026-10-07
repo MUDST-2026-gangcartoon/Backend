@@ -677,7 +677,7 @@ class EventListServiceTests {
     @Test
     void shouldReturnMetadataFromFilteredRepositoryPage() {
 
-        EventListRow row =
+        EventListRow row1 =
                 eventRow(
                         100L,
                         100,
@@ -685,9 +685,29 @@ class EventListServiceTests {
                         false
                 );
 
+        EventListRow row2 =
+                eventRow(
+                        101L,
+                        100,
+                        5L,
+                        false
+                );
+
+        EventListRow row3 =
+                eventRow(
+                        102L,
+                        100,
+                        2L,
+                        false
+                );
+
         Page<EventListRow> repositoryPage =
                 new PageImpl<>(
-                        List.of(row),
+                        List.of(
+                                row1,
+                                row2,
+                                row3
+                        ),
                         PageRequest.of(
                                 2,
                                 5
@@ -711,7 +731,15 @@ class EventListServiceTests {
         when(
                 ticketTypeRepository
                         .summariesForEventIds(
-                                List.of(100L)
+                                argThat(ids ->
+                                        ids.size() == 3
+                                                &&
+                                                ids.contains(100L)
+                                                &&
+                                                ids.contains(101L)
+                                                &&
+                                                ids.contains(102L)
+                                )
                         )
         ).thenReturn(
                 List.of()
@@ -1212,7 +1240,7 @@ class EventListServiceTests {
                 new PageImpl<>(
                         List.of(filteredEvent),
                         PageRequest.of(
-                                3,
+                                2,
                                 10
                         ),
                         21L
@@ -1238,7 +1266,7 @@ class EventListServiceTests {
         );
 
         // จำนวน Registration records
-        // ไม่ใช่ quantity
+        // ไม่ใช่ผลรวม quantity
         when(
                 registrationRepository.count()
         ).thenReturn(
@@ -1248,7 +1276,7 @@ class EventListServiceTests {
         ApiDtos.EventPageDto result =
                 eventService.list(
                         null,
-                        3,
+                        2,
                         10,
                         "spring",
                         "TECH",
