@@ -52,6 +52,30 @@ jobs:
       - name: Build backend JAR
         run: ./mvnw --batch-mode --no-transfer-progress package -DskipTests
 
+      - name: Generate JaCoCo report
+        if: always()
+        run: ./mvnw --batch-mode --no-transfer-progress -DskipTests jacoco:report
+
+      - name: Upload backend test reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: backend-test-reports-${{ github.sha }}
+          path: backend/target/surefire-reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload JaCoCo coverage report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: backend-jacoco-${{ github.sha }}
+          path: |
+            backend/target/site/jacoco/
+            backend/target/jacoco.exec
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload backend artifact
         uses: actions/upload-artifact@v5
         with:
@@ -59,7 +83,6 @@ jobs:
           path: backend/target/*.jar
           if-no-files-found: error
           retention-days: 7
-
 
   frontend:
     name: Frontend - Build
