@@ -1515,3 +1515,43 @@ Backend ใช้ Session Cookie + CSRF ของระบบเดิม; Front
 5. เมื่อ `mvnw.cmd clean test` และ CI ผ่าน, QA/Backend review, PR `feat/backend-staff` → `main` และ merge บน GitHub
 
 **อย่าใช้เอกสารนี้แทนผลตรวจ repository ล่าสุด:** ตรวจ method/constructor, package, DB mapping, workflow และ CI run จริงก่อนเริ่มทุก phase; หาก API ยังไม่มี Controller ให้บอก Frontend ว่ายังเป็น contract เป้าหมาย ไม่ใช่ endpoint ที่ใช้งานได้แล้ว
+# 19. Branch 10 — Backend Analytics / Dashboard
+
+Branch นี้เพิ่ม Business Analytics สำหรับ EventHub
+โดยใช้ข้อมูลจาก `PageView`, Event และ Registration ที่มีอยู่ในระบบ
+
+Analytics ใน Branch นี้เป็น Application / Business Feature
+ไม่ใช่ Infrastructure Monitoring & Logging
+
+ขอบเขตหลัก:
+
+- บันทึกการเข้าชมเว็บไซต์
+- บันทึกการเปิด Event Detail
+- สรุป Analytics สำหรับ Admin Dashboard
+- สรุป Analytics ราย Event
+
+QA ต้องยึด Requirement ด้านล่าง
+และห้ามสร้าง Business Rule เพิ่มจาก implementation เอง
+
+---
+
+## EVT-AN-001 — Record Site Visit [P0]
+
+Given:
+
+ผู้ใช้ Anonymous หรือ authenticated อยู่
+และมี HTTP Session ปัจจุบัน
+
+When:
+
+เรียก:
+
+`POST /api/analytics/visit`
+
+Request:
+
+```json
+{
+  "type": "SITE",
+  "eventId": null
+}
