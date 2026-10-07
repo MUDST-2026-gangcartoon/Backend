@@ -276,6 +276,41 @@ public class EventService {
                 remaining
         );
     }
+    private ApiDtos.EventDto eventListDto(
+            EventListRow row,
+            List<ApiDtos.TicketTypeDto> ticketTypes,
+            LocalDateTime now
+    ) {
+        long spotsLeft =
+                Math.max(
+                        0L,
+                        (long) row.capacity()
+                                - row.registeredCount()
+                );
+
+        String eventStatus =
+                eventListStatus(
+                        row,
+                        now
+                );
+
+        return new ApiDtos.EventDto(
+                row.id(),
+                row.title(),
+                row.description(),
+                row.location(),
+                row.startsAt(),
+                row.capacity(),
+                row.category(),
+                row.imageUrl(),
+                List.of(),
+                row.registeredCount(),
+                spotsLeft,
+                eventStatus,
+                row.registered(),
+                ticketTypes
+        );
+    }
 
     @Transactional(readOnly = true)
     public ApiDtos.EventDto get(
