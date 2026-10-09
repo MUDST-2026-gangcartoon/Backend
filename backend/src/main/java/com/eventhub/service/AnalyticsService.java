@@ -12,6 +12,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Locale;
+
+import com.eventhub.model.Event;
+
+import java.time.LocalDateTime;
 @Service
 public class AnalyticsService {
 
@@ -108,14 +112,93 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public ApiDtos.AnalyticsSummaryDto summary() {
-        throw notImplemented();
+
+        LocalDateTime now =
+                LocalDateTime.now();
+
+        long totalRegistrations =
+                registrationRepository.count();
+
+        long totalEvents =
+                eventRepository.count();
+
+        long totalOpenEvents =
+                eventRepository.countOpen(now);
+
+        long siteViews =
+                pageViewRepository.countByType(
+                        "SITE"
+                );
+
+        long eventDetailViews =
+                pageViewRepository.countByType(
+                        "EVENT"
+                );
+
+        long uniqueVisitors =
+                pageViewRepository.uniqueSessions(
+                        "SITE"
+                );
+
+        return new ApiDtos.AnalyticsSummaryDto(
+                totalRegistrations,
+                totalEvents,
+                totalOpenEvents,
+                siteViews,
+                eventDetailViews,
+                uniqueVisitors
+        );
     }
 
     @Transactional(readOnly = true)
     public ApiDtos.EventAnalyticsDto eventSummary(
             Long eventId
     ) {
-        throw notImplemented();
+        Event event =
+                eventRepository
+                        .findById(eventId)
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "Event not found"
+                                )
+                        );
+
+        long views =
+                pageViewRepository
+                        .countByTypeAndEventId(
+                                "EVENT",
+                                eventId
+                        );
+
+        long registrations =
+                registrationRepository
+                        .countByEventId(
+                                eventId
+                        );
+
+        long registeredSeats =
+                registrationRepository
+                        .seatsReservedByEventId(
+                                eventId
+                        );
+
+        long spotsLeft =
+                Math.max(
+                        0L,
+                        (long) event.getCapacity()
+                                - registeredSeats
+                );
+
+        return new ApiDtos.EventAnalyticsDto(
+                event.getId(),
+                event.getTitle(),
+                views,
+                registrations,
+                registeredSeats,
+                event.getCapacity(),
+                spotsLeft
+        );
     }
 
     private UnsupportedOperationException notImplemented() {
