@@ -1546,6 +1546,7 @@ When:
 
 เรียก:
 
+
 `POST /api/analytics/visit`
 
 Request:
@@ -1554,4 +1555,212 @@ Request:
 {
   "type": "SITE",
   "eventId": null
-}
+} 
+```
+# 19. Branch 10 — Backend Analytics / Dashboard
+
+## 19.1 Objective & Scope
+
+เพิ่ม Business Analytics สำหรับ EventHub โดยใช้ข้อมูลจริงจาก `PageView`, `Event` และ `Registration`
+
+ประกอบด้วย:
+
+- บันทึก Site Visit และ Event Detail Visit
+- สรุป Analytics ทั้งระบบสำหรับ ADMIN
+- สรุป Analytics ของ Event แต่ละรายการ
+
+Business Analytics แยกจาก Infrastructure Monitoring & Logging
+
+**QA ต้องทดสอบตาม Requirement นี้ และห้ามปรับ Business Rule โดยอ้างอิง implementation เอง**
+
+---
+
+## EVT-AN-001 — Record Site Visit [P0]
+
+**Endpoint:** `POST /api/analytics/visit`
+
+Request: `{"type":"SITE","eventId":null}`
+
+Expected:
+
+- Anonymous และ authenticated users สามารถบันทึกได้
+- สร้าง `PageView` 1 record ต่อ request ที่สำเร็จ
+- `type = "SITE"`
+- `eventId = null`
+- `sessionId` มาจาก HTTP Session ฝั่ง Server
+- Client ไม่สามารถกำหนด sessionId เอง
+- ไม่ deduplicate Raw PageView ตอนบันทึก
+- `viewedAt` ต้องถูกกำหนดเมื่อสร้าง PageView
+- Success: `204 No Content`
+
+## EVT-AN-002 — Record Event Detail Visit [P0]
+
+**Endpoint:** `POST /api/analytics/visit`
+
+Request: `{"type":"EVENT","eventId":123}`
+
+Expected:
+
+- ตรวจสอบว่า Event มีอยู่จริง
+- Event มีอยู่ → บันทึก `PageView("EVENT", eventId, sessionId)`
+- Event ไม่มี → `404 Not Found`
+- เมื่อ 404 ห้ามสร้าง PageView
+- Session ID ต้องมาจาก Server
+
+## EVT-AN-003 — Analytics Visit Validation [P0]
+
+**Type validation**
+
+- `null` → 400
+- blank → 400
+- trim และ uppercase ก่อนใช้งาน
+- รองรับเฉพาะ `SITE` และ `EVENT`
+- ค่าอื่น → 400
+- `" site "` ต้องถูก normalize เป็น `SITE`
+
+**Event ID validation**
+
+- `SITE` ต้องมี `eventId = null`
+- `SITE` + eventId ไม่เป็น null → 400
+- `EVENT` ต้องมี eventId
+- `EVENT` + eventId เป็น null → 400
+
+**Session validation**
+
+- sessionId ต้องมาจาก Server-side HTTP Session
+- sessionId เป็น null หรือ blank → 400
+- Request ที่ไม่ถูกต้องต้องไม่สร้าง PageView
+
+## EVT-AN-004 — Global Analytics Summary [P0]
+
+**Endpoint:** `GET /api/admin/analytics/summary`
+
+Success: `200 OK`
+
+Response fields:
+
+| Field | Meaning / Source |
+|---|---|
+| totalRegistrations | จำนวน Registration records ทั้งระบบ จาก `RegistrationRepository.count()` |
+| totalEvents | จำนวน Event records จาก `EventRepository.count()` |
+| totalOpenEvents | จำนวน Open Events จาก `EventRepository.countOpen(now)` |
+| siteViews | จำนวน `PageView` type SITE |
+| eventDetailViews | จำนวน `PageView` type EVENT |
+| uniqueVisitors | Distinct sessionId สำหรับ PageView type SITE |
+
+`totalRegistrations` นับ Registration records ไม่ใช่ผลรวม quantity
+
+`uniqueVisitors` ใช้ `PageViewRepository.uniqueSessions("SITE")`
+
+ค่าทั้งหมดเป็น Global Totals และไม่ขึ้นกับ Event pagination/filter
+
+## EVT-AN-005 — Per-Event Analytics [P0]
+
+**Endpoint:** `GET /api/admin/analytics/events/{eventId}`
+
+Success: `200 OK`
+
+Response fields:
+
+| Field | Meaning / Source |
+|---|---|
+| eventId | Event ID |
+| title | Event title |
+| views | `PageViewRepository.countByTypeAndEventId("EVENT", eventId)` |
+| registrations | `RegistrationRepository.countByEventId(eventId)` |
+| registeredSeats | `RegistrationRepository.seatsReservedByEventId(eventId)` |
+| capacity | Event capacity |
+| spotsLeft | `max(0, capacity - registeredSeats)` |
+
+Registrations คือจำนวน Registration records ส่วน registeredSeats คือผลรวม quantity
+
+ถ้า Event ไม่มี:
+
+- คืน `404 Not Found`
+- ไม่ query PageView/Registration ต่อโดยไม่จำเป็น
+
+## EVT-AN-006 — Public Analytics HTTP Contract [P0]
+
+**Endpoint:** `POST /api/analytics/visit`
+
+Allowed roles: Anonymous, USER, STAFF, ADMIN
+
+Expected:
+
+- Valid request + valid CSRF → 204
+- Missing/invalid CSRF → 403
+- Invalid request body → 400
+
+Controller ต้องอ่าน `sessionId` จาก HTTP Session จริง และส่ง request กับ sessionId ให้ `AnalyticsService.recordVisit(...)`
+
+ห้ามรับ sessionId จาก Client
+
+## EVT-AN-007 — Admin Analytics Authorization [P0]
+
+Endpoints:
+
+- `GET /api/admin/analytics/summary`
+- `GET /api/admin/analytics/events/{eventId}`
+
+Expected Authorization:
+
+| Role | Expected |
+|---|---|
+| Anonymous | 401 |
+| USER | 403 |
+| STAFF | 403 |
+| ADMIN | Allowed |
+
+ต้องพิสูจน์ Authorization ผ่าน HTTP/Spring Security Tests ไม่ใช่ Pure Mockito Service Tests เพียงอย่างเดียว
+
+## EVT-AN-008 — Raw Views vs Unique Visitors [P0]
+
+Given: Session เดิมส่ง SITE visit 3 ครั้ง
+
+Then:
+
+- Raw SITE PageView records = 3
+- siteViews = 3
+- uniqueVisitors = 1
+
+Raw views ต้องนับทุก successful request
+
+Unique visitors ใช้ distinct sessionId ตอน query Summary
+
+ห้าม deduplicate ระหว่าง record visit
+
+---
+
+## 19.2 Out of Scope
+
+Branch 10 ไม่รวม:
+
+- Analytics time-range filters
+- Daily/weekly/monthly time-series charts
+- Backend conversion percentage
+- IP/device/browser tracking
+- External analytics integrations
+- Kubernetes infrastructure metrics
+- Application log aggregation
+- Prometheus/Grafana/Loki configuration
+
+## 19.3 Test Strategy
+
+QA ใช้ `AnalyticsServiceTests.java` สำหรับ Service Behavior และ `AnalyticsControllerHttpTests.java` / `AdminAnalyticsControllerHttpTests.java` สำหรับ HTTP, Validation, Security และ Controller Delegation
+
+ต้องมีหลักฐาน Initial Red ที่ compile ได้แต่ Behavior ไม่ผ่าน ตามด้วย Green เมื่อ Backend implement แล้ว
+
+การทดสอบแบบ Mockito ไม่ใช่หลักฐานแทน Integration Test กับ Database จริง
+
+## 19.4 Test-first & Completion
+
+1. Backend/PM กำหนด Requirement และ Contract
+2. Backend สร้าง compile-ready Skeleton
+3. QA เขียน Tests ก่อน implementation และเก็บ Red CI
+4. QA merge tests เข้า Feature Branch
+5. Backend implement โดยรักษา Business Rule เดิม
+6. Backend และ QA ตรวจ Green CI และ Full Regression
+7. QA ตรวจ Requirement Coverage และ Integration gaps
+8. เปิด PR `feat/backend-analytics → main` หลัง Final Review ผ่าน
+
+การกู้คืนเอกสารที่ถูกตัดค้างภายหลัง ต้องเป็น Documentation Correction ที่แยก Commit อย่างชัดเจน และไม่อ้างว่าเป็น Commit ก่อน QA Test หากไม่ใช่ลำดับจริง
