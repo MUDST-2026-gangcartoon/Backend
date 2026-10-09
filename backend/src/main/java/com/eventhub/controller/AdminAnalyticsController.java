@@ -18,14 +18,16 @@ public class AdminAnalyticsController {
 
     @GetMapping("/summary")
     public ApiDtos.AnalyticsSummaryDto summary() {
-        throw notImplemented();
+        return analyticsService.summary();
     }
 
     @GetMapping("/events/{eventId}")
     public ApiDtos.EventAnalyticsDto eventSummary(
             @PathVariable Long eventId
     ) {
-        throw notImplemented();
+        return analyticsService.eventSummary(
+                eventId
+        );
     }
 
     private UnsupportedOperationException notImplemented() {

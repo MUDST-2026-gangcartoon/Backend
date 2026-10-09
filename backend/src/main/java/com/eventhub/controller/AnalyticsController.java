@@ -25,7 +25,15 @@ public class AnalyticsController {
             @Valid @RequestBody ApiDtos.AnalyticsVisitRequest body,
             HttpServletRequest request
     ) {
-        throw notImplemented();
+        String sessionId =
+                request
+                        .getSession(true)
+                        .getId();
+
+        analyticsService.recordVisit(
+                body,
+                sessionId
+        );
     }
 
     private UnsupportedOperationException notImplemented() {
