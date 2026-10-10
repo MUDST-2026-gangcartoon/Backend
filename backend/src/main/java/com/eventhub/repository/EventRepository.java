@@ -29,8 +29,16 @@ public interface EventRepository
                         e.category,
                         e.imageUrl,
                         e.detailImageUrl,
-                        coalesce(sum(coalesce(r.quantity, 1)), 0),
-                        case when count(vr.id) > 0 then true else false end
+coalesce(
+    sum(
+        case
+            when r.id is null then 0
+            else coalesce(r.quantity, 1)
+        end
+    ),
+    0
+),
+case when count(vr.id) > 0 then true else false end
                     )
                     from Event e
                     left join Registration r
@@ -62,14 +70,30 @@ public interface EventRepository
                     having (
                         :status = 'ALL'
                         or (
-                            :status = 'OPEN'
-                            and e.startsAt > :now
-                            and coalesce(sum(coalesce(r.quantity, 1)), 0) < e.capacity
+:status = 'OPEN'
+and e.startsAt > :now
+and coalesce(
+    sum(
+        case
+            when r.id is null then 0
+            else coalesce(r.quantity, 1)
+        end
+    ),
+    0
+) < e.capacity
                         )
                         or (
-                            :status = 'FULL'
-                            and e.startsAt > :now
-                            and coalesce(sum(coalesce(r.quantity, 1)), 0) >= e.capacity
+:status = 'FULL'
+and e.startsAt > :now
+and coalesce(
+    sum(
+        case
+            when r.id is null then 0
+            else coalesce(r.quantity, 1)
+        end
+    ),
+    0
+) >= e.capacity
                         )
                         or (
                             :status = 'ENDED'
