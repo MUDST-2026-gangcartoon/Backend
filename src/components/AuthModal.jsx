@@ -3,99 +3,183 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function AuthModal() {
-  const { modal, closeModal, login, register } = useAuth();
+  const { modal, closeModal, openModal, login, register } = useAuth();
   const navigate = useNavigate();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registerError, setRegisterError] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
 
   if (!modal) return null;
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const result = login(email, password);
 
-    if (!result.success) {
-      setLoginError(result.message);
-      return;
-    }
+    if (isSubmitting) return;
 
+    setIsSubmitting(true);
     setLoginError('');
-    setEmail('');
-    setPassword('');
 
-    // หลัง Login ให้ไปยังหน้าแรกของแต่ละ Role
-    if (result.user?.role === 'admin') {
-      navigate('/admin/dashboard');
-    } else if (result.user?.role === 'staff') {
-      navigate('/staff/checkin');
-    } else {
-      navigate('/');
+    try {
+      const result = await login(email.trim(), password);
+
+      if (!result?.success) {
+        setLoginError(result?.message || 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่');
+        return;
+      }
+
+      const role = result.user?.role;
+
+      setEmail('');
+      setPassword('');
+      setLoginError('');
+
+      if (role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (role === 'staff') {
+        navigate('/staff/checkin');
+      } else {
+        navigate('/');
+      }
+    } catch (error) {
+      setLoginError(
+        error?.message || 'ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่อีกครั้ง'
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    register();
+
+    if (isRegistering) return;
+
+    setIsRegistering(true);
+    setRegisterError('');
+
+    try {
+      const result = await register();
+
+      if (!result?.success) {
+        setRegisterError(
+          result?.message || 'ระบบสมัครสมาชิกยังไม่พร้อมใช้งาน'
+        );
+        return;
+      }
+
+      setRegisterError('');
+      openModal('login');
+    } catch (error) {
+      setRegisterError(
+        error?.message || 'สมัครสมาชิกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
+      );
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  const switchModal = (type) => {
+    setLoginError('');
+    setRegisterError('');
+    openModal(type);
   };
 
   return (
-    <div className="auth-modal-overlay" onClick={closeModal}>
+    <div
+      className="auth-modal-overlay"
+      onClick={closeModal}
+    >
       {modal === 'login' && (
-        <div className="auth-modal-box" onClick={(e) => e.stopPropagation()}>
-          <button className="btn-close-modal" onClick={closeModal}>✕</button>
+        <div
+          className="auth-modal-box"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="login-title"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="btn-close-modal"
+            onClick={closeModal}
+            aria-label="ปิดหน้าต่าง"
+          >
+            ✕
+          </button>
+
           <div className="login-icon">
-            <img src="https://via.placeholder.com/48/93C5FD/FFFFFF?text=+" alt="Icon" />
+            <img
+              src="https://via.placeholder.com/48/93C5FD/FFFFFF?text=+"
+              alt=""
+            />
           </div>
+
           <div className="login-subtitle">สำหรับสมาชิก</div>
-          <h1 className="login-title">เข้าสู่ระบบเพื่อลงทะเบียน</h1>
+
+          <h1 className="login-title" id="login-title">
+            เข้าสู่ระบบเพื่อลงทะเบียน
+          </h1>
 
           <form onSubmit={handleLogin}>
             <div className="form-group">
-              <label>อีเมล</label>
+              <label htmlFor="login-email">อีเมล</label>
               <input
+                id="login-email"
                 type="email"
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
                   setLoginError('');
                 }}
-                placeholder="user@test.com"
+                placeholder="กรอกอีเมลของคุณ"
               />
             </div>
+
             <div className="form-group">
-              <label>รหัสผ่าน</label>
+              <label htmlFor="login-password">รหัสผ่าน</label>
               <input
+                id="login-password"
                 type="password"
+                autoComplete="current-password"
                 required
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   setLoginError('');
                 }}
-                placeholder="1234"
+                placeholder="กรอกรหัสผ่าน"
               />
             </div>
 
             {loginError && (
-              <p className="helper-text err" role="alert">{loginError}</p>
+              <p className="helper-text err" role="alert">
+                {loginError}
+              </p>
             )}
 
-            <button type="submit" className="btn-submit-login">
-              เข้าสู่ระบบ
+            <button
+              type="submit"
+              className="btn-submit-login"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
             </button>
           </form>
 
           <div className="login-footer">
-            Mock User: <b>user@test.com / 1234</b><br />
-            Mock Admin: <b>admin@test.com / 1234</b><br />
-            Mock Staff: <b>staff@test.com / 1234</b>
-          </div>
-
-          <div className="login-footer">
             ยังไม่มีบัญชี Petopia?{' '}
-            <a href="#" onClick={(e) => { e.preventDefault(); register(); }}>
+            <a
+              href="#register"
+              onClick={(e) => {
+                e.preventDefault();
+                switchModal('register');
+              }}
+            >
               สร้างบัญชีใหม่
             </a>
           </div>
@@ -103,35 +187,98 @@ export default function AuthModal() {
       )}
 
       {modal === 'register' && (
-        <div className="auth-modal-box" onClick={(e) => e.stopPropagation()}>
-          <button className="btn-close-modal" onClick={closeModal}>✕</button>
+        <div
+          className="auth-modal-box"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="register-title"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="btn-close-modal"
+            onClick={closeModal}
+            aria-label="ปิดหน้าต่าง"
+          >
+            ✕
+          </button>
+
           <div className="login-icon">
-            <img src="https://via.placeholder.com/48/D1FAE5/FFFFFF?text=+" alt="Icon" />
+            <img
+              src="https://via.placeholder.com/48/D1FAE5/FFFFFF?text=+"
+              alt=""
+            />
           </div>
-          <div className="login-subtitle" style={{ color: '#10B981' }}>สมัครสมาชิก</div>
-          <h1 className="login-title">สร้างบัญชีของคุณ</h1>
+
+          <div
+            className="login-subtitle"
+            style={{ color: '#10B981' }}
+          >
+            สมัครสมาชิก
+          </div>
+
+          <h1 className="login-title" id="register-title">
+            สร้างบัญชีของคุณ
+          </h1>
 
           <form onSubmit={handleRegister}>
             <div className="form-group">
-              <label>ชื่อที่แสดง</label>
-              <input type="text" required />
+              <label htmlFor="register-name">ชื่อที่แสดง</label>
+              <input
+                id="register-name"
+                type="text"
+                autoComplete="name"
+                required
+              />
             </div>
+
             <div className="form-group">
-              <label>อีเมล</label>
-              <input type="email" required />
+              <label htmlFor="register-email">อีเมล</label>
+              <input
+                id="register-email"
+                type="email"
+                autoComplete="email"
+                required
+              />
             </div>
+
             <div className="form-group">
-              <label>รหัสผ่าน</label>
-              <input type="password" required minLength={8} />
+              <label htmlFor="register-password">รหัสผ่าน</label>
+              <input
+                id="register-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+              />
             </div>
-            <button type="submit" className="btn-submit-register">
-              สร้างบัญชีและเริ่มจอง
+
+            {registerError && (
+              <p className="helper-text err" role="alert">
+                {registerError}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              className="btn-submit-register"
+              disabled={isRegistering}
+            >
+              {isRegistering
+                ? 'กำลังดำเนินการ...'
+                : 'สร้างบัญชีและเริ่มจอง'}
             </button>
           </form>
 
           <div className="login-footer">
             มีบัญชีอยู่แล้ว?{' '}
-            <a href="#" onClick={(e) => { e.preventDefault(); closeModal(); }}>
+            <a
+              href="#login"
+              onClick={(e) => {
+                e.preventDefault();
+                switchModal('login');
+              }}
+            >
               เข้าสู่ระบบ
             </a>
           </div>
