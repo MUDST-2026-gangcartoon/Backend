@@ -3,7 +3,7 @@
 // ถ้าโปรเจกต์คุณใช้ axios ให้เปิดใช้งาน (และอย่าลืม npm install axios)
 // import axios from 'axios';
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 // ตัวอย่างโครงสร้างเบื้องต้น (สามารถปรับแก้ตาม Stack ที่ใช้ เช่น ใช้ axios หรือ fetch ปกติ)
 const apiClient = {
