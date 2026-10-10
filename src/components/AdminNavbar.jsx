@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthModal from './AuthModal.jsx';
+import LanguageToggle from './LanguageToggle.jsx';
 import logo from '../../assets/public/logo.png';
 
 export default function AdminNavbar() {
@@ -9,17 +10,11 @@ export default function AdminNavbar() {
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
-  // State สำหรับจัดการเปลี่ยนภาษา (ไทย / EN)
-  const [currentLang, setCurrentLang] = useState('ไทย');
 
   const handleLogout = () => {
     setIsDropdownOpen(false);
     logout();
     navigate('/');
-  };
-
-  const toggleLanguage = () => {
-    setCurrentLang((prev) => (prev === 'ไทย' ? 'EN' : 'ไทย'));
   };
 
   return (
@@ -48,11 +43,9 @@ export default function AdminNavbar() {
         </div>
 
         <div className="nav-right">
+          <LanguageToggle />
           {!isLoggedIn && (
             <div className="nav-auth-buttons">
-              <button className="btn-lang-toggle" onClick={toggleLanguage}>
-                {currentLang}
-              </button>
               <a href="#" className="btn-nav-register" onClick={(e) => { e.preventDefault(); openModal('register'); }}>
                 สมัครสมาชิก
               </a>
@@ -64,15 +57,6 @@ export default function AdminNavbar() {
 
           {isLoggedIn && (
             <div className="user-profile flex items-center">
-              {/* ปุ่มสลับภาษาและเส้นกั้นแนวตั้ง */}
-              <button 
-                className="lang-text bg-transparent border-none cursor-pointer font-medium px-2"
-                onClick={toggleLanguage}
-              >
-                {currentLang}
-              </button>
-              <div className="lang-divider" style={{ width: '1px', height: '24px', backgroundColor: '#cbd5e1', margin: '0 8px' }} />
-
               <div
                 className="user-profile"
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}

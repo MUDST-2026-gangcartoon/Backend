@@ -1,4 +1,6 @@
-# Frontend – Usage Guide
+# EventFest Admin — React
+
+แปลงหน้าเว็บ HTML/CSS/vanilla JS เดิมของ EventFest (แอดมินและทีมหน้างาน) เป็น React โดยใช้ Vite
 
 ## 1. Requirements
 
