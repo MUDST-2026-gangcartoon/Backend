@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthModal from './AuthModal.jsx';
+import LanguageToggle from './LanguageToggle.jsx';
 
 export default function Navbar({ onSearchChange }) {
   const { isLoggedIn, user, openModal, logout } = useAuth();
@@ -11,62 +12,6 @@ export default function Navbar({ onSearchChange }) {
   // 🟢 STATES
   const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [currentLang, setCurrentLang] = useState('th');
-
-  // 🌟 1. ตรวจสอบสถานะภาษาปัจจุบันจาก Cookie เมื่อโหลดหน้าเว็บ
-  useEffect(() => {
-    const getCookie = (name) => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop().split(';').shift();
-      return null;
-    };
-
-    const googTrans = getCookie('googtrans');
-    if (googTrans && googTrans.includes('/en')) {
-      setCurrentLang('en');
-    } else {
-      setCurrentLang('th');
-    }
-
-    // โหลด Google Translate Script เบื้องหลัง (ไม่ต้องแสดง Widget)
-    if (!document.getElementById('google-translate-script')) {
-      window.googleTranslateElementInit = () => {
-        new window.google.translate.TranslateElement(
-          {
-            pageLanguage: 'th',
-            includedLanguages: 'en,th',
-            autoDisplay: false
-          },
-          'google_translate_hidden_element'
-        );
-      };
-
-      const script = document.createElement('script');
-      script.id = 'google-translate-script';
-      script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-      script.async = true;
-      document.body.appendChild(script);
-    }
-  }, []);
-
-  // 🌟 2. ฟังก์ชันสลับภาษาเมื่อกดปุ่ม (สั่งงานผ่าน Cookie + Reload สั้นๆ)
-  const toggleLanguage = (e) => {
-    e.stopPropagation();
-    const targetLang = currentLang === 'th' ? 'en' : 'th';
-    
-    // กำหนด Cookie สำหรับ Google Translate Engine
-    if (targetLang === 'en') {
-      document.cookie = "googtrans=/th/en; path=/";
-      document.cookie = `googtrans=/th/en; domain=${window.location.hostname}; path=/`;
-    } else {
-      document.cookie = "googtrans=/th/th; path=/";
-      document.cookie = `googtrans=/th/th; domain=${window.location.hostname}; path=/`;
-    }
-
-    setCurrentLang(targetLang);
-    window.location.reload(); // รีโหลดสั้นๆ เพื่อให้ Google แปลภาษาทั้งหน้าอย่างสมบูรณ์
-  };
 
   // 🟢 HANDLERS
   const handleSearchKeyDown = (e) => {
@@ -88,9 +33,6 @@ export default function Navbar({ onSearchChange }) {
 
   return (
     <>
-      {/* Element สำหรับ Google Translate ทำงานเบื้องหลัง */}
-      <div id="google_translate_hidden_element" style={{ display: 'none' }}></div>
-
       <nav className="navbar">
         {/* ด้านซ้าย: Logo + ช่องค้นหา */}
         <div className="nav-left">
@@ -143,9 +85,7 @@ export default function Navbar({ onSearchChange }) {
         <div className="nav-right" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           
           {/* 🌟 ปุ่มสลับภาษา TH / EN แสดงผลเสมอทุก Role */}
-          <button type="button" className="btn-lang-toggle" onClick={toggleLanguage}>
-            {currentLang === 'th' ? 'EN' : 'ไทย'}
-          </button>
+          <LanguageToggle />
 
           {!isLoggedIn ? (
             <div id="nav-guest-view" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
