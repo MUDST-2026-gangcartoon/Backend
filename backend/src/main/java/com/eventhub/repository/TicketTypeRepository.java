@@ -24,7 +24,15 @@ public interface TicketTypeRepository
                 t.description,
                 t.price,
                 t.capacity,
-                coalesce(sum(coalesce(r.quantity, 1)), 0)
+                coalesce(
+                    sum(
+                        case
+                            when r.id is null then 0
+                            else coalesce(r.quantity, 1)
+                        end
+                    ),
+                    0
+                )
             )
             from TicketType t
             left join Registration r
