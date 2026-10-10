@@ -1,180 +1,285 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import Navbar from "../../components/Navbar";
-import '../../EventDetailPage.css'; 
 
-// 📌 ฐานข้อมูลจำลอง (Mock Database) สำหรับอีเวนต์ทั้งหมด
-const mockEventsDatabase = [
-  {
-    id: 1,
-    category: "DESIGN LAB",
-    title: "ออกแบบเพื่อผู้คนจริง",
-    dateTime: "19 ส.ค. 2570 • 10:00",
-    location: "Creative Hall อาคาร A",
-    seatsLeft: 40,
-    registeredSeats: 10,
-    totalSeats: 50,
-    descriptionParagraphs: [
-      "เวิร์กชอปลงมือทำเพื่อเปลี่ยนอินไซต์จากการรีเสิร์ชให้เป็นอินเทอร์เฟซที่คนเข้าใจและไว้วางใจ",
-      "มาร่วมเรียนรู้จากคนที่ลงมือทำจริง แลกเปลี่ยนมุมมองกับผู้เข้าร่วม และเก็บประสบการณ์ที่นำไปใช้ต่อได้หลังจบงาน"
-    ],
-    organizer: { name: "Design Community", avatarLetter: "D", tag: "ผู้จัดอีเวนต์", bio: "ชุมชนนักออกแบบที่ชอบแบ่งปันความรู้" },
-    tickets: [
-      { id: "t1", name: "Student", desc: "สำหรับนักศึกษา", price: 0, priceText: "ฟรี" },
-      { id: "t2", name: "Public", desc: "บุคคลทั่วไป", price: 290, priceText: "฿290" }
-    ]
-  },
-  {
-    id: 2,
-    category: "TECHNOLOGY",
-    title: "Spring Boot สำหรับระบบที่ขยายได้",
-    dateTime: "25 ส.ค. 2570 • 13:30",
-    location: "Engineering Lab 3",
-    seatsLeft: 60,
-    registeredSeats: 40,
-    totalSeats: 100,
-    descriptionParagraphs: [
-      "เรียนรู้การสร้างบริการที่เสถียรด้วยขอบเขตธุรกิจ การสังเกตระบบ และสถาปัตยกรรมที่ใช้งานได้จริง",
-      "เหมาะสำหรับนักพัฒนาที่ต้องการยกระดับทักษะการเขียน Backend"
-    ],
-    organizer: { name: "Tech Meetup", avatarLetter: "T", tag: "ผู้จัดอีเวนต์", bio: "กลุ่มนักพัฒนาซอฟต์แวร์ที่หลงใหลในโค้ด" },
-    tickets: [
-      { id: "t1", name: "Early Bird", desc: "ราคาพิเศษ", price: 150, priceText: "฿150" },
-      { id: "t2", name: "Regular", desc: "ราคาปกติ", price: 300, priceText: "฿300" }
-    ]
-  },
-  {
-    id: 3,
-    category: "STARTUP",
-    title: "คืนแห่งโปรดักต์ในมหาวิทยาลัย",
-    dateTime: "31 ส.ค. 2570 • 17:30",
-    location: "หอประชุมใหญ่",
-    seatsLeft: 15,
-    registeredSeats: 85,
-    totalSeats: 100,
-    descriptionParagraphs: [
-      "ทีมสตาร์ตอัพแชร์ต้นแบบ บทเรียน และเหตุผลเนื่องจากการตัดสินใจสร้างโปรดักต์",
-      "มาฟังประสบการณ์จริง เจ็บจริง โตจริง จากรุ่นพี่ในวงการ"
-    ],
-    organizer: { name: "Gather Campus Events", avatarLetter: "G", tag: "ผู้จัดอีเวนต์", bio: "ทีมจัดกิจกรรมจากนักศึกษาเพื่อนักศึกษา" },
-    tickets: [
-      { id: "t1", name: "All Access", desc: "เข้าร่วมได้ทุกคน", price: 0, priceText: "ฟรี" }
-    ]
-  },
-  {
-    id: 4,
-    category: "ACCESSIBILITY",
-    title: "แล็บทดสอบเพื่อการเข้าถึง",
-    dateTime: "7 ก.ย. 2570 • 09:00",
-    location: "Digital Studio 2",
-    seatsLeft: 25,
-    registeredSeats: 25,
-    totalSeats: 50,
-    descriptionParagraphs: [
-      "นำอินเทอร์เฟซของคุณมาทดสอบด้วยคีย์บอร์ด โปรแกรมอ่านหน้าจอ และเช็กลิสต์คอนทราสต์ที่ทำซ้ำได้",
-      "เพื่อสร้างเว็บไซต์ที่ทุกคนสามารถเข้าถึงได้อย่างเท่าเทียม"
-    ],
-    organizer: { name: "A11y Thailand", avatarLetter: "A", tag: "ผู้จัดอีเวนต์", bio: "ขับเคลื่อนความเท่าเทียมทางดิจิทัล" },
-    tickets: [
-      { id: "t1", name: "Workshop Pass", desc: "รวมอุปกรณ์ทดสอบ", price: 500, priceText: "฿500" }
-    ]
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import Navbar from '../../components/Navbar';
+import { eventService } from '../../api/eventService';
+import { registrationService } from '../../api/registrationService';
+import '../../EventDetailPage.css';
+
+const categoryLabels = {
+  TECH: 'เทคโนโลยี',
+  DESIGN: 'ออกแบบ',
+  CAREER: 'อาชีพ',
+  COMMUNITY: 'คอมมูนิตี้',
+};
+
+const formatDateTime = (value) => {
+  if (!value) return '-';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
   }
-];
+
+  const dateText = date.toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  const timeText = date.toLocaleTimeString('th-TH', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  return `${dateText} • ${timeText}`;
+};
+
+const formatMoney = (value) =>
+  Number(value ?? 0).toLocaleString('th-TH');
+
+const getErrorMessage = (error) => {
+  const message = String(error?.message || '');
+  const status = error?.status ?? error?.response?.status;
+
+  if (
+    status === 401 ||
+    status === 403 ||
+    /\b401\b|\b403\b/.test(message)
+  ) {
+    return 'กรุณาเข้าสู่ระบบก่อนลงทะเบียน';
+  }
+
+  return message || 'ลงทะเบียนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+};
 
 export default function EventDetailPage() {
   const navigate = useNavigate();
   const { eventId } = useParams();
 
-  // 🟢 1. STATE MANAGEMENT
   const [eventData, setEventData] = useState(null);
-  const [selectedTicketIndex, setSelectedTicketIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+
+  const [selectedTicketId, setSelectedTicketId] = useState(null);
   const [qty, setQty] = useState(1);
-  
+
   const [showOrganizer, setShowOrganizer] = useState(true);
   const [showTickets, setShowTickets] = useState(true);
-  
-  const [activeModal, setActiveModal] = useState(null); 
-  const [paymentTimeLeft, setPaymentTimeLeft] = useState(300);
-  const [refCode, setRefCode] = useState('');
 
-  // 🟢 2. ค้นหาข้อมูลอีเวนต์
+  const [activeModal, setActiveModal] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [registerError, setRegisterError] = useState('');
+  const [registrationResult, setRegistrationResult] = useState(null);
+
+  // โหลดรายละเอียดอีเวนต์จาก Backend
   useEffect(() => {
-    const foundEvent = mockEventsDatabase.find(e => e.id === parseInt(eventId));
-    if (foundEvent) {
-      setEventData(foundEvent);
-    } else {
-      setEventData(mockEventsDatabase[0]);
-    }
-    setSelectedTicketIndex(0);
-    setQty(1);
+    let cancelled = false;
+
+    const loadEvent = async () => {
+      setLoading(true);
+      setLoadError('');
+      setEventData(null);
+      setSelectedTicketId(null);
+      setQty(1);
+      setActiveModal(null);
+      setRegisterError('');
+
+      try {
+        const data = await eventService.getEventById(eventId);
+
+        if (cancelled) return;
+
+        setEventData(data);
+
+        const tickets = Array.isArray(data?.ticketTypes)
+          ? data.ticketTypes
+          : [];
+
+        setSelectedTicketId(tickets[0]?.id ?? null);
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError(
+            error?.message || 'ไม่สามารถโหลดรายละเอียดอีเวนต์ได้'
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadEvent();
+
+    return () => {
+      cancelled = true;
+    };
   }, [eventId]);
 
-  // 🟢 3. SYSTEM TIMER
-  useEffect(() => {
-    let timer = null;
-    if (activeModal === 'payment') {
-      setPaymentTimeLeft(300);
-      timer = setInterval(() => {
-        setPaymentTimeLeft((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [activeModal]);
+  const tickets = Array.isArray(eventData?.ticketTypes)
+    ? eventData.ticketTypes
+    : [];
 
-  const formatTimer = (seconds) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const s = (seconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
-  };
+  const selectedTicket =
+    tickets.find(
+      (ticket) => String(ticket.id) === String(selectedTicketId)
+    ) ?? tickets[0] ?? null;
 
-  // 🟢 4. HANDLERS
-  if (!eventData) return <div style={{textAlign: 'center', marginTop: '100px'}}>กำลังโหลดข้อมูล...</div>;
+  const totalPrice = Number(selectedTicket?.price ?? 0) * qty;
 
-  const selectedTicket = eventData.tickets[selectedTicketIndex];
-  const totalPrice = selectedTicket.price * qty;
+  const ticketRemaining = selectedTicket
+    ? Number(selectedTicket.remaining ?? 0)
+    : 0;
 
-  const handleRegisterClick = (e) => {
-    e.preventDefault();
+  const maxQty = Math.min(10, Math.max(0, ticketRemaining));
+
+  const status = String(eventData?.status || '').toUpperCase();
+
+  const eventUnavailable =
+    ['FULL', 'ENDED'].includes(status) ||
+    Number(eventData?.spotsLeft ?? 1) <= 0;
+
+  const alreadyRegistered = Boolean(eventData?.registered);
+
+  const canRegister =
+    Boolean(selectedTicket) &&
+    ticketRemaining > 0 &&
+    !eventUnavailable &&
+    !alreadyRegistered;
+
+  const handleRegisterClick = () => {
+    if (!canRegister) return;
+
     setQty(1);
+    setRegisterError('');
+    setRegistrationResult(null);
     setActiveModal('booking');
   };
 
   const handleQtyChange = (change) => {
-    setQty((prev) => {
-      const newQty = prev + change;
-      return newQty >= 1 && newQty <= 5 ? newQty : prev;
+    setQty((current) => {
+      const next = current + change;
+
+      if (next < 1 || next > maxQty) {
+        return current;
+      }
+
+      return next;
     });
   };
 
-  const handleConfirmBooking = () => {
-    if (totalPrice === 0) {
-      generateRefCode();
+  const handleConfirmBooking = async () => {
+    if (!selectedTicket || submitting) return;
+
+    if (qty < 1 || qty > maxQty) {
+      setRegisterError('จำนวนบัตรไม่ถูกต้องหรือบัตรมีไม่เพียงพอ');
+      return;
+    }
+
+    setSubmitting(true);
+    setRegisterError('');
+
+    try {
+      // ส่งคำขอลงทะเบียนจริงไปยัง Backend
+      const result = await registrationService.registerForEvent(
+        eventId,
+        {
+          ticketTypeId: selectedTicket.id,
+          quantity: qty,
+        }
+      );
+
+      setRegistrationResult(result);
       setActiveModal('success');
-    } else {
-      setActiveModal('payment');
+
+      // อัปเดตข้อมูลบนหน้าจอหลังลงทะเบียนสำเร็จ
+      setEventData((previous) => {
+        if (!previous) return previous;
+
+        return {
+          ...previous,
+          registered: true,
+          registeredCount:
+            Number(previous.registeredCount ?? 0) + qty,
+          spotsLeft: Math.max(
+            0,
+            Number(previous.spotsLeft ?? 0) - qty
+          ),
+          ticketTypes: (previous.ticketTypes ?? []).map((ticket) => {
+            if (String(ticket.id) !== String(selectedTicket.id)) {
+              return ticket;
+            }
+
+            return {
+              ...ticket,
+              sold: Number(ticket.sold ?? 0) + qty,
+              remaining: Math.max(
+                0,
+                Number(ticket.remaining ?? 0) - qty
+              ),
+            };
+          }),
+        };
+      });
+    } catch (error) {
+      setRegisterError(getErrorMessage(error));
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleSimulatePayment = () => {
-    generateRefCode();
-    setActiveModal('success');
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div style={{ textAlign: 'center', marginTop: '100px' }}>
+          กำลังโหลดข้อมูลอีเวนต์...
+        </div>
+      </>
+    );
+  }
+
+  if (loadError || !eventData) {
+    return (
+      <>
+        <Navbar />
+        <div style={{ textAlign: 'center', margin: '100px 20px' }}>
+          <p style={{ color: '#dc2626' }}>
+            {loadError || 'ไม่พบข้อมูลอีเวนต์'}
+          </p>
+          <button className="btn-back" onClick={() => navigate(-1)}>
+            ← กลับไปดูอีเวนต์
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  const description = eventData.description || '';
+  const descriptionParagraphs = description
+    .split(/\n+/)
+    .filter((paragraph) => paragraph.trim());
+
+  const registeredCount = Number(eventData.registeredCount ?? 0);
+  const capacity = Number(eventData.capacity ?? 0);
+
+  const statusLabels = {
+    OPEN: 'เปิดรับลงทะเบียน',
+    FULL: 'เต็มแล้ว',
+    ENDED: 'สิ้นสุดแล้ว',
+    REGISTERED: 'ลงทะเบียนแล้ว',
   };
 
-  const generateRefCode = () => {
-    const random = "GTH-" + Math.random().toString(36).substring(2, 12).toUpperCase();
-    setRefCode(random);
-  };
+  const ticketCode = registrationResult?.ticketCode;
+  const registrationId = registrationResult?.id;
 
   return (
     <>
       <Navbar />
-      
+
       <div className="event-detail-page">
         <div className="back-link-container">
           <button className="btn-back" onClick={() => navigate(-1)}>
@@ -183,31 +288,51 @@ export default function EventDetailPage() {
         </div>
 
         <div className="event-content-wrapper">
-          {/* ================= ฝั่งซ้าย ================= */}
+          {/* ฝั่งซ้าย: รายละเอียดอีเวนต์ */}
           <div className="event-main-content">
-            <div className="section-subtitle theme-text">{eventData.category}</div>
+            <div className="section-subtitle theme-text">
+              {categoryLabels[String(eventData.category || '').toUpperCase()]
+                || eventData.category
+                || 'อีเวนต์'}
+            </div>
+
             <h1 className="event-title">{eventData.title}</h1>
+
+            {eventData.status && (
+              <p>
+                สถานะ: {statusLabels[status] || eventData.status}
+              </p>
+            )}
 
             <div className="info-row">
               <div className="info-item">
                 <div className="info-icon">🕒</div>
                 <div>
                   <div className="info-label">วันและเวลา</div>
-                  <div className="info-value">{eventData.dateTime}</div>
+                  <div className="info-value">
+                    {formatDateTime(eventData.startsAt)}
+                  </div>
                 </div>
               </div>
+
               <div className="info-item">
                 <div className="info-icon">📍</div>
                 <div>
                   <div className="info-label">สถานที่</div>
-                  <div className="info-value">{eventData.location}</div>
+                  <div className="info-value">
+                    {eventData.location || '-'}
+                  </div>
                 </div>
               </div>
+
               <div className="info-item">
                 <div className="info-icon">👥</div>
                 <div>
                   <div className="info-label">จำนวนที่นั่ง</div>
-                  <div className="info-value">ลงทะเบียนแล้ว {eventData.registeredSeats} / {eventData.totalSeats}</div>
+                  <div className="info-value">
+                    ลงทะเบียนแล้ว {registeredCount}
+                    {capacity > 0 ? ` / ${capacity}` : ''}
+                  </div>
                 </div>
               </div>
             </div>
@@ -215,11 +340,19 @@ export default function EventDetailPage() {
             <hr className="divider" />
 
             <div className="event-description">
-              <div className="section-subtitle theme-text">รายละเอียดอีเวนต์</div>
+              <div className="section-subtitle theme-text">
+                รายละเอียดอีเวนต์
+              </div>
+
               <h2>เกี่ยวกับกิจกรรมนี้</h2>
-              {eventData.descriptionParagraphs.map((p, i) => (
-                <p key={i}>{p}</p>
-              ))}
+
+              {descriptionParagraphs.length > 0 ? (
+                descriptionParagraphs.map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))
+              ) : (
+                <p>ยังไม่มีรายละเอียดเพิ่มเติมสำหรับอีเวนต์นี้</p>
+              )}
             </div>
 
             <hr className="divider" />
@@ -227,173 +360,336 @@ export default function EventDetailPage() {
             <div className="event-organizer">
               <div className="org-header">
                 <h3>👥 ผู้จัดอีเวนต์</h3>
-                <button className="btn-text-theme" onClick={() => setShowOrganizer(!showOrganizer)}>
+                <button
+                  className="btn-text-theme"
+                  onClick={() => setShowOrganizer((current) => !current)}
+                >
                   {showOrganizer ? 'ซ่อนข้อมูลผู้จัด >' : 'แสดงข้อมูลผู้จัด >'}
                 </button>
               </div>
+
               {showOrganizer && (
                 <div className="org-profile">
-                  <div className="org-avatar theme-bg">{eventData.organizer.avatarLetter}</div>
-                  <div className="org-info">
-                    <div className="org-label theme-text">{eventData.organizer.tag}</div>
-                    <div className="org-name">{eventData.organizer.name}</div>
-                    <div className="org-desc">{eventData.organizer.bio}</div>
-                  </div>
+                  {eventData.organizer ? (
+                    <>
+                      <div className="org-avatar theme-bg">
+                        {eventData.organizer.avatarLetter || '?'}
+                      </div>
+                      <div className="org-info">
+                        <div className="org-label theme-text">
+                          {eventData.organizer.tag || 'ผู้จัดอีเวนต์'}
+                        </div>
+                        <div className="org-name">
+                          {eventData.organizer.name || 'ไม่ระบุชื่อผู้จัด'}
+                        </div>
+                        <div className="org-desc">
+                          {eventData.organizer.bio || ''}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="org-info">
+                      <div className="org-desc">
+                        ยังไม่มีข้อมูลผู้จัดสำหรับอีเวนต์นี้
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
 
-          {/* ================= ฝั่งขวา ================= */}
+          {/* ฝั่งขวา: ประเภทบัตรและการลงทะเบียน */}
           <div className="event-sidebar">
-              <div className="event-booking-card">
-                <span className="ticket-label">ที่นั่ง</span>
-                <h2 className="ticket-left theme-text">เหลือ {eventData.seatsLeft} ที่นั่ง</h2>
-                <p className="ticket-reg">ลงทะเบียนแล้ว {eventData.registeredSeats} / {eventData.totalSeats}</p>
-                
-                <div className="ticket-divider" />
+            <div className="event-booking-card">
+              <span className="ticket-label">ที่นั่ง</span>
 
-                <div 
-                  className="ticket-types-toggle" 
-                  onClick={() => setShowTickets(!showTickets)}
-                  style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}
-                >
-                  <span>🎟️ {showTickets ? 'ซ่อนประเภทบัตร' : 'แสดงประเภทบัตร'}</span>
-                  <span>{showTickets ? '˅' : '›'}</span>
-                </div>
+              <h2 className="ticket-left theme-text">
+                เหลือ {Number(eventData.spotsLeft ?? 0)} ที่นั่ง
+              </h2>
 
-                {showTickets && (
-                  <div className="ticket-list">
-                    {eventData.tickets.map(t => (
-                      <div className="ticket-item" key={t.id}>
+              <p className="ticket-reg">
+                ลงทะเบียนแล้ว {registeredCount}
+                {capacity > 0 ? ` / ${capacity}` : ''}
+              </p>
+
+              <div className="ticket-divider" />
+
+              <button
+                type="button"
+                className="ticket-types-toggle"
+                onClick={() => setShowTickets((current) => !current)}
+                style={{
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  marginBottom: '16px',
+                  background: 'none',
+                  border: 'none',
+                  textAlign: 'left',
+                }}
+              >
+                <span>
+                  🎟️ {showTickets ? 'ซ่อนประเภทบัตร' : 'แสดงประเภทบัตร'}
+                </span>
+                <span>{showTickets ? '˅' : '›'}</span>
+              </button>
+
+              {showTickets && (
+                <div className="ticket-list">
+                  {tickets.length > 0 ? (
+                    tickets.map((ticket) => (
+                      <div className="ticket-item" key={ticket.id}>
                         <div className="t-info">
-                          <div className="t-name">{t.name}</div>
-                          <div className="t-desc">{t.desc}</div>
+                          <div className="t-name">{ticket.name}</div>
+                          <div className="t-desc">
+                            {ticket.description || ''}
+                          </div>
+                          <div className="t-desc">
+                            {Number(ticket.remaining ?? 0) > 0
+                              ? `เหลือ ${ticket.remaining} ใบ`
+                              : 'บัตรหมด'}
+                          </div>
                         </div>
-                        <div className="t-price theme-text">{t.priceText}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
-                <button className="btn-register theme-bg" onClick={handleRegisterClick}>
-                  ลงทะเบียน →
-                </button>
-              </div>
+                        <div className="t-price theme-text">
+                          {Number(ticket.price ?? 0) === 0
+                            ? 'ฟรี'
+                            : `฿${formatMoney(ticket.price)}`}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p>อีเวนต์นี้ยังไม่มีข้อมูลประเภทบัตร</p>
+                  )}
+                </div>
+              )}
+
+              <button
+                className="btn-register theme-bg"
+                onClick={handleRegisterClick}
+                disabled={!canRegister}
+                style={{
+                  opacity: canRegister ? 1 : 0.55,
+                  cursor: canRegister ? 'pointer' : 'not-allowed',
+                }}
+              >
+                {alreadyRegistered
+                  ? 'ลงทะเบียนแล้ว'
+                  : eventUnavailable
+                    ? 'ปิดรับลงทะเบียน'
+                    : !selectedTicket
+                      ? 'ไม่มีประเภทบัตร'
+                      : ticketRemaining <= 0
+                        ? 'บัตรหมด'
+                        : 'ลงทะเบียน →'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ================= MODALS ================= */}
-      {/* 1. Modal เลือกบัตร */}
+      {/* Modal เลือกบัตรและยืนยันลงทะเบียน */}
       {activeModal === 'booking' && (
         <div className="custom-modal-overlay">
           <div className="custom-modal-box">
-            <button className="btn-close-modal" onClick={() => setActiveModal(null)}>✕</button>
+            <button
+              className="btn-close-modal"
+              onClick={() => setActiveModal(null)}
+              disabled={submitting}
+            >
+              ✕
+            </button>
+
             <div className="modal-header">
-              <h2 className="modal-title">การจองบัตร: {eventData.title}</h2>
-              <p className="modal-subtitle">{eventData.dateTime}</p>
+              <h2 className="modal-title">
+                ลงทะเบียน: {eventData.title}
+              </h2>
+              <p className="modal-subtitle">
+                {formatDateTime(eventData.startsAt)}
+              </p>
             </div>
 
             <div className="modal-body">
-              <label className="section-label">เลือกบัตรของคุณ</label>
+              <label className="section-label">เลือกประเภทบัตร</label>
+
               <div className="ticket-options">
-                {eventData.tickets.map((t, index) => (
-                  <div
-                    key={t.id}
-                    className={`modal-ticket-card ${selectedTicketIndex === index ? 'active' : ''}`}
-                    onClick={() => setSelectedTicketIndex(index)}
-                  >
-                    <div>
-                      <div className="t-name">{t.name}</div>
-                      <div className="t-desc">{t.desc}</div>
-                    </div>
-                    <div className="t-price theme-text">{t.priceText}</div>
-                  </div>
-                ))}
+                {tickets.map((ticket) => {
+                  const isSelected =
+                    String(selectedTicket?.id) === String(ticket.id);
+
+                  const remaining = Number(ticket.remaining ?? 0);
+
+                  return (
+                    <button
+                      type="button"
+                      key={ticket.id}
+                      className={`modal-ticket-card ${
+                        isSelected ? 'active' : ''
+                      }`}
+                      disabled={remaining <= 0 || submitting}
+                      onClick={() => {
+                        setSelectedTicketId(ticket.id);
+                        setQty(1);
+                        setRegisterError('');
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        cursor: remaining > 0 ? 'pointer' : 'not-allowed',
+                        opacity: remaining > 0 ? 1 : 0.55,
+                      }}
+                    >
+                      <div>
+                        <div className="t-name">{ticket.name}</div>
+                        <div className="t-desc">
+                          {ticket.description || ''}
+                        </div>
+                        <div className="t-desc">
+                          {remaining > 0 ? `เหลือ ${remaining} ใบ` : 'บัตรหมด'}
+                        </div>
+                      </div>
+
+                      <div className="t-price theme-text">
+                        {Number(ticket.price ?? 0) === 0
+                          ? 'ฟรี'
+                          : `฿${formatMoney(ticket.price)}`}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="qty-section">
                 <span>จำนวนบัตร</span>
+
                 <div className="qty-controls">
-                  <button type="button" onClick={() => handleQtyChange(-1)}>−</button>
+                  <button
+                    type="button"
+                    onClick={() => handleQtyChange(-1)}
+                    disabled={qty <= 1 || submitting}
+                  >
+                    −
+                  </button>
+
                   <input type="text" value={qty} readOnly />
-                  <button type="button" onClick={() => handleQtyChange(1)}>+</button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQtyChange(1)}
+                    disabled={qty >= maxQty || submitting}
+                  >
+                    +
+                  </button>
                 </div>
               </div>
 
               <div className="total-section">
                 <span>รวมทั้งหมด</span>
-                <span className="theme-text" style={{ fontSize: '20px', fontWeight: 'bold' }}>
-                  ฿{totalPrice.toLocaleString()}
+                <span
+                  className="theme-text"
+                  style={{ fontSize: '20px', fontWeight: 'bold' }}
+                >
+                  ฿{formatMoney(totalPrice)}
                 </span>
               </div>
+
+              {Number(selectedTicket?.price ?? 0) > 0 && (
+                <p style={{ fontSize: '13px', color: '#92400e' }}>
+                  หมายเหตุ: ระบบชำระเงินออนไลน์ยังไม่ได้เชื่อมต่อ
+                  การยืนยันนี้จะส่งคำขอลงทะเบียนเท่านั้น
+                </p>
+              )}
+
+              {registerError && (
+                <p
+                  role="alert"
+                  style={{ color: '#dc2626', marginTop: '12px' }}
+                >
+                  {registerError}
+                </p>
+              )}
             </div>
 
             <div className="modal-footer">
-              <button 
-                className="btn-modal-confirm theme-bg" 
-                style={{ width: '100%', padding: '12px', fontSize: '16px', borderRadius: '8px', border: 'none', color: '#fff', cursor: 'pointer' }}
+              <button
+                className="btn-modal-confirm theme-bg"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: submitting ? 'wait' : 'pointer',
+                }}
                 onClick={handleConfirmBooking}
+                disabled={submitting || !selectedTicket || qty > maxQty}
               >
-                ยืนยันการจอง
+                {submitting ? 'กำลังลงทะเบียน...' : 'ยืนยันลงทะเบียน'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 2. Modal ชำระเงิน */}
-      {activeModal === 'payment' && (
-        <div className="custom-modal-overlay">
-          <div className="custom-modal-box" style={{ textAlign: 'center' }}>
-            <button className="btn-close-modal" onClick={() => setActiveModal(null)}>✕</button>
-            <div className="modal-header">
-              <h2 className="modal-title">ชำระเงิน</h2>
-              <p>สแกน QR Code ด้านล่างเพื่อชำระเงิน</p>
-            </div>
-            
-            <div style={{ margin: '20px auto', width: '200px', height: '200px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '2px dashed #ccc' }}>
-              <span style={{ color: '#888' }}>QR Code ยอด ฿{totalPrice.toLocaleString()}</span>
-            </div>
-
-            <p className="theme-text" style={{ fontSize: '24px', fontWeight: 'bold', margin: '10px 0' }}>
-              {formatTimer(paymentTimeLeft)}
-            </p>
-            {paymentTimeLeft === 0 && <p style={{ color: 'red' }}>หมดเวลาทำรายการ กรุณาทำรายการใหม่</p>}
-
-            <button 
-              className="btn-modal-confirm theme-bg" 
-              onClick={handleSimulatePayment}
-              disabled={paymentTimeLeft === 0}
-              style={{ width: '100%', padding: '12px', fontSize: '16px', borderRadius: '8px', border: 'none', color: '#fff', cursor: paymentTimeLeft === 0 ? 'not-allowed' : 'pointer', opacity: paymentTimeLeft === 0 ? 0.5 : 1 }}
-            >
-              จำลองว่าชำระเงินสำเร็จแล้ว
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Modal จองสำเร็จ */}
+      {/* Modal ลงทะเบียนสำเร็จจากผลตอบกลับของ Backend */}
       {activeModal === 'success' && (
         <div className="custom-modal-overlay">
           <div className="custom-modal-box" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
-            <h2 className="modal-title">ลงทะเบียนสำเร็จ!</h2>
-            <p style={{ marginTop: '8px', color: '#666' }}>ระบบได้ส่งรายละเอียดไปยังอีเมลของคุณแล้ว</p>
-            
-            <div style={{ backgroundColor: '#f9f9f9', padding: '16px', borderRadius: '8px', margin: '24px 0' }}>
-              <p style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>รหัสอ้างอิงการจอง (Ref Code)</p>
-              <h3 className="theme-text" style={{ margin: 0, letterSpacing: '1px' }}>{refCode}</h3>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>
+              ✅
             </div>
 
-            <button 
-              className="btn-modal-confirm theme-bg" 
+            <h2 className="modal-title">ลงทะเบียนสำเร็จ!</h2>
+
+            <p style={{ marginTop: '8px', color: '#666' }}>
+              ระบบบันทึกการลงทะเบียนของคุณเรียบร้อยแล้ว
+            </p>
+
+            {ticketCode && (
+              <div
+                style={{
+                  backgroundColor: '#f9f9f9',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  margin: '24px 0',
+                }}
+              >
+                <p style={{ fontSize: '14px', color: '#666' }}>
+                  รหัสบัตร
+                </p>
+                <h3
+                  className="theme-text"
+                  style={{ margin: 0, letterSpacing: '1px' }}
+                >
+                  {ticketCode}
+                </h3>
+              </div>
+            )}
+
+            {!ticketCode && registrationId != null && (
+              <p style={{ margin: '24px 0' }}>
+                หมายเลขการลงทะเบียน: {registrationId}
+              </p>
+            )}
+
+            <button
+              className="btn-modal-confirm theme-bg"
               onClick={() => {
                 setActiveModal(null);
-                // navigate('/'); // เปิดใช้บรรทัดนี้ถ้าต้องการให้พากลับหน้าแรกทันที
+                setRegistrationResult(null);
               }}
-              style={{ width: '100%', padding: '12px', fontSize: '16px', borderRadius: '8px', border: 'none', color: '#fff', cursor: 'pointer' }}
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '16px',
+                borderRadius: '8px',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+              }}
             >
               ปิดหน้าต่าง
             </button>
