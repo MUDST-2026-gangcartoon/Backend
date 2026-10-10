@@ -3,17 +3,38 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function AuthModal() {
-  const { modal, closeModal, openModal, login, register } = useAuth();
+  const {
+    modal,
+    closeModal,
+    openModal,
+    login,
+    register,
+  } = useAuth();
+
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [registerName, setRegisterName] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
   const [registerError, setRegisterError] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
 
   if (!modal) return null;
+
+  const navigateByRole = (role) => {
+    if (role === 'admin') {
+      navigate('/admin/dashboard');
+    } else if (role === 'staff') {
+      navigate('/staff/checkin');
+    } else {
+      navigate('/');
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -24,29 +45,21 @@ export default function AuthModal() {
     setLoginError('');
 
     try {
-      const result = await login(email.trim(), password);
+      const result = await login(email, password);
 
       if (!result?.success) {
-        setLoginError(result?.message || 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่');
+        setLoginError(
+          result?.message || 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่'
+        );
         return;
       }
 
-      const role = result.user?.role;
-
       setEmail('');
       setPassword('');
-      setLoginError('');
-
-      if (role === 'admin') {
-        navigate('/admin/dashboard');
-      } else if (role === 'staff') {
-        navigate('/staff/checkin');
-      } else {
-        navigate('/');
-      }
+      navigateByRole(result.user?.role);
     } catch (error) {
       setLoginError(
-        error?.message || 'ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่อีกครั้ง'
+        error?.message || 'ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่'
       );
     } finally {
       setIsSubmitting(false);
@@ -62,20 +75,28 @@ export default function AuthModal() {
     setRegisterError('');
 
     try {
-      const result = await register();
+      const result = await register({
+        name: registerName,
+        email: registerEmail,
+        password: registerPassword,
+      });
 
       if (!result?.success) {
         setRegisterError(
-          result?.message || 'ระบบสมัครสมาชิกยังไม่พร้อมใช้งาน'
+          result?.message || 'สมัครสมาชิกไม่สำเร็จ กรุณาลองใหม่'
         );
         return;
       }
 
-      setRegisterError('');
-      openModal('login');
+      setRegisterName('');
+      setRegisterEmail('');
+      setRegisterPassword('');
+
+      // Backend สมัครสมาชิกแล้วเข้าสู่ระบบให้ทันที
+      navigateByRole(result.user?.role);
     } catch (error) {
       setRegisterError(
-        error?.message || 'สมัครสมาชิกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
+        error?.message || 'สมัครสมาชิกไม่สำเร็จ กรุณาลองใหม่'
       );
     } finally {
       setIsRegistering(false);
@@ -228,7 +249,14 @@ export default function AuthModal() {
                 id="register-name"
                 type="text"
                 autoComplete="name"
+                minLength={2}
+                maxLength={100}
                 required
+                value={registerName}
+                onChange={(e) => {
+                  setRegisterName(e.target.value);
+                  setRegisterError('');
+                }}
               />
             </div>
 
@@ -238,7 +266,13 @@ export default function AuthModal() {
                 id="register-email"
                 type="email"
                 autoComplete="email"
+                maxLength={254}
                 required
+                value={registerEmail}
+                onChange={(e) => {
+                  setRegisterEmail(e.target.value);
+                  setRegisterError('');
+                }}
               />
             </div>
 
@@ -248,8 +282,14 @@ export default function AuthModal() {
                 id="register-password"
                 type="password"
                 autoComplete="new-password"
-                required
                 minLength={8}
+                maxLength={100}
+                required
+                value={registerPassword}
+                onChange={(e) => {
+                  setRegisterPassword(e.target.value);
+                  setRegisterError('');
+                }}
               />
             </div>
 
@@ -265,7 +305,7 @@ export default function AuthModal() {
               disabled={isRegistering}
             >
               {isRegistering
-                ? 'กำลังดำเนินการ...'
+                ? 'กำลังสมัครสมาชิก...'
                 : 'สร้างบัญชีและเริ่มจอง'}
             </button>
           </form>

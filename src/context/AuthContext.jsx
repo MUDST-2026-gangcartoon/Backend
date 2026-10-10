@@ -1,25 +1,15 @@
-
 import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useState,
 } from 'react';
+
 import { authService } from '../api/authService.js';
 
 const AuthContext = createContext(null);
-
-const TOKEN_KEY = 'authToken';
 const USER_KEY = 'authUser';
-
-function getStoredUser() {
-  try {
-    const user = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
-    return user?.role ? user : null;
-  } catch {
-    return null;
-  }
-}
 
 function getResponseLayers(payload) {
   const layers = [];
@@ -40,22 +30,6 @@ function getResponseLayers(payload) {
   return layers;
 }
 
-function extractToken(payload) {
-  for (const layer of getResponseLayers(payload)) {
-    const token =
-      layer.accessToken ??
-      layer.access_token ??
-      layer.token ??
-      layer.jwt;
-
-    if (typeof token === 'string' && token.length > 0) {
-      return token;
-    }
-  }
-
-  return null;
-}
-
 function extractUser(payload) {
   for (const layer of getResponseLayers(payload)) {
     const candidate = layer.user ?? layer.profile ?? layer.account;
@@ -64,7 +38,12 @@ function extractUser(payload) {
       return candidate;
     }
 
-    if (layer.role || layer.userRole || layer.roles || layer.authorities) {
+    if (
+      layer.role ||
+      layer.userRole ||
+      layer.roles ||
+      layer.authorities
+    ) {
       return layer;
     }
   }
@@ -77,15 +56,21 @@ function normalizeUser(rawUser) {
     return null;
   }
 
+  const roles = Array.isArray(rawUser.roles) ? rawUser.roles : [];
+  const authorities = Array.isArray(rawUser.authorities)
+    ? rawUser.authorities
+    : [];
+
   const roleValue =
     rawUser.role ??
     rawUser.userRole ??
-    rawUser.roles?.[0] ??
-    rawUser.authorities?.[0]?.authority;
+    roles[0] ??
+    authorities[0]?.authority;
 
-  const roleText = typeof roleValue === 'object'
-    ? roleValue?.authority ?? roleValue?.name
-    : roleValue;
+  const roleText =
+    typeof roleValue === 'object'
+      ? roleValue?.authority ?? roleValue?.name
+      : roleValue;
 
   const role = String(roleText ?? '')
     .toLowerCase()
@@ -96,10 +81,10 @@ function normalizeUser(rawUser) {
   }
 
   const username =
+    rawUser.name ??
     rawUser.username ??
     rawUser.displayName ??
     rawUser.fullName ??
-    rawUser.name ??
     rawUser.email ??
     'User';
 
@@ -119,12 +104,81 @@ function normalizeUser(rawUser) {
   };
 }
 
+function getStoredUser() {
+  try {
+    return normalizeUser(
+      JSON.parse(localStorage.getItem(USER_KEY) || 'null')
+    );
+  } catch {
+    return null;
+  }
+}
+
+function persistUser(user) {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStorage.setItem('isLoggedIn', 'true');
+
+  // ล้างข้อมูลจากระบบ Mock/JWT รุ่นก่อน
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('mockUser');
+}
+
+function clearStoredAuth() {
+  localStorage.removeItem(USER_KEY);
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('mockUser');
+  localStorage.setItem('isLoggedIn', 'false');
+}
+
+function getErrorMessage(error, fallback) {
+  return error?.message || fallback;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getStoredUser);
   const [isLoggedIn, setIsLoggedIn] = useState(
     () => Boolean(getStoredUser()?.role)
   );
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [modal, setModal] = useState(null);
+
+  // ตรวจสอบ Session จริงกับ Backend เมื่อเปิดหรือรีเฟรชเว็บ
+  useEffect(() => {
+    let active = true;
+
+    const verifySession = async () => {
+      try {
+        const response = await authService.getProfile();
+        const currentUser = normalizeUser(extractUser(response));
+
+        if (!currentUser) {
+          throw new Error('ไม่พบข้อมูลผู้ใช้จาก Backend');
+        }
+
+        if (!active) return;
+
+        persistUser(currentUser);
+        setUser(currentUser);
+        setIsLoggedIn(true);
+      } catch {
+        if (!active) return;
+
+        clearStoredAuth();
+        setUser(null);
+        setIsLoggedIn(false);
+      } finally {
+        if (active) {
+          setIsAuthLoading(false);
+        }
+      }
+    };
+
+    verifySession();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const openModal = useCallback((type) => {
     setModal(type);
@@ -135,27 +189,18 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback(async (email, password) => {
-    let receivedToken = false;
-
     try {
       const response = await authService.login({
         email: email.trim().toLowerCase(),
         password,
       });
 
-      const token = extractToken(response);
-
-      if (token) {
-        localStorage.setItem(TOKEN_KEY, token);
-        receivedToken = true;
-      }
-
       let nextUser = normalizeUser(extractUser(response));
 
-      // ถ้า Login ส่ง Token กลับมาอย่างเดียว ให้ขอข้อมูลผู้ใช้เพิ่ม
+      // Backend อาจคืนข้อมูลผู้ใช้ไม่ครบ จึงลองดึง /auth/me
       if (!nextUser) {
-        const profileResponse = await authService.getProfile();
-        nextUser = normalizeUser(extractUser(profileResponse));
+        const profile = await authService.getProfile();
+        nextUser = normalizeUser(extractUser(profile));
       }
 
       if (!nextUser) {
@@ -164,47 +209,95 @@ export function AuthProvider({ children }) {
         );
       }
 
-      localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
-      localStorage.setItem('isLoggedIn', 'true');
-
+      persistUser(nextUser);
       setUser(nextUser);
       setIsLoggedIn(true);
       setModal(null);
 
-      return { success: true, user: nextUser };
+      return {
+        success: true,
+        user: nextUser,
+      };
     } catch (error) {
-      if (receivedToken) {
-        localStorage.removeItem(TOKEN_KEY);
-      }
-
       return {
         success: false,
-        message: error.message || 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่',
+        message: getErrorMessage(
+          error,
+          'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่'
+        ),
       };
     }
   }, []);
 
-  const register = useCallback(() => ({
-    success: false,
-    message: 'ระบบสมัครสมาชิกยังไม่ได้เชื่อมต่อ Backend',
-  }), []);
+  const register = useCallback(async (details) => {
+    try {
+      const name = details?.name?.trim();
+      const email = details?.email?.trim().toLowerCase();
+      const password = details?.password;
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    localStorage.removeItem('mockUser');
-    localStorage.setItem('isLoggedIn', 'false');
+      if (!name || !email || !password) {
+        return {
+          success: false,
+          message: 'กรุณากรอกชื่อ อีเมล และรหัสผ่านให้ครบ',
+        };
+      }
 
-    setUser(null);
-    setIsLoggedIn(false);
-    setModal(null);
+      const response = await authService.signup({
+        name,
+        email,
+        password,
+      });
+
+      let nextUser = normalizeUser(extractUser(response));
+
+      if (!nextUser) {
+        const profile = await authService.getProfile();
+        nextUser = normalizeUser(extractUser(profile));
+      }
+
+      if (!nextUser) {
+        throw new Error('สมัครสำเร็จแต่ไม่พบข้อมูลผู้ใช้จาก Backend');
+      }
+
+      persistUser(nextUser);
+      setUser(nextUser);
+      setIsLoggedIn(true);
+      setModal(null);
+
+      return {
+        success: true,
+        user: nextUser,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: getErrorMessage(
+          error,
+          'สมัครสมาชิกไม่สำเร็จ กรุณาลองใหม่'
+        ),
+      };
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout API failed:', error);
+    } finally {
+      clearStoredAuth();
+      setUser(null);
+      setIsLoggedIn(false);
+      setModal(null);
+    }
   }, []);
 
   return (
     <AuthContext.Provider
       value={{
-        isLoggedIn,
         user,
+        isLoggedIn,
+        isAuthLoading,
         modal,
         openModal,
         closeModal,
