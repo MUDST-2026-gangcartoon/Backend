@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
@@ -88,16 +87,17 @@ export default function UpcomingEventsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [expandedTickets, setExpandedTickets] = useState([]);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const eventsSectionRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      setLoadError('');
+    setLoading(true);
+    setLoadError('');
 
+    const timer = setTimeout(async () => {
       try {
         const response = await eventService.getAllEvents({
           page: 0,
@@ -109,9 +109,14 @@ export default function UpcomingEventsPage() {
 
         if (cancelled) return;
 
-        const items = Array.isArray(response?.items)
-          ? response.items
-          : [];
+        // รองรับทั้ง response.items และ response.data.items
+        const payload = response?.data ?? response;
+
+        const items = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.items)
+            ? payload.items
+            : [];
 
         setEvents(items.map(mapEvent));
         setExpandedTickets([]);
@@ -119,7 +124,7 @@ export default function UpcomingEventsPage() {
         if (!cancelled) {
           setEvents([]);
           setLoadError(
-            error.message || 'ไม่สามารถโหลดรายการอีเวนต์ได้'
+            error?.message || 'ไม่สามารถโหลดรายการอีเวนต์ได้'
           );
         }
       } finally {
@@ -133,10 +138,10 @@ export default function UpcomingEventsPage() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, reloadKey]);
 
-  const handleRegisterClick = (e, eventId) => {
-    e.preventDefault();
+  const handleRegisterClick = (event, eventId) => {
+    event.preventDefault();
     navigate(`/event-detail/${eventId}`);
   };
 
@@ -180,6 +185,7 @@ export default function UpcomingEventsPage() {
             </p>
 
             <button
+              type="button"
               className="btn-all-events"
               onClick={scrollToEvents}
             >
@@ -196,8 +202,8 @@ export default function UpcomingEventsPage() {
               <h2 className="hero-card-title">
                 {(featuredEvent?.title || 'ค้นหาอีเวนต์ที่ใช่')
                   .split('\n')
-                  .map((text, i) => (
-                    <React.Fragment key={i}>
+                  .map((text, index) => (
+                    <React.Fragment key={index}>
                       {text}
                       <br />
                     </React.Fragment>
@@ -213,10 +219,12 @@ export default function UpcomingEventsPage() {
             </div>
 
             <button
+              type="button"
               className="btn-circle-arrow"
-              onClick={(e) => {
+              aria-label="ดูรายละเอียดอีเวนต์แนะนำ"
+              onClick={(event) => {
                 if (featuredEvent) {
-                  handleRegisterClick(e, featuredEvent.id);
+                  handleRegisterClick(event, featuredEvent.id);
                 } else {
                   scrollToEvents();
                 }
@@ -240,19 +248,23 @@ export default function UpcomingEventsPage() {
           </h2>
 
           <div className="filter-pills">
-            {categories.map((cat, index) => (
+            {categories.map((category, index) => (
               <button
-                key={cat}
+                type="button"
+                key={category}
                 className={`pill ${
                   activeCategory === categoryValues[index]
                     ? 'active'
                     : ''
                 }`}
+                aria-pressed={
+                  activeCategory === categoryValues[index]
+                }
                 onClick={() =>
                   setActiveCategory(categoryValues[index])
                 }
               >
-                {cat}
+                {category}
               </button>
             ))}
           </div>
@@ -263,6 +275,7 @@ export default function UpcomingEventsPage() {
             <span className="gather-badge">
               PETOPIA PICKS
             </span>
+
             <h3 className="gather-title">
               อีเวนต์น่าสนใจประจำสัปดาห์
             </h3>
@@ -286,6 +299,7 @@ export default function UpcomingEventsPage() {
             </div>
           ) : loadError ? (
             <div
+              role="alert"
               style={{
                 textAlign: 'center',
                 padding: '2rem',
@@ -294,7 +308,16 @@ export default function UpcomingEventsPage() {
                 color: '#dc2626',
               }}
             >
-              ไม่สามารถโหลดอีเวนต์ได้: {loadError}
+              <p>
+                ไม่สามารถโหลดอีเวนต์ได้: {loadError}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setReloadKey((key) => key + 1)}
+              >
+                ลองอีกครั้ง
+              </button>
             </div>
           ) : events.length > 0 ? (
             events.map((event) => (
@@ -308,8 +331,8 @@ export default function UpcomingEventsPage() {
                   </span>
 
                   <div className="banner-text">
-                    {event.bannerText.split('\n').map((line, i) => (
-                      <React.Fragment key={i}>
+                    {event.bannerText.split('\n').map((line, index) => (
+                      <React.Fragment key={index}>
                         {line}
                         <br />
                       </React.Fragment>
@@ -322,6 +345,7 @@ export default function UpcomingEventsPage() {
                     <span className="date-month">
                       {event.month}
                     </span>
+
                     <span className="date-day">
                       {event.day}
                     </span>
@@ -340,6 +364,7 @@ export default function UpcomingEventsPage() {
                       <span className="meta-item">
                         🕒 {event.time}
                       </span>
+
                       <span className="meta-item">
                         📍 {event.location}
                       </span>
@@ -354,7 +379,11 @@ export default function UpcomingEventsPage() {
                       }}
                     >
                       <button
-                        onClick={() => toggleTicketExpand(event.id)}
+                        type="button"
+                        aria-expanded={expandedTickets.includes(event.id)}
+                        onClick={() =>
+                          toggleTicketExpand(event.id)
+                        }
                         style={{
                           background: 'none',
                           border: 'none',
@@ -405,14 +434,14 @@ export default function UpcomingEventsPage() {
                                 <span
                                   style={{
                                     color:
-                                      ticket.remaining > 0
+                                      Number(ticket.remaining ?? 0) > 0
                                         ? '#10b981'
                                         : '#ef4444',
                                     fontWeight: 'bold',
                                     whiteSpace: 'nowrap',
                                   }}
                                 >
-                                  {ticket.remaining > 0
+                                  {Number(ticket.remaining ?? 0) > 0
                                     ? `เหลือ ${ticket.remaining} ใบ`
                                     : 'บัตรหมด'}
                                 </span>
@@ -436,6 +465,7 @@ export default function UpcomingEventsPage() {
                       </span>
 
                       <button
+                        type="button"
                         onClick={(e) =>
                           handleRegisterClick(e, event.id)
                         }
