@@ -1,29 +1,83 @@
-// src/api/apiClient.js
 
-// ถ้าโปรเจกต์คุณใช้ axios ให้เปิดใช้งาน (และอย่าลืม npm install axios)
-// import axios from 'axios';
+const BASE_URL = (
+  import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
+).replace(/\/+$/, '');
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const buildUrl = (endpoint) => {
+  const path = endpoint.startsWith('/')
+    ? endpoint
+    : `/${endpoint}`;
 
-// ตัวอย่างโครงสร้างเบื้องต้น (สามารถปรับแก้ตาม Stack ที่ใช้ เช่น ใช้ axios หรือ fetch ปกติ)
+  return `${BASE_URL}${path}`;
+};
+
+const parseResponse = async (response) => {
+  if (response.status === 204) {
+    return null;
+  }
+
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+};
+
+const request = async (method, endpoint, data) => {
+  const headers = {
+    Accept: 'application/json',
+  };
+
+  const options = {
+    method,
+    headers,
+  };
+
+  if (data !== undefined) {
+    headers['Content-Type'] = 'application/json';
+    options.body = JSON.stringify(data);
+  }
+
+  const response = await fetch(buildUrl(endpoint), options);
+  const result = await parseResponse(response);
+
+  if (!response.ok) {
+    const message =
+      result && typeof result === 'object'
+        ? result.message || result.error || result.detail
+        : typeof result === 'string'
+          ? result
+          : null;
+
+    const error = new Error(
+      message || `Request failed with status ${response.status}`
+    );
+
+    error.status = response.status;
+    error.data = result;
+
+    throw error;
+  }
+
+  return result;
+};
+
 const apiClient = {
-    get: async (endpoint) => {
-        const response = await fetch(`${BASE_URL}${endpoint}`);
-        if (!response.ok) throw new Error(`Error: ${response.status}`);
-        return response.json();
-    },
-    post: async (endpoint, data) => {
-        const response = await fetch(`${BASE_URL}${endpoint}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error(`Error: ${response.status}`);
-        return response.json();
-    }
-    // เดี๋ยวเราจะมาเพิ่ม PUT, DELETE หรือ Interceptor (ใส่ Token) ทีหลังได้
+  get: (endpoint) => request('GET', endpoint),
+
+  post: (endpoint, data) => request('POST', endpoint, data),
+
+  put: (endpoint, data) => request('PUT', endpoint, data),
+
+  patch: (endpoint, data) => request('PATCH', endpoint, data),
+
+  delete: (endpoint, data) => request('DELETE', endpoint, data),
 };
 
 export default apiClient;
