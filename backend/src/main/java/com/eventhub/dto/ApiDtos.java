@@ -345,4 +345,49 @@ public final class ApiDtos {
             String message
     ) {
     }
+
+// =========================
+// Analytics
+// =========================
+
+public record AnalyticsVisitRequest(
+
+        @NotBlank(message = "Analytics type is required")
+        @Pattern(
+                regexp = "SITE|EVENT",
+                message = "Analytics type must be SITE or EVENT"
+        )
+        String type,
+
+        Long eventId
+) {
+    public AnalyticsVisitRequest {
+        if (type != null) {
+            type = type
+                    .trim()
+                    .toUpperCase(Locale.ROOT);
+        }
+    }
+}
+
+public record AnalyticsSummaryDto(
+        long totalRegistrations,
+        long totalEvents,
+        long totalOpenEvents,
+        long siteViews,
+        long eventDetailViews,
+        long uniqueVisitors
+) {
+}
+
+public record EventAnalyticsDto(
+        Long eventId,
+        String title,
+        long views,
+        long registrations,
+        long registeredSeats,
+        int capacity,
+        long spotsLeft
+) {
+}
 }
