@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import StaffNavbar from '../components/StaffNavbar.jsx';
@@ -6,6 +5,86 @@ import { eventService } from '../api/eventService.js';
 import { staffService } from '../api/staffService.js';
 import '../staff-shell.css';
 import '../checkin-attendees.css';
+
+function unwrapResponse(response) {
+  let value = response;
+
+  for (let i = 0; i < 3; i += 1) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      break;
+    }
+
+    if (value.data !== undefined) {
+      value = value.data;
+      continue;
+    }
+
+    if (value.result !== undefined) {
+      value = value.result;
+      continue;
+    }
+
+    break;
+  }
+
+  return value;
+}
+
+function extractItems(response, keys = []) {
+  const value = unwrapResponse(response);
+
+  if (Array.isArray(value)) return value;
+
+  if (!value || typeof value !== 'object') return [];
+
+  for (const key of keys) {
+    if (Array.isArray(value[key])) return value[key];
+  }
+
+  for (const key of ['items', 'content', 'data', 'result']) {
+    if (value[key] !== undefined) {
+      const items = extractItems(value[key], keys);
+      if (items.length > 0) return items;
+    }
+  }
+
+  return [];
+}
+
+function formatTime(value) {
+  if (!value) return '—';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return date.toLocaleTimeString('th-TH', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function getTicketCode(item) {
+  return (
+    item?.ticketCode ??
+    item?.code ??
+    item?.registrationCode ??
+    item?.ticket?.ticketCode ??
+    'ไม่พบรหัสตั๋ว'
+  );
+}
+
+function isCheckedIn(item) {
+  return Boolean(
+    item?.checkedIn === true ||
+    item?.isCheckedIn === true ||
+    item?.checkedInAt ||
+    item?.checkInAt ||
+    item?.status === 'CHECKED_IN'
+  );
+}
 
 export default function CheckinAttendeesPage() {
   const { eventId } = useParams();
@@ -20,29 +99,54 @@ export default function CheckinAttendeesPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setError('');
 
     try {
-      const [eventData, attendeeData, recentData] =
-        await Promise.all([
-          eventService.getEventById(eventId),
-          staffService.getAttendees(eventId),
-          staffService.getRecentCheckIns(eventId),
-        ]);
+      const [
+        eventResponse,
+        attendeeResponse,
+        recentResponse,
+      ] = await Promise.all([
+        eventService.getEventById(eventId),
+        staffService.getAttendees(eventId),
+        staffService.getRecentCheckIns(eventId),
+      ]);
 
-      setEvent(eventData);
-      setAttendees(
-        Array.isArray(attendeeData) ? attendeeData : []
+      const eventData = unwrapResponse(eventResponse);
+
+      setEvent(
+        eventData && !Array.isArray(eventData)
+          ? eventData
+          : null
       );
+
+      setAttendees(
+        extractItems(attendeeResponse, [
+          'attendees',
+          'registrations',
+          'items',
+          'content',
+        ])
+      );
+
       setRecent(
-        Array.isArray(recentData) ? recentData : []
+        extractItems(recentResponse, [
+          'recentCheckIns',
+          'checkIns',
+          'checkins',
+          'items',
+          'content',
+        ])
       );
     } catch (err) {
-      setError(err.message || 'โหลดข้อมูลไม่สำเร็จ');
+      setError(
+        err.message ||
+          'โหลดข้อมูลไม่สำเร็จ กรุณาตรวจสอบการเข้าสู่ระบบและสิทธิ์ Staff'
+      );
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, [eventId]);
 
@@ -64,31 +168,41 @@ export default function CheckinAttendeesPage() {
     setMessage('');
 
     try {
-      const result = await staffService.checkIn(
+      const response = await staffService.checkIn(
         eventId,
         ticketCode
       );
 
+      const result = unwrapResponse(response);
+
+      if (!result || result.checkedIn !== true) {
+        throw new Error(
+          result?.message || 'ไม่สามารถเช็กอินตั๋วนี้ได้'
+        );
+      }
+
       setMessage(
-        result?.name
-          ? `เช็กอินสำเร็จ: ${result.name}`
-          : 'เช็กอินสำเร็จ'
+        `ตั๋วนี้เช็กอินแล้ว: ${
+          result.attendeeName || 'ผู้เข้าร่วม'
+        }`
       );
+
       setCode('');
 
-      await loadData();
+      await loadData(false);
     } catch (err) {
       setError(
-        err.message || 'เช็กอินไม่สำเร็จ กรุณาตรวจสอบรหัสตั๋ว'
+        err.message ||
+          'เช็กอินไม่สำเร็จ กรุณาตรวจสอบรหัสตั๋ว'
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !submitting) {
-      e.preventDefault();
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' && !submitting) {
+      event.preventDefault();
       handleCheckin();
     }
   };
@@ -101,24 +215,17 @@ export default function CheckinAttendeesPage() {
 
   const checkedIn = attendees.reduce(
     (total, attendee) =>
-      total + (
-        attendee.checkedInAt
-          ? Number(attendee.quantity) || 1
-          : 0
-      ),
+      total +
+      (isCheckedIn(attendee)
+        ? Number(attendee.quantity) || 1
+        : 0),
     0
   );
 
-  const remaining = Math.max(0, totalGuests - checkedIn);
-
-  const formatTime = (value) => {
-    if (!value) return '';
-
-    return new Date(value).toLocaleTimeString('th-TH', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  const remaining = Math.max(
+    0,
+    totalGuests - checkedIn
+  );
 
   if (loading) {
     return (
@@ -135,12 +242,22 @@ export default function CheckinAttendeesPage() {
     return (
       <>
         <StaffNavbar />
-        <main className="page" style={{ paddingTop: 48 }}>
-          <section style={{ textAlign: 'center', padding: 40 }}>
+        <main
+          className="page"
+          style={{ paddingTop: 48 }}
+        >
+          <section
+            style={{
+              textAlign: 'center',
+              padding: 40,
+            }}
+          >
             <h1>ไม่สามารถโหลดอีเวนต์ได้</h1>
+
             <p className="subtitle">
               {error || `ไม่พบอีเวนต์รหัส ${eventId}`}
             </p>
+
             <button
               type="button"
               className="btn-primary"
@@ -167,7 +284,12 @@ export default function CheckinAttendeesPage() {
               navigate('/staff/checkin');
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
               <path
                 d="M19 12H5M12 19l-7-7 7-7"
                 stroke="currentColor"
@@ -188,7 +310,12 @@ export default function CheckinAttendeesPage() {
               navigate(-1);
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
               <path
                 d="M17 3l4 4-4 4M3 7h18M7 21l-4-4 4-4M21 17H3"
                 stroke="currentColor"
@@ -201,14 +328,18 @@ export default function CheckinAttendeesPage() {
           </a>
 
           <span className="sep">/</span>
-          <span className="current">เช็กอินผู้เข้าร่วม</span>
+          <span className="current">
+            เช็กอินผู้เข้าร่วม
+          </span>
         </div>
 
         <div className="page-head">
           <div>
             <h1>เช็กอินผู้เข้าร่วม</h1>
+
             <p className="subtitle">
-              {event.title} · <b>{totalGuests}</b> ผู้ลงทะเบียน
+              {event.title || event.name || 'กิจกรรม'} ·{' '}
+              <b>{totalGuests}</b> ผู้ลงทะเบียน
             </p>
           </div>
 
@@ -220,10 +351,24 @@ export default function CheckinAttendeesPage() {
 
         <hr className="rule" />
 
+        {error && (
+          <p
+            className="helper-text err"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+
         <section className="checkin-card">
           <div className="cc-form">
             <span className="eyebrow">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
                 <path
                   d="M9 12l2 2 4-4"
                   stroke="currentColor"
@@ -243,7 +388,10 @@ export default function CheckinAttendeesPage() {
             </span>
 
             <div>
-              <label className="field-label" htmlFor="ticketCode">
+              <label
+                className="field-label"
+                htmlFor="ticketCode"
+              >
                 รหัสตั๋ว
               </label>
 
@@ -264,13 +412,14 @@ export default function CheckinAttendeesPage() {
                 onKeyDown={handleKeyDown}
               />
 
-              <p className={`helper-text${error ? ' err' : ''}`}>
-                {error || 'กรอกรหัสตั๋ว แล้วกดเช็กอิน'}
+              <p
+                className={`helper-text${error ? ' err' : ''}`}
+                role={error ? 'alert' : 'status'}
+              >
+                {error ||
+                  message ||
+                  'กรอกรหัสตั๋ว แล้วกดเช็กอิน'}
               </p>
-
-              {message && (
-                <p className="helper-text">{message}</p>
-              )}
             </div>
 
             <button
@@ -279,7 +428,12 @@ export default function CheckinAttendeesPage() {
               onClick={handleCheckin}
               disabled={submitting}
             >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
                 <path
                   d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"
                   stroke="currentColor"
@@ -294,7 +448,10 @@ export default function CheckinAttendeesPage() {
                   strokeLinecap="round"
                 />
               </svg>
-              {submitting ? 'กำลังเช็กอิน...' : 'เช็กอินตั๋ว'}
+
+              {submitting
+                ? 'กำลังเช็กอิน...'
+                : 'เช็กอินตั๋ว'}
             </button>
 
             <div className="divider-or">
@@ -303,16 +460,34 @@ export default function CheckinAttendeesPage() {
           </div>
 
           <div className="cc-scan">
-            <svg className="paw-deco one" viewBox="0 0 100 100" fill="#fff">
+            <svg
+              className="paw-deco one"
+              viewBox="0 0 100 100"
+              fill="#fff"
+            >
               <circle cx="30" cy="20" r="10" />
               <circle cx="60" cy="20" r="10" />
-              <ellipse cx="45" cy="55" rx="28" ry="26" />
+              <ellipse
+                cx="45"
+                cy="55"
+                rx="28"
+                ry="26"
+              />
             </svg>
 
-            <svg className="paw-deco two" viewBox="0 0 100 100" fill="#fff">
+            <svg
+              className="paw-deco two"
+              viewBox="0 0 100 100"
+              fill="#fff"
+            >
               <circle cx="30" cy="20" r="10" />
               <circle cx="60" cy="20" r="10" />
-              <ellipse cx="45" cy="55" rx="28" ry="26" />
+              <ellipse
+                cx="45"
+                cy="55"
+                rx="28"
+                ry="26"
+              />
             </svg>
 
             <div className="scan-frame">
@@ -330,16 +505,31 @@ export default function CheckinAttendeesPage() {
                 fill="none"
               >
                 <rect
-                  x="3" y="3" width="7" height="7" rx="1.5"
-                  stroke="#FFF3D1" strokeWidth="2"
+                  x="3"
+                  y="3"
+                  width="7"
+                  height="7"
+                  rx="1.5"
+                  stroke="#FFF3D1"
+                  strokeWidth="2"
                 />
                 <rect
-                  x="14" y="3" width="7" height="7" rx="1.5"
-                  stroke="#FFF3D1" strokeWidth="2"
+                  x="14"
+                  y="3"
+                  width="7"
+                  height="7"
+                  rx="1.5"
+                  stroke="#FFF3D1"
+                  strokeWidth="2"
                 />
                 <rect
-                  x="3" y="14" width="7" height="7" rx="1.5"
-                  stroke="#FFF3D1" strokeWidth="2"
+                  x="3"
+                  y="14"
+                  width="7"
+                  height="7"
+                  rx="1.5"
+                  stroke="#FFF3D1"
+                  strokeWidth="2"
                 />
                 <path
                   d="M14 14h3v3h-3zM19 14h2v2h-2zM14 19h2v2h-2zM19 19h2v2h-2z"
@@ -357,7 +547,12 @@ export default function CheckinAttendeesPage() {
         <section className="stats-row">
           <div className="stat-card">
             <div className="stat-label">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
                 <path
                   d="M12 8v4l3 3"
                   stroke="currentColor"
@@ -366,20 +561,27 @@ export default function CheckinAttendeesPage() {
                   strokeLinejoin="round"
                 />
                 <circle
-                  cx="12" cy="12" r="9"
-                  stroke="currentColor" strokeWidth="2"
+                  cx="12"
+                  cy="12"
+                  r="9"
+                  stroke="currentColor"
+                  strokeWidth="2"
                 />
               </svg>
               เช็กอินล่าสุด
             </div>
 
-            <div className="stat-main">คนที่เพิ่งมาถึง</div>
+            <div className="stat-main">
+              คนที่เพิ่งมาถึง
+            </div>
 
             <div className="stat-sub">
               {recent.length === 0
                 ? 'ยังไม่มีการเช็กอิน'
                 : `เช็กอินล่าสุดเมื่อ ${formatTime(
-                    recent[0].checkedInAt
+                    recent[0].checkedInAt ??
+                      recent[0].checkInAt ??
+                      recent[0].createdAt
                   )}`}
             </div>
 
@@ -387,14 +589,20 @@ export default function CheckinAttendeesPage() {
               {recent.map((item, index) => (
                 <div
                   className="recent-item"
-                  key={`${item.ticketCode}-${index}`}
+                  key={`${getTicketCode(item)}-${index}`}
                 >
                   <span className="ri-dot" />
+
                   <span className="ri-code">
-                    {item.ticketCode}
+                    {getTicketCode(item)}
                   </span>
+
                   <span className="ri-time">
-                    {formatTime(item.checkedInAt)}
+                    {formatTime(
+                      item.checkedInAt ??
+                        item.checkInAt ??
+                        item.createdAt
+                    )}
                   </span>
                 </div>
               ))}
@@ -403,7 +611,12 @@ export default function CheckinAttendeesPage() {
 
           <div className="stat-card">
             <div className="stat-label">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
                 <path
                   d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M10 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
                   stroke="currentColor"
@@ -419,8 +632,12 @@ export default function CheckinAttendeesPage() {
               {totalGuests} ราย
             </div>
 
-            <div className="stat-sub" style={{ marginTop: 8 }}>
-              เช็กอินแล้ว {checkedIn} ราย · เหลืออีก {remaining} ราย
+            <div
+              className="stat-sub"
+              style={{ marginTop: 8 }}
+            >
+              เช็กอินแล้ว {checkedIn} ราย · เหลืออีก{' '}
+              {remaining} ราย
             </div>
           </div>
         </section>
