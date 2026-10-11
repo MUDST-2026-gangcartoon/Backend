@@ -324,7 +324,12 @@ export default function UpcomingEventsPage() {
               <div className="event-card" key={event.id}>
                 <div
                   className="card-banner"
-                  style={{ background: event.bannerBg }}
+                  style={{
+                    background: event.imageUrl
+                      ? `linear-gradient(rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.4)), url("${event.imageUrl}") center / cover no-repeat`
+                      : event.bannerBg,
+                  }}
+
                 >
                   <span className="status-badge">
                     {event.statusBadge}

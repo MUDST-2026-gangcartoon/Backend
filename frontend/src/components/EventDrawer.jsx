@@ -12,6 +12,7 @@ const emptyForm = {
   max: 30,
   coverIndex: 0,
   coverUrl: '',
+  coverFile: null,
 };
 
 export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmit }) {
@@ -33,6 +34,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
         max: initialEvent.max || 30,
         coverIndex: initialEvent.coverIndex ?? 0,
         coverUrl: initialEvent.coverUrl || '',
+        coverFile: null,
       });
     } else {
       setErrors({});
@@ -43,7 +45,14 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
   if (!open) return null;
 
   const set = (key) => (e) => {
-    setForm((f) => ({ ...f, [key]: e.target.value }));
+    const value = e.target.value;
+
+    setForm((f) => ({
+      ...f,
+      [key]: value,
+      ...(key === 'coverUrl' ? { coverFile: null } : {}),
+    }));
+
     setErrors((prev) => ({ ...prev, [key]: '' }));
   };
 
@@ -70,7 +79,13 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
     if (!file) return;
 
     const previewUrl = URL.createObjectURL(file);
-    setForm((f) => ({ ...f, coverUrl: previewUrl }));
+
+    setForm((f) => ({
+      ...f,
+      coverUrl: previewUrl,
+      coverFile: file,
+    }));
+
     setErrors((prev) => ({ ...prev, coverUrl: '' }));
   };
 
@@ -128,7 +143,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
             <input
               id="ev-cover-file"
               type="file"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.gif,.bmp"
               onChange={handleFileChange}
               style={{ display: 'none' }}
             />

@@ -141,8 +141,16 @@ export function AuthProvider({ children }) {
   );
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [modal, setModal] = useState(null);
+  const [authError, setAuthError] = useState(null);
+  const [sessionCheckKey, setSessionCheckKey] = useState(0);
+
+  const retrySessionCheck = useCallback(() => {
+    setSessionCheckKey((current) => current + 1);
+  }, []);
+
 
   // ตรวจสอบ Session จริงกับ Backend เมื่อเปิดหรือรีเฟรชเว็บ
+
   useEffect(() => {
     let active = true;
 
@@ -152,7 +160,7 @@ export function AuthProvider({ children }) {
         const currentUser = normalizeUser(extractUser(response));
 
         if (!currentUser) {
-          throw new Error('ไม่พบข้อมูลผู้ใช้จาก Backend');
+          throw new Error('Backend returned no valid user profile');
         }
 
         if (!active) return;
@@ -160,12 +168,25 @@ export function AuthProvider({ children }) {
         persistUser(currentUser);
         setUser(currentUser);
         setIsLoggedIn(true);
-      } catch {
+        setAuthError(null);
+      } catch (error) {
         if (!active) return;
 
-        clearStoredAuth();
-        setUser(null);
-        setIsLoggedIn(false);
+        if (error?.status === 401) {
+          // Session ใช้ไม่ได้: ล้างข้อมูล login ที่เก็บไว้
+          clearStoredAuth();
+          setUser(null);
+          setIsLoggedIn(false);
+          setAuthError(null);
+        } else {
+          // ปัญหาอื่น: ไม่ลบข้อมูลใน localStorage
+          // แต่ไม่อนุญาตให้ Route Guard เชื่อข้อมูลผู้ใช้เก่า
+          setUser(null);
+          setIsLoggedIn(false);
+          setAuthError(
+            'ไม่สามารถตรวจสอบ session กับ Backend ได้ กรุณาตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง'
+          );
+        }
       } finally {
         if (active) {
           setIsAuthLoading(false);
@@ -173,12 +194,16 @@ export function AuthProvider({ children }) {
       }
     };
 
+    setIsAuthLoading(true);
+    setAuthError(null);
+
     verifySession();
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [sessionCheckKey]);
+
 
   const openModal = useCallback((type) => {
     setModal(type);
@@ -212,6 +237,7 @@ export function AuthProvider({ children }) {
       persistUser(nextUser);
       setUser(nextUser);
       setIsLoggedIn(true);
+      setAuthError(null);
       setModal(null);
 
       return {
@@ -262,6 +288,7 @@ export function AuthProvider({ children }) {
       persistUser(nextUser);
       setUser(nextUser);
       setIsLoggedIn(true);
+      setAuthError(null);
       setModal(null);
 
       return {
@@ -279,6 +306,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+
   const logout = useCallback(async () => {
     try {
       await authService.logout();
@@ -288,9 +316,11 @@ export function AuthProvider({ children }) {
       clearStoredAuth();
       setUser(null);
       setIsLoggedIn(false);
+      setAuthError(null);
       setModal(null);
     }
   }, []);
+
 
   return (
     <AuthContext.Provider
@@ -298,6 +328,8 @@ export function AuthProvider({ children }) {
         user,
         isLoggedIn,
         isAuthLoading,
+        authError,
+        retrySessionCheck,
         modal,
         openModal,
         closeModal,
