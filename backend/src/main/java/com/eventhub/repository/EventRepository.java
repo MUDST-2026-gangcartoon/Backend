@@ -29,7 +29,7 @@ public interface EventRepository
                         e.category,
                         e.imageUrl,
                         e.detailImageUrl,
-                        coalesce(sum(coalesce(r.quantity, 1)), 0),
+                        coalesce(sum(case when r.id is not null then coalesce(r.quantity, 1) else 0 end), 0),
                         case when count(vr.id) > 0 then true else false end
                     )
                     from Event e
@@ -64,12 +64,12 @@ public interface EventRepository
                         or (
                             :status = 'OPEN'
                             and e.startsAt > :now
-                            and coalesce(sum(coalesce(r.quantity, 1)), 0) < e.capacity
+                            and coalesce(sum(case when r.id is not null then coalesce(r.quantity, 1) else 0 end), 0) < e.capacity
                         )
                         or (
                             :status = 'FULL'
                             and e.startsAt > :now
-                            and coalesce(sum(coalesce(r.quantity, 1)), 0) >= e.capacity
+                            and coalesce(sum(case when r.id is not null then coalesce(r.quantity, 1) else 0 end), 0) >= e.capacity
                         )
                         or (
                             :status = 'ENDED'

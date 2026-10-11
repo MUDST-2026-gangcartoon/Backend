@@ -32,6 +32,20 @@ export const eventService = {
   createEvent: (eventData) =>
     apiClient.post('/admin/events', eventData),
 
+  uploadEventImage: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.postForm('/admin/uploads', formData);
+  },
+  updateEvent: (eventId, eventData) =>
+    apiClient.put(`/admin/events/${encodeURIComponent(eventId)}`, eventData),
+
+  deleteEvent: (eventId) =>
+    apiClient.delete(`/admin/events/${encodeURIComponent(eventId)}`),
+
+  getEventAttendees: (eventId) =>
+    apiClient.get(`/admin/events/${encodeURIComponent(eventId)}/attendees`),
+
   getAdminStats: () =>
-    apiClient.get('/admin/stats'),
+    apiClient.get('/admin/analytics/summary'),
 };

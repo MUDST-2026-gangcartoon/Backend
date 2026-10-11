@@ -133,8 +133,8 @@ export default function AuthModal() {
 
           <div className="login-icon">
             <img
-              src="https://via.placeholder.com/48/93C5FD/FFFFFF?text=+"
-              alt=""
+              src="/assets/public/logo.png"
+              alt="Logo"
             />
           </div>
 
@@ -193,7 +193,7 @@ export default function AuthModal() {
           </form>
 
           <div className="login-footer">
-            ยังไม่มีบัญชี Petopia?{' '}
+            ยังไม่มีบัญชี ?{' '}
             <a
               href="#register"
               onClick={(e) => {
@@ -226,8 +226,8 @@ export default function AuthModal() {
 
           <div className="login-icon">
             <img
-              src="https://via.placeholder.com/48/D1FAE5/FFFFFF?text=+"
-              alt=""
+              src="/assets/public/logo.png"
+              alt="Logo"
             />
           </div>
 

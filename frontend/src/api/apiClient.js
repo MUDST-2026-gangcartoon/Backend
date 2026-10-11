@@ -1,5 +1,5 @@
 const BASE_URL = (
-  import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
+  import.meta.env.VITE_API_URL || '/api'
 ).replace(/\/+$/, '');
 
 let csrfToken = null;
@@ -117,8 +117,12 @@ const request = async (method, endpoint, data) => {
   };
 
   if (data !== undefined) {
-    headers['Content-Type'] = 'application/json';
-    options.body = JSON.stringify(data);
+    if (typeof FormData !== 'undefined' && data instanceof FormData) {
+      options.body = data;
+    } else {
+      headers['Content-Type'] = 'application/json';
+      options.body = JSON.stringify(data);
+    }
   }
 
   if (requiresCsrf) {
@@ -147,6 +151,7 @@ const request = async (method, endpoint, data) => {
 const apiClient = {
   get: (endpoint) => request('GET', endpoint),
   post: (endpoint, data) => request('POST', endpoint, data),
+  postForm: (endpoint, formData) => request('POST', endpoint, formData),
   put: (endpoint, data) => request('PUT', endpoint, data),
   patch: (endpoint, data) => request('PATCH', endpoint, data),
   delete: (endpoint, data) => request('DELETE', endpoint, data),
