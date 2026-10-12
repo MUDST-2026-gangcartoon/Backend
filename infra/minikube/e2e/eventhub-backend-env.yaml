@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eventhub-backend-config
+  namespace: eventhub-e2e
+data:
+  SPRING_PROFILES_ACTIVE: "e2e"
+  SERVER_PORT: "8080"
+  SERVER_FORWARD_HEADERS_STRATEGY: "framework"
+  SERVER_SERVLET_SESSION_COOKIE_SECURE: "true"
