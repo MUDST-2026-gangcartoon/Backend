@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useState } from 'react';
 import AdminNavbar from '../components/AdminNavbar.jsx';
 import EventDrawer from '../components/EventDrawer.jsx';
@@ -45,7 +44,9 @@ const mapApiEvent = (event) => ({
   coverIndex: 0,
   coverUrl: event.imageUrl ?? '',
   attendees: [],
-  ticketTypes: event.ticketTypes ?? [],
+  ticketTypes: Array.isArray(event.ticketTypes)
+    ? event.ticketTypes
+    : [],
   detailImages: event.detailImages ?? [],
   status: event.status,
 });
@@ -118,8 +119,43 @@ export default function ManageEventsPage() {
   const openCreateDrawer = () =>
     setDrawer({ open: true, mode: 'create', event: null });
 
-  const openEditDrawer = (event) =>
-    setDrawer({ open: true, mode: 'edit', event });
+  const openEditDrawer = async (event) => {
+    try {
+      const response = await eventService.getEventById(event.id);
+      const data = response?.data ?? response;
+
+      if (!data || data.id == null) {
+        throw new Error('Event details not found');
+      }
+
+      const fullEvent = {
+        ...mapApiEvent(data),
+        attendees: event.attendees ?? [],
+        ticketTypes: Array.isArray(data.ticketTypes)
+          ? data.ticketTypes.map((ticket) => ({
+              ...ticket,
+              id: ticket.id,
+              name: ticket.name ?? '',
+              description: ticket.description ?? '',
+              price: Number(ticket.price ?? 0),
+              capacity: Number(ticket.capacity ?? 0),
+              sold: Number(ticket.sold ?? 0),
+            }))
+          : [],
+      };
+
+      setDrawer({
+        open: true,
+        mode: 'edit',
+        event: fullEvent,
+      });
+    } catch (error) {
+      console.error('Failed to load event details:', error);
+      window.alert(
+        'โหลดรายละเอียดอีเวนต์ไม่สำเร็จ กรุณาตรวจสอบ Backend'
+      );
+    }
+  };
 
   const closeDrawer = () =>
     setDrawer((current) => ({ ...current, open: false }));
@@ -274,34 +310,96 @@ export default function ManageEventsPage() {
       return;
     }
 
-    const currentEvent = isEdit
-      ? events.find(
-          (event) => String(event.id) === String(eventId)
-        )
-      : null;
 
-    const existingTickets = currentEvent?.ticketTypes ?? [];
+const currentEvent = isEdit
+  ? (
+      String(drawer.event?.id) === String(eventId)
+        ? drawer.event
+        : events.find(
+            (event) => String(event.id) === String(eventId)
+          )
+    )
+  : null;
 
 
-    const ticketTypes = existingTickets.length
-      ? existingTickets.map((ticket) => ({
+    const existingTickets = Array.isArray(currentEvent?.ticketTypes)
+      ? currentEvent.ticketTypes
+      : [];
+
+    // ใช้ Ticket Types ที่ผู้ใช้กรอกในฟอร์มเป็นข้อมูลหลัก
+    // และอ้างอิง Ticket Types เดิมเพื่อเก็บ ID กับจำนวนที่ขายแล้ว
+    const submittedTickets = Array.isArray(form.ticketTypes)
+      ? form.ticketTypes
+      : [];
+
+    let ticketTypes;
+
+    if (submittedTickets.length > 0) {
+      ticketTypes = submittedTickets.map((ticket) => {
+        const existingTicket = existingTickets.find(
+          (item) =>
+            ticket.id != null &&
+            String(item.id) === String(ticket.id)
+        );
+
+        return {
           ...(ticket.id != null ? { id: ticket.id } : {}),
-          name: ticket.name,
-          description: ticket.description ?? '',
+          name: String(ticket.name ?? '').trim(),
+          description: String(ticket.description ?? ''),
           price: Number(ticket.price ?? 0),
           capacity: Number(ticket.capacity ?? 0),
-          sold: Number(ticket.sold ?? 0),
-        }))
-      : [
-          {
-            name: 'General Admission',
-            description: '',
-            price: 0,
-            capacity: max,
-            sold: 0,
-          },
-        ];
+          sold: Math.max(
+            0,
+            Number(existingTicket?.sold ?? ticket.sold ?? 0)
+          ),
+        };
+      });
+    } else if (existingTickets.length > 0) {
+      // รองรับกรณีฟอร์มรุ่นเก่าที่ยังไม่ได้ส่ง ticketTypes
+      ticketTypes = existingTickets.map((ticket) => ({
+        ...(ticket.id != null ? { id: ticket.id } : {}),
+        name: ticket.name,
+        description: ticket.description ?? '',
+        price: Number(ticket.price ?? 0),
+        capacity: Number(ticket.capacity ?? 0),
+        sold: Number(ticket.sold ?? 0),
+      }));
+    } else {
+      ticketTypes = [
+        {
+          name: 'General Admission',
+          description: '',
+          price: 0,
+          capacity: max,
+          sold: 0,
+        },
+      ];
+    }
 
+    // ตรวจสอบข้อมูล Ticket Types ก่อนส่ง Backend
+    if (ticketTypes.length === 0) {
+      window.alert('กรุณาเพิ่ม Ticket Type อย่างน้อย 1 รายการ');
+      return;
+    }
+
+    const invalidTicket = ticketTypes.find(
+      (ticket) =>
+        !ticket.name ||
+        !Number.isFinite(ticket.price) ||
+        ticket.price < 0 ||
+        !Number.isInteger(ticket.capacity) ||
+        ticket.capacity < 1 ||
+        ticket.capacity < ticket.sold
+    );
+
+    if (invalidTicket) {
+      window.alert(
+        'กรุณาตรวจสอบชื่อ ราคา และจำนวนที่นั่งของ Ticket Types โดยจำนวนที่นั่งต้องไม่น้อยกว่าจำนวนตั๋วที่ขายแล้ว'
+      );
+      return;
+    }
+
+    // ความจุรวมของ Ticket Types ต้องเท่ากับความจุ Event
     const currentTicketCapacity = ticketTypes.reduce(
       (sum, ticket) => sum + ticket.capacity,
       0
@@ -310,8 +408,12 @@ export default function ManageEventsPage() {
     let seatsToAdjust = max - currentTicketCapacity;
 
     if (seatsToAdjust > 0) {
+      // หากความจุ Ticket Types รวมกันน้อยกว่า Event
+      // เพิ่มส่วนต่างให้ Ticket Type รายการแรก
       ticketTypes[0].capacity += seatsToAdjust;
     } else if (seatsToAdjust < 0) {
+      // หากความจุรวมมากเกินไป ให้ลดจากรายการท้ายก่อน
+      // โดยห้ามลดต่ำกว่าจำนวนที่ขายไปแล้ว
       seatsToAdjust = Math.abs(seatsToAdjust);
 
       for (const ticket of [...ticketTypes].reverse()) {
@@ -322,17 +424,20 @@ export default function ManageEventsPage() {
         ticket.capacity -= reduction;
         seatsToAdjust -= reduction;
 
-        if (seatsToAdjust === 0) break;
+        if (seatsToAdjust === 0) {
+          break;
+        }
       }
 
       if (seatsToAdjust > 0) {
         window.alert(
-          'Cannot reduce event capacity below the number of tickets already sold.'
+          'ไม่สามารถลดความจุ Event ได้ เพราะจำนวนที่นั่งที่เหลือไม่เพียงพอ'
         );
         return;
       }
     }
 
+    // ไม่ส่ง sold ไป เพราะ Backend คำนวณจำนวนขายจากข้อมูลการลงทะเบียน
     const ticketTypesForRequest = ticketTypes.map(
       ({ sold, ...ticket }) => ticket
     );
@@ -620,6 +725,7 @@ export default function ManageEventsPage() {
             max: drawer.event.max,
             coverIndex: drawer.event.coverIndex,
             coverUrl: drawer.event.coverUrl,
+            ticketTypes: drawer.event.ticketTypes ?? [],
           }
         }
         onClose={closeDrawer}

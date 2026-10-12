@@ -13,6 +13,8 @@ import {
   useAuth,
 } from './context/AuthContext.jsx';
 
+import AnalyticsTracker from './api/AnalyticsTracker.jsx';
+
 import './global.css';
 import './navbar.css';
 import './manage-events.css';
@@ -173,6 +175,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>
       <BrowserRouter>
+        <AnalyticsTracker />
         <AppRoutes />
       </BrowserRouter>
     </AuthProvider>

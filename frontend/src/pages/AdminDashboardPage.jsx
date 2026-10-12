@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar.jsx';
@@ -26,6 +27,29 @@ function extractEvents(response) {
   return null;
 }
 
+function extractAnalytics(response) {
+  const candidates = [
+    response,
+    response?.data,
+    response?.data?.data,
+  ];
+
+  return candidates.find(
+    (item) =>
+      item &&
+      typeof item === 'object' &&
+      !Array.isArray(item) &&
+      (
+        'totalRegistrations' in item ||
+        'totalEvents' in item ||
+        'totalOpenEvents' in item ||
+        'siteViews' in item ||
+        'eventDetailViews' in item ||
+        'uniqueVisitors' in item
+      ),
+  ) ?? null;
+}
+
 function formatNumber(value) {
   return new Intl.NumberFormat('th-TH').format(value);
 }
@@ -36,8 +60,11 @@ function getStatusLabel(status) {
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
+
   const [events, setEvents] = useState([]);
   const [loadState, setLoadState] = useState('loading');
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoadState, setAnalyticsLoadState] = useState('loading');
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
@@ -45,12 +72,15 @@ export default function AdminDashboardPage() {
 
     async function loadEvents() {
       setLoadState('loading');
+
       try {
         const response = await eventService.getAllEvents();
         const result = extractEvents(response);
 
         if (!result) {
-          throw new Error('รูปแบบข้อมูลรายการอีเวนต์จาก API ไม่ตรงกับที่หน้า Dashboard รองรับ');
+          throw new Error(
+            'รูปแบบข้อมูลรายการอีเวนต์จาก API ไม่ตรงกับที่หน้า Dashboard รองรับ',
+          );
         }
 
         if (!cancelled) {
@@ -59,11 +89,50 @@ export default function AdminDashboardPage() {
         }
       } catch (error) {
         console.error('Failed to load dashboard events:', error);
-        if (!cancelled) setLoadState('error');
+
+        if (!cancelled) {
+          setLoadState('error');
+        }
       }
     }
 
     loadEvents();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [retryCount]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAnalytics() {
+      setAnalyticsLoadState('loading');
+
+      try {
+        const response = await eventService.getAdminStats();
+        const result = extractAnalytics(response);
+
+        if (!result) {
+          throw new Error('รูปแบบข้อมูล Analytics API ไม่ถูกต้อง');
+        }
+
+        if (!cancelled) {
+          setAnalytics(result);
+          setAnalyticsLoadState('success');
+        }
+      } catch (error) {
+        console.error('Failed to load dashboard analytics:', error);
+
+        if (!cancelled) {
+          setAnalytics(null);
+          setAnalyticsLoadState('error');
+        }
+      }
+    }
+
+    loadAnalytics();
+
     return () => {
       cancelled = true;
     };
@@ -73,30 +142,45 @@ export default function AdminDashboardPage() {
     const bookingValues = events
       .map((event) => toNumber(event.registeredCount))
       .filter((value) => value !== null);
-    const hasBookingData = bookingValues.length > 0;
-    const totalBookings = bookingValues.reduce((total, value) => total + value, 0);
-    const openEvents = events.filter((event) => getStatusLabel(event.status) === 'OPEN').length;
 
-    // Only include events that provide both capacity and remaining seats in the API response.
-    // This avoids presenting guessed seat-utilization figures as real data.
+    const hasBookingData = bookingValues.length > 0;
+    const totalBookings = bookingValues.reduce(
+      (total, value) => total + value,
+      0,
+    );
+
+    const openEvents = events.filter(
+      (event) => getStatusLabel(event.status) === 'OPEN',
+    ).length;
+
     const eventsWithCapacityData = events.filter((event) => {
       const capacity = toNumber(event.capacity);
       const spotsLeft = toNumber(event.spotsLeft);
-      return capacity !== null && capacity >= 0 && spotsLeft !== null && spotsLeft >= 0;
+
+      return (
+        capacity !== null &&
+        capacity >= 0 &&
+        spotsLeft !== null &&
+        spotsLeft >= 0
+      );
     });
 
     const totalCapacity = eventsWithCapacityData.reduce(
       (total, event) => total + toNumber(event.capacity),
       0,
     );
+
     const bookedSeats = eventsWithCapacityData.reduce((total, event) => {
       const capacity = toNumber(event.capacity);
       const spotsLeft = toNumber(event.spotsLeft);
+
       return total + Math.max(0, Math.min(capacity, capacity - spotsLeft));
     }, 0);
-    const utilization = totalCapacity > 0
-      ? Math.round((bookedSeats / totalCapacity) * 100)
-      : null;
+
+    const utilization =
+      totalCapacity > 0
+        ? Math.round((bookedSeats / totalCapacity) * 100)
+        : null;
 
     return {
       hasBookingData,
@@ -109,12 +193,37 @@ export default function AdminDashboardPage() {
     };
   }, [events]);
 
+  const analyticsStats = useMemo(() => {
+    const totalRegistrations = toNumber(analytics?.totalRegistrations);
+    const totalOpenEvents = toNumber(analytics?.totalOpenEvents);
+    const uniqueVisitors = toNumber(analytics?.uniqueVisitors);
+    const siteViews = toNumber(analytics?.siteViews);
+    const eventDetailViews = toNumber(analytics?.eventDetailViews);
+
+    return {
+      totalRegistrations,
+      totalOpenEvents,
+      uniqueVisitors,
+      siteViews,
+      eventDetailViews,
+    };
+  }, [analytics]);
+
   const isLoading = loadState === 'loading';
   const hasError = loadState === 'error';
   const hasNoEvents = loadState === 'success' && events.length === 0;
-  const donutOffset = stats.utilization === null
-    ? CIRCLE_CIRCUMFERENCE
-    : CIRCLE_CIRCUMFERENCE * (1 - stats.utilization / 100);
+
+  const isAnalyticsLoading = analyticsLoadState === 'loading';
+  const hasAnalyticsError = analyticsLoadState === 'error';
+
+  const donutOffset =
+    stats.utilization === null
+      ? CIRCLE_CIRCUMFERENCE
+      : CIRCLE_CIRCUMFERENCE * (1 - stats.utilization / 100);
+
+  const siteViews = analyticsStats.siteViews;
+  const eventDetailViews = analyticsStats.eventDetailViews;
+  const maxViews = Math.max(siteViews ?? 0, eventDetailViews ?? 0, 1);
 
   return (
     <>
@@ -126,7 +235,8 @@ export default function AdminDashboardPage() {
             <div className="dashboard-eyebrow">ภาพรวมผู้จัดงาน</div>
             <h1>ภาพรวมที่ช่วยให้งานของคุณเดินต่อ</h1>
             <p className="dashboard-subtitle">
-              ดูข้อมูลอีเวนต์และการลงทะเบียนจากระบบ แล้วเลือกสิ่งที่ควรจัดการต่อ
+              ดูข้อมูลอีเวนต์และการลงทะเบียนจากระบบ
+              แล้วเลือกสิ่งที่ควรจัดการต่อ
             </p>
           </div>
 
@@ -135,8 +245,19 @@ export default function AdminDashboardPage() {
             className="dashboard-event-btn"
             onClick={() => navigate('/manage-events')}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 20h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 20h9"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
               <path
                 d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
                 stroke="currentColor"
@@ -167,8 +288,37 @@ export default function AdminDashboardPage() {
               color: '#991B1B',
             }}
           >
-            <span>โหลดข้อมูล Dashboard ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง</span>
-            <button type="button" onClick={() => setRetryCount((count) => count + 1)}>
+            <span>
+              โหลดข้อมูลอีเวนต์ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง
+            </span>
+            <button
+              type="button"
+              onClick={() => setRetryCount((count) => count + 1)}
+            >
+              ลองอีกครั้ง
+            </button>
+          </div>
+        )}
+
+        {hasAnalyticsError && (
+          <div
+            role="status"
+            style={{
+              padding: '12px 16px',
+              marginBottom: 20,
+              border: '1px solid #FDE68A',
+              borderRadius: 12,
+              background: '#FFFBEB',
+              color: '#92400E',
+            }}
+          >
+            โหลดข้อมูล Analytics ไม่สำเร็จ
+            กรุณาตรวจสอบ API และสิทธิ์การเข้าถึง
+            <button
+              type="button"
+              style={{ marginLeft: 12 }}
+              onClick={() => setRetryCount((count) => count + 1)}
+            >
               ลองอีกครั้ง
             </button>
           </div>
@@ -192,27 +342,59 @@ export default function AdminDashboardPage() {
 
         <section className="dashboard-stats" aria-busy={isLoading}>
           <article className="dashboard-stat-card dashboard-stat-highlight">
-            <div className="dashboard-stat-label">การจอง/ลงทะเบียนรวม</div>
+            <div className="dashboard-stat-label">
+              การจอง/ลงทะเบียนรวม
+            </div>
             <div className="dashboard-stat-number">
-              {isLoading ? '…' : hasError || !stats.hasBookingData ? '—' : formatNumber(stats.totalBookings)}
+              {isAnalyticsLoading
+                ? '…'
+                : analyticsStats.totalRegistrations !== null
+                  ? formatNumber(analyticsStats.totalRegistrations)
+                  : isLoading
+                    ? '…'
+                    : hasError || !stats.hasBookingData
+                      ? '—'
+                      : formatNumber(stats.totalBookings)}
             </div>
             <div className="dashboard-stat-description">
-              {isLoading ? 'กำลังโหลดข้อมูล' : 'รวมจากรายการอีเวนต์ที่ API ส่งกลับมา'}
+              {analyticsStats.totalRegistrations !== null
+                ? 'ข้อมูลจาก Analytics API'
+                : 'แสดงข้อมูลจาก Event API เมื่อไม่มีสถิติจาก Analytics'}
             </div>
           </article>
 
           <article className="dashboard-stat-card">
             <div className="dashboard-stat-label">อีเวนต์ที่เปิดรับ</div>
             <div className="dashboard-stat-number">
-              {isLoading ? '…' : hasError ? '—' : formatNumber(stats.openEvents)}
+              {isAnalyticsLoading
+                ? '…'
+                : analyticsStats.totalOpenEvents !== null
+                  ? formatNumber(analyticsStats.totalOpenEvents)
+                  : isLoading
+                    ? '…'
+                    : hasError
+                      ? '—'
+                      : formatNumber(stats.openEvents)}
             </div>
-            <div className="dashboard-stat-description">นับจากอีเวนต์ที่มีสถานะ OPEN</div>
+            <div className="dashboard-stat-description">
+              จำนวนอีเวนต์ที่เปิดรับลงทะเบียน
+            </div>
           </article>
 
           <article className="dashboard-stat-card">
             <div className="dashboard-stat-label">ผู้เข้าชมไม่ซ้ำ</div>
-            <div className="dashboard-stat-number">—</div>
-            <div className="dashboard-stat-description">API ปัจจุบันไม่มีข้อมูลสถิติผู้เข้าชม</div>
+            <div className="dashboard-stat-number">
+              {isAnalyticsLoading
+                ? '…'
+                : analyticsStats.uniqueVisitors === null
+                  ? '—'
+                  : formatNumber(analyticsStats.uniqueVisitors)}
+            </div>
+            <div className="dashboard-stat-description">
+              {hasAnalyticsError
+                ? 'ไม่สามารถโหลดสถิติผู้เข้าชมได้'
+                : 'ข้อมูลจาก Analytics API'}
+            </div>
           </article>
         </section>
 
@@ -220,20 +402,117 @@ export default function AdminDashboardPage() {
           <article className="dashboard-chart-card dashboard-bar-card">
             <div className="dashboard-chart-header">
               <div>
-                <div className="dashboard-chart-label">เส้นทางการจอง</div>
-                <h2>จากการเข้าชมสู่การจอง</h2>
+                <div className="dashboard-chart-label">เส้นทางการเข้าชม</div>
+                <h2>การเข้าชมเว็บไซต์และหน้าอีเวนต์</h2>
               </div>
               <div className="dashboard-chart-tag">ข้อมูล Analytics</div>
             </div>
 
             <div
               className="dashboard-bar-chart"
-              role="status"
-              style={{ minHeight: 190, display: 'grid', placeItems: 'center', padding: 20, textAlign: 'center' }}
+              aria-busy={isAnalyticsLoading}
+              style={{
+                minHeight: 190,
+                padding: 20,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                gap: 22,
+              }}
             >
-              {isLoading
-                ? 'กำลังโหลดข้อมูล…'
-                : 'ยังไม่มี API Analytics สำหรับแสดงเส้นทางการเข้าชมและการจอง จึงไม่แสดงตัวเลขประมาณการ'}
+              {isAnalyticsLoading ? (
+                <p role="status">กำลังโหลดข้อมูล Analytics…</p>
+              ) : hasAnalyticsError ? (
+                <p role="status">
+                  ไม่สามารถโหลดข้อมูล Analytics ได้ กรุณาลองอีกครั้ง
+                </p>
+              ) : siteViews === null && eventDetailViews === null ? (
+                <p role="status">
+                  API ยังไม่มีข้อมูลการเข้าชมเว็บไซต์และหน้าอีเวนต์
+                </p>
+              ) : (
+                <>
+                  <div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <span>การเข้าชมเว็บไซต์</span>
+                      <strong>
+                        {siteViews === null ? '—' : formatNumber(siteViews)}
+                      </strong>
+                    </div>
+                    <div
+                      style={{
+                        height: 12,
+                        background: '#E0F2FE',
+                        borderRadius: 999,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width:
+                            siteViews === null
+                              ? '0%'
+                              : `${(siteViews / maxViews) * 100}%`,
+                          height: '100%',
+                          background: '#38BDF8',
+                          borderRadius: 999,
+                          transition: 'width 0.3s ease',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <span>การเข้าชมหน้าอีเวนต์</span>
+                      <strong>
+                        {eventDetailViews === null
+                          ? '—'
+                          : formatNumber(eventDetailViews)}
+                      </strong>
+                    </div>
+                    <div
+                      style={{
+                        height: 12,
+                        background: '#FCE7F3',
+                        borderRadius: 999,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width:
+                            eventDetailViews === null
+                              ? '0%'
+                              : `${(eventDetailViews / maxViews) * 100}%`,
+                          height: '100%',
+                          background: '#F472B6',
+                          borderRadius: 999,
+                          transition: 'width 0.3s ease',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <p style={{ margin: 0, fontSize: 12, color: '#64748B' }}>
+                    ความยาวแถบแสดงสัดส่วนเมื่อเทียบกับค่าที่สูงที่สุดในสองรายการ
+                  </p>
+                </>
+              )}
             </div>
           </article>
 
@@ -248,7 +527,12 @@ export default function AdminDashboardPage() {
 
             <div className="dashboard-donut-content" aria-busy={isLoading}>
               <div className="dashboard-donut">
-                <svg width="130" height="130" viewBox="0 0 130 130" aria-hidden="true">
+                <svg
+                  width="130"
+                  height="130"
+                  viewBox="0 0 130 130"
+                  aria-hidden="true"
+                >
                   <circle
                     cx="65"
                     cy="65"
@@ -271,8 +555,13 @@ export default function AdminDashboardPage() {
                     />
                   )}
                 </svg>
+
                 <div className="dashboard-donut-center">
-                  {isLoading ? '…' : hasError || stats.utilization === null ? '—' : `${stats.utilization}%`}
+                  {isLoading
+                    ? '…'
+                    : hasError || stats.utilization === null
+                      ? '—'
+                      : `${stats.utilization}%`}
                 </div>
               </div>
 
@@ -282,7 +571,12 @@ export default function AdminDashboardPage() {
                     ? '…'
                     : hasError || !stats.hasCapacityData
                       ? '—'
-                      : <>{formatNumber(stats.bookedSeats)}<span> / {formatNumber(stats.totalCapacity)}</span></>}
+                      : (
+                        <>
+                          {formatNumber(stats.bookedSeats)}
+                          <span> / {formatNumber(stats.totalCapacity)}</span>
+                        </>
+                      )}
                 </div>
                 <p>
                   {stats.hasCapacityData

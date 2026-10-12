@@ -13,6 +13,7 @@ const emptyForm = {
   coverIndex: 0,
   coverUrl: '',
   coverFile: null,
+  ticketTypes: [{ name: 'General Admission', description: '', price: 0, capacity: 30, sold: 0 }],
 };
 
 export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmit }) {
@@ -35,6 +36,22 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
         coverIndex: initialEvent.coverIndex ?? 0,
         coverUrl: initialEvent.coverUrl || '',
         coverFile: null,
+        ticketTypes: Array.isArray(initialEvent.ticketTypes) && initialEvent.ticketTypes.length
+          ? initialEvent.ticketTypes.map((ticket) => ({
+              ...ticket,
+              name: ticket.name ?? '',
+              description: ticket.description ?? '',
+              price: Number(ticket.price ?? 0),
+              capacity: Number(ticket.capacity ?? 0),
+              sold: Number(ticket.sold ?? 0),
+            }))
+          : [{
+              name: 'General Admission',
+              description: '',
+              price: 0,
+              capacity: Number(initialEvent.max || 30),
+              sold: 0,
+            }],
       });
     } else {
       setErrors({});
@@ -74,6 +91,55 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
     onSubmit(form, isEdit);
   };
 
+
+  const addTicketType = () => {
+    setForm((current) => ({
+      ...current,
+      ticketTypes: [
+        ...(current.ticketTypes ?? []),
+        {
+          name: '',
+          description: '',
+          price: 0,
+          capacity: 1,
+          sold: 0,
+        },
+      ],
+    }));
+  };
+
+  const updateTicketType = (index, key, value) => {
+    setForm((current) => ({
+      ...current,
+      ticketTypes: current.ticketTypes.map((ticket, ticketIndex) =>
+        ticketIndex === index
+          ? { ...ticket, [key]: value }
+          : ticket
+      ),
+    }));
+  };
+
+  const removeTicketType = (index) => {
+    const tickets = form.ticketTypes ?? [];
+    const ticket = tickets[index];
+
+    if (tickets.length <= 1) {
+      window.alert('ต้องมีประเภทบัตรอย่างน้อย 1 รายการ');
+      return;
+    }
+
+    if (Number(ticket?.sold ?? 0) > 0) {
+      window.alert('ไม่สามารถลบประเภทบัตรที่มีการขายแล้ว');
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      ticketTypes: current.ticketTypes.filter(
+        (_, ticketIndex) => ticketIndex !== index
+      ),
+    }));
+  };
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -207,6 +273,91 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
               {errors.max && <small className="helper-text err">{errors.max}</small>}
             </div>
           </div>
+          <section className="ticket-types-section">
+            <div className="ticket-types-heading">
+              <div>
+                <h3>ประเภทบัตร</h3>
+                <p className="hint">กำหนดชื่อ ราคา และจำนวนบัตรแต่ละประเภท</p>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={addTicketType}
+              >
+                + เพิ่มประเภทบัตร
+              </button>
+            </div>
+
+            {(form.ticketTypes ?? []).map((ticket, index) => (
+              <div className="ticket-type-card" key={ticket.id ?? `new-ticket-${index}`}>
+                <div className="ticket-type-heading">
+                  <strong>ประเภทบัตรที่ {index + 1}</strong>
+                  <button
+                    type="button"
+                    className="btn-ghost ticket-remove"
+                    onClick={() => removeTicketType(index)}
+                    disabled={Number(ticket.sold ?? 0) > 0}
+                    title={Number(ticket.sold ?? 0) > 0 ? 'มีการขายบัตรแล้ว ไม่สามารถลบได้' : 'ลบประเภทบัตร'}
+                  >
+                    ลบ
+                  </button>
+                </div>
+
+                <div className="field">
+                  <label htmlFor={`ticket-name-${index}`}>ชื่อประเภทบัตร</label>
+                  <input
+                    id={`ticket-name-${index}`}
+                    type="text"
+                    maxLength={80}
+                    value={ticket.name ?? ''}
+                    onChange={(e) => updateTicketType(index, 'name', e.target.value)}
+                    placeholder="เช่น General Admission, VIP"
+                  />
+                </div>
+
+                <div className="field">
+                  <label htmlFor={`ticket-description-${index}`}>รายละเอียดบัตร</label>
+                  <textarea
+                    id={`ticket-description-${index}`}
+                    rows={2}
+                    maxLength={500}
+                    value={ticket.description ?? ''}
+                    onChange={(e) => updateTicketType(index, 'description', e.target.value)}
+                    placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)"
+                  />
+                </div>
+
+                <div className="field-row">
+                  <div className="field">
+                    <label htmlFor={`ticket-price-${index}`}>ราคา (บาท)</label>
+                    <input
+                      id={`ticket-price-${index}`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={ticket.price ?? 0}
+                      onChange={(e) => updateTicketType(index, 'price', e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor={`ticket-capacity-${index}`}>จำนวนบัตร</label>
+                    <input
+                      id={`ticket-capacity-${index}`}
+                      type="number"
+                      min={Math.max(1, Number(ticket.sold ?? 0))}
+                      step="1"
+                      value={ticket.capacity ?? 1}
+                      onChange={(e) => updateTicketType(index, 'capacity', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <p className="hint">
+                  ขายแล้ว: {Number(ticket.sold ?? 0)} ใบ
+                </p>
+              </div>
+            ))}
+          </section>
         </div>
 
         <div className="drawer-footer">
