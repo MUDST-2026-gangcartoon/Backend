@@ -234,7 +234,7 @@ class EventServiceTests {
                         200L,
                         event,
                         "General",
-                        new BigDecimal("250.00"),
+                        BigDecimal.ZERO,
                         50
                 );
 
@@ -1300,14 +1300,12 @@ class EventServiceTests {
 
     // EVT-REG-010
     @Test
-    void shouldCalculateTotalPriceFromTicketPriceAndQuantity() {
+    void shouldReturnZeroTotalPriceForFreeRegistration() {
 
         RegistrationFixture f =
                 registrationFixture();
 
-        f.ticket().setPrice(
-                new BigDecimal("250.00")
-        );
+        f.ticket().setPrice(BigDecimal.ZERO);
 
         ApiDtos.PurchaseRequest request =
                 new ApiDtos.PurchaseRequest(
@@ -2018,13 +2016,73 @@ class EventServiceTests {
         );
 
         assertEquals(
-                502L,
-                result.get(1).id()
+                0,
+                BigDecimal.ZERO.compareTo(result.totalPrice())
         );
 
         verify(registrationRepository)
                 .findByUserIdOrderByEventStartsAtAsc(
                         user.getId()
                 );
+    }
+    // PAY-REG-002 / BR-PAY-003
+    @Test
+    void shouldRejectDirectRegistrationForPaidTicket() {
+        RegistrationFixture f = registrationFixture();
+
+        // สร้าง Paid Ticket จาก Fixture เดิม
+        f.ticket().setPrice(new BigDecimal("250.00"));
+
+        ApiDtos.PurchaseRequest request =
+                new ApiDtos.PurchaseRequest(
+                        f.ticket().getId(),
+                        2
+                );
+
+        when(userRepository.findByEmail(f.user().getEmail()))
+                .thenReturn(Optional.of(f.user()));
+
+        when(eventRepository.findByIdForUpdate(f.event().getId()))
+                .thenReturn(Optional.of(f.event()));
+
+        lenient().when(
+                registrationRepository.existsByUserIdAndEventId(
+                        f.user().getId(),
+                        f.event().getId()
+                )
+        ).thenReturn(false);
+
+        lenient().when(
+                ticketTypeRepository.findById(f.ticket().getId())
+        ).thenReturn(Optional.of(f.ticket()));
+
+        lenient().when(
+                registrationRepository.seatsReservedByEventId(
+                        f.event().getId()
+                )
+        ).thenReturn(0L);
+
+        lenient().when(
+                registrationRepository.seatsReservedByTicketTypeId(
+                        f.ticket().getId()
+                )
+        ).thenReturn(0L);
+
+        // ทำให้ Service เดิมสามารถ Save ได้
+        // เพื่อพิสูจน์ว่า Red เกิดจากยังไม่กัน Paid Bypass
+        lenient().when(
+                registrationRepository.save(any(Registration.class))
+        ).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertStatus(
+                HttpStatus.CONFLICT,
+                () -> eventService.register(
+                        f.event().getId(),
+                        request,
+                        f.principal()
+                )
+        );
+
+        verify(registrationRepository, never()).save(any());
     }
 }
