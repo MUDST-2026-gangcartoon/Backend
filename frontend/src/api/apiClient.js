@@ -1,5 +1,5 @@
 const BASE_URL = (
-  import.meta.env.VITE_API_URL || '/api'
+  import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 ).replace(/\/+$/, '');
 
 let csrfToken = null;
@@ -74,7 +74,9 @@ const getCsrfToken = async () => {
     }
 
     if (!data?.token) {
-      throw new Error('ไม่สามารถดึง CSRF token จาก Backend ได้');
+      throw new Error(
+        'ไม่สามารถดึง CSRF token จาก Backend ได้'
+      );
     }
 
     csrfToken = data.token;
@@ -99,9 +101,12 @@ const request = async (method, endpoint, data) => {
     ? endpoint
     : `/${endpoint}`;
 
-  const requiresCsrf = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(
-    normalizedMethod
-  );
+  const requiresCsrf = [
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+  ].includes(normalizedMethod);
 
   const refreshCsrfAfterRequest =
     /^\/auth\/(login|signup|logout)$/.test(path.split('?')[0]);
@@ -116,8 +121,14 @@ const request = async (method, endpoint, data) => {
     credentials: 'include',
   };
 
-  if (data !== undefined) {
-    if (typeof FormData !== 'undefined' && data instanceof FormData) {
+  if (data !== undefined && data !== null) {
+    const isFormData =
+      typeof FormData !== 'undefined' &&
+      data instanceof FormData;
+
+    if (isFormData) {
+      // ห้ามกำหนด Content-Type เอง
+      // เพื่อให้ fetch ใส่ multipart boundary ให้อัตโนมัติ
       options.body = data;
     } else {
       headers['Content-Type'] = 'application/json';
@@ -140,7 +151,7 @@ const request = async (method, endpoint, data) => {
 
     return result;
   } finally {
-    // Backend ล้าง CSRF token หลัง Login, Signup และ Logout
+    // ล้าง CSRF token หลัง Login, Signup และ Logout
     if (refreshCsrfAfterRequest) {
       csrfToken = null;
       csrfPromise = null;
@@ -150,11 +161,30 @@ const request = async (method, endpoint, data) => {
 
 const apiClient = {
   get: (endpoint) => request('GET', endpoint),
-  post: (endpoint, data) => request('POST', endpoint, data),
-  postForm: (endpoint, formData) => request('POST', endpoint, formData),
-  put: (endpoint, data) => request('PUT', endpoint, data),
-  patch: (endpoint, data) => request('PATCH', endpoint, data),
-  delete: (endpoint, data) => request('DELETE', endpoint, data),
+
+  post: (endpoint, data) =>
+    request('POST', endpoint, data),
+
+  // สำหรับอัปโหลดไฟล์ด้วย FormData
+  postForm: (endpoint, formData) => {
+    if (
+      typeof FormData === 'undefined' ||
+      !(formData instanceof FormData)
+    ) {
+      throw new TypeError('postForm ต้องรับค่าเป็น FormData');
+    }
+
+    return request('POST', endpoint, formData);
+  },
+
+  put: (endpoint, data) =>
+    request('PUT', endpoint, data),
+
+  patch: (endpoint, data) =>
+    request('PATCH', endpoint, data),
+
+  delete: (endpoint, data) =>
+    request('DELETE', endpoint, data),
 };
 
 export default apiClient;

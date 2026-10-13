@@ -52,6 +52,7 @@ const formatDate = (value) => {
 
 export default function EventCheckinSelectPage() {
   const navigate = useNavigate();
+
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -64,31 +65,27 @@ export default function EventCheckinSelectPage() {
         setLoading(true);
         setError('');
 
-        const response = await eventService.getAllEvents({
-          page: 0,
+        // Load every page from the backend.
+        const items = await eventService.getAllEventsAcrossPages({
           size: 100,
         });
 
-        const items = Array.isArray(response)
-          ? response
-          : response?.items ?? [];
+        if (!active) return;
 
-        if (active) {
-          // Use sample cards only when the real API returns an empty list
-          // and Vite is running in development mode.
-          const isDevelopment = import.meta.env.DEV;
-          setEvents(
-            isDevelopment && items.length === 0
-              ? DEMO_EVENTS
-              : items
-          );
-        }
+        // Demo data is used only during development when no events exist.
+        const isDevelopment = import.meta.env.DEV;
+
+        setEvents(
+          isDevelopment && items.length === 0
+            ? DEMO_EVENTS
+            : items
+        );
       } catch (err) {
-        if (active) {
-          setError(
-            err.message || 'ไม่สามารถโหลดรายการอีเวนต์ได้'
-          );
-        }
+        if (!active) return;
+
+        setError(
+          err?.message || 'ไม่สามารถโหลดรายการอีเวนต์ได้'
+        );
       } finally {
         if (active) {
           setLoading(false);
@@ -103,14 +100,30 @@ export default function EventCheckinSelectPage() {
     };
   }, []);
 
+  const isShowingDemoEvents =
+    import.meta.env.DEV &&
+    events.length > 0 &&
+    events.every((event) =>
+      String(event.id).startsWith('demo-')
+    );
+
   return (
     <>
       <StaffNavbar />
 
       <main className="page">
         <div className="crumbs">
-          <a href="#" onClick={(e) => e.preventDefault()}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+          <a
+            href="#"
+            onClick={(e) => e.preventDefault()}
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
               <path
                 d="M17 3l4 4-4 4M3 7h18M7 21l-4-4 4-4M21 17H3"
                 stroke="currentColor"
@@ -135,14 +148,20 @@ export default function EventCheckinSelectPage() {
         <hr className="rule" />
 
         {loading && (
-          <p role="status">กำลังโหลดรายการอีเวนต์...</p>
+          <p role="status">
+            กำลังโหลดรายการอีเวนต์...
+          </p>
         )}
 
         {!loading && error && (
           <div role="alert">
-            <p>โหลดรายการอีเวนต์ไม่สำเร็จ: {error}</p>
+            <p>
+              โหลดรายการอีเวนต์ไม่สำเร็จ: {error}
+            </p>
+
             <button
               type="button"
+              className="btn-primary"
               onClick={() => window.location.reload()}
             >
               ลองใหม่
@@ -156,9 +175,10 @@ export default function EventCheckinSelectPage() {
 
         {!loading && !error && events.length > 0 && (
           <>
-            {import.meta.env.DEV && events === DEMO_EVENTS && (
+            {isShowingDemoEvents && (
               <p role="status">
-                โหมดตัวอย่างสำหรับพัฒนา Frontend — ข้อมูลนี้ไม่ใช่อีเวนต์จริง
+                โหมดตัวอย่างสำหรับพัฒนา Frontend
+                — ข้อมูลนี้ไม่ใช่อีเวนต์จริง
               </p>
             )}
 
@@ -171,7 +191,11 @@ export default function EventCheckinSelectPage() {
                   <a
                     className="event-card"
                     key={ev.id}
-                    href={isDemo ? '#' : `/staff/checkin/${ev.id}`}
+                    href={
+                      isDemo
+                        ? '#'
+                        : `/staff/checkin/${ev.id}`
+                    }
                     onClick={(e) => {
                       e.preventDefault();
 
@@ -186,25 +210,45 @@ export default function EventCheckinSelectPage() {
                     }}
                   >
                     <div
-                      className={`event-thumb ${String(category).toLowerCase()}`}
+                      className={`event-thumb ${String(
+                        category
+                      ).toLowerCase()}`}
                     >
-                      <span className="event-tag">{category}</span>
+                      <span className="event-tag">
+                        {category}
+                      </span>
+
                       <span style={{ fontSize: 30 }}>
                         {ICONS[category] || '🎟️'}
                       </span>
                     </div>
 
                     <div className="event-body">
-                      <h2 className="event-title">{ev.title}</h2>
+                      <h2 className="event-title">
+                        {ev.title || ev.name || 'ไม่มีชื่ออีเวนต์'}
+                      </h2>
+
                       <p className="event-meta">
                         {formatDate(ev.startsAt)}
                         <span className="mdot">·</span>
                         {ev.location || 'ไม่ระบุสถานที่'}
                       </p>
+
+                      <p className="event-meta">
+                        ผู้ลงทะเบียน {ev.registeredCount ?? 0} คน
+                        <span className="mdot">·</span>
+                        {ev.status || 'ไม่ระบุสถานะ'}
+                      </p>
                     </div>
 
                     <span className="event-arrow">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                      <svg
+                        width="17"
+                        height="17"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                      >
                         <path
                           d="M5 12h14M13 6l6 6-6 6"
                           stroke="currentColor"

@@ -74,7 +74,6 @@ export default function EventDetailPage() {
   const [registerError, setRegisterError] = useState('');
   const [registrationResult, setRegistrationResult] = useState(null);
 
-  // โหลดรายละเอียดอีเวนต์จาก Backend
   useEffect(() => {
     let cancelled = false;
 
@@ -94,11 +93,11 @@ export default function EventDetailPage() {
 
         setEventData(data);
 
-        const tickets = Array.isArray(data?.ticketTypes)
+        const loadedTickets = Array.isArray(data?.ticketTypes)
           ? data.ticketTypes
           : [];
 
-        setSelectedTicketId(tickets[0]?.id ?? null);
+        setSelectedTicketId(loadedTickets[0]?.id ?? null);
       } catch (error) {
         if (!cancelled) {
           setLoadError(
@@ -138,9 +137,21 @@ export default function EventDetailPage() {
 
   const status = String(eventData?.status || '').toUpperCase();
 
+  // ป้องกันการลงทะเบียนเมื่อถึงหรือเลยเวลาเริ่มกิจกรรม
+  const startsAtTime = eventData?.startsAt
+    ? new Date(eventData.startsAt).getTime()
+    : NaN;
+
+  const hasStarted =
+    Number.isFinite(startsAtTime) &&
+    startsAtTime <= Date.now();
+
+  const spotsLeft = Number(eventData?.spotsLeft ?? 0);
+
   const eventUnavailable =
     ['FULL', 'ENDED'].includes(status) ||
-    Number(eventData?.spotsLeft ?? 1) <= 0;
+    spotsLeft <= 0 ||
+    hasStarted;
 
   const alreadyRegistered = Boolean(eventData?.registered);
 
@@ -174,6 +185,26 @@ export default function EventDetailPage() {
   const handleConfirmBooking = async () => {
     if (!selectedTicket || submitting) return;
 
+    // ตรวจสอบสถานะอีกครั้งก่อนส่งคำขอ
+    const currentStartsAt = eventData?.startsAt
+      ? new Date(eventData.startsAt).getTime()
+      : NaN;
+
+    const hasEventStarted =
+      Number.isFinite(currentStartsAt) &&
+      currentStartsAt <= Date.now();
+
+    if (
+      ['FULL', 'ENDED'].includes(status) ||
+      Number(eventData?.spotsLeft ?? 0) <= 0 ||
+      hasEventStarted
+    ) {
+      setRegisterError(
+        'กิจกรรมเริ่มแล้วหรือปิดรับลงทะเบียน ไม่สามารถลงทะเบียนได้'
+      );
+      return;
+    }
+
     if (qty < 1 || qty > maxQty) {
       setRegisterError('จำนวนบัตรไม่ถูกต้องหรือบัตรมีไม่เพียงพอ');
       return;
@@ -183,7 +214,6 @@ export default function EventDetailPage() {
     setRegisterError('');
 
     try {
-      // ส่งคำขอลงทะเบียนจริงไปยัง Backend
       const result = await registrationService.registerForEvent(
         eventId,
         {
@@ -195,7 +225,6 @@ export default function EventDetailPage() {
       setRegistrationResult(result);
       setActiveModal('success');
 
-      // อัปเดตข้อมูลบนหน้าจอหลังลงทะเบียนสำเร็จ
       setEventData((previous) => {
         if (!previous) return previous;
 
@@ -273,6 +302,17 @@ export default function EventDetailPage() {
     REGISTERED: 'ลงทะเบียนแล้ว',
   };
 
+  // ข้อความสถานะที่แสดงบนหน้า User
+  const displayStatus = hasStarted
+    ? 'ENDED'
+    : status === 'OPEN' && spotsLeft > 0
+      ? 'OPEN'
+      : status === 'ENDED'
+        ? 'ENDED'
+        : spotsLeft <= 0 || status === 'FULL'
+          ? 'FULL'
+          : status;
+
   const ticketCode = registrationResult?.ticketCode;
   const registrationId = registrationResult?.id;
 
@@ -288,20 +328,17 @@ export default function EventDetailPage() {
         </div>
 
         <div className="event-content-wrapper">
-          {/* ฝั่งซ้าย: รายละเอียดอีเวนต์ */}
           <div className="event-main-content">
             <div className="section-subtitle theme-text">
-              {categoryLabels[String(eventData.category || '').toUpperCase()]
-                || eventData.category
-                || 'อีเวนต์'}
+              {categoryLabels[
+                String(eventData.category || '').toUpperCase()
+              ] || eventData.category || 'อีเวนต์'}
             </div>
 
             <h1 className="event-title">{eventData.title}</h1>
 
             {eventData.status && (
-              <p>
-                สถานะ: {statusLabels[status] || eventData.status}
-              </p>
+              <p>สถานะ: {statusLabels[displayStatus] || eventData.status}</p>
             )}
 
             <div className="info-row">
@@ -399,13 +436,12 @@ export default function EventDetailPage() {
             </div>
           </div>
 
-          {/* ฝั่งขวา: ประเภทบัตรและการลงทะเบียน */}
           <div className="event-sidebar">
             <div className="event-booking-card">
               <span className="ticket-label">ที่นั่ง</span>
 
               <h2 className="ticket-left theme-text">
-                เหลือ {Number(eventData.spotsLeft ?? 0)} ที่นั่ง
+                เหลือ {spotsLeft} ที่นั่ง
               </h2>
 
               <p className="ticket-reg">
@@ -478,7 +514,9 @@ export default function EventDetailPage() {
                 {alreadyRegistered
                   ? 'ลงทะเบียนแล้ว'
                   : eventUnavailable
-                    ? 'ปิดรับลงทะเบียน'
+                    ? displayStatus === 'ENDED'
+                      ? 'กิจกรรมสิ้นสุดแล้ว'
+                      : 'ปิดรับลงทะเบียน'
                     : !selectedTicket
                       ? 'ไม่มีประเภทบัตร'
                       : ticketRemaining <= 0
@@ -490,7 +528,6 @@ export default function EventDetailPage() {
         </div>
       </div>
 
-      {/* Modal เลือกบัตรและยืนยันลงทะเบียน */}
       {activeModal === 'booking' && (
         <div className="custom-modal-overlay">
           <div className="custom-modal-box">
@@ -625,7 +662,12 @@ export default function EventDetailPage() {
                   cursor: submitting ? 'wait' : 'pointer',
                 }}
                 onClick={handleConfirmBooking}
-                disabled={submitting || !selectedTicket || qty > maxQty}
+                disabled={
+                  submitting ||
+                  !selectedTicket ||
+                  qty > maxQty ||
+                  eventUnavailable
+                }
               >
                 {submitting ? 'กำลังลงทะเบียน...' : 'ยืนยันลงทะเบียน'}
               </button>
@@ -634,7 +676,6 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      {/* Modal ลงทะเบียนสำเร็จจากผลตอบกลับของ Backend */}
       {activeModal === 'success' && (
         <div className="custom-modal-overlay">
           <div className="custom-modal-box" style={{ textAlign: 'center' }}>

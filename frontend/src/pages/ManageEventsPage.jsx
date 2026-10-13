@@ -1,58 +1,183 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import AdminNavbar from '../components/AdminNavbar.jsx';
 import EventDrawer from '../components/EventDrawer.jsx';
 import AttendeesDrawer from '../components/AttendeesDrawer.jsx';
 import { eventService } from '../api/eventService.js';
 
 const CATEGORY_CLASS = {
-  TECH: 'eng',
   DESIGN: 'design',
-  CAREER: 'access',
-  COMMUNITY: 'product',
-  Design: 'design',
-  Engineering: 'eng',
-  สัตว์เลี้ยง: 'product',
-  ไลฟ์สไตล์: 'product',
-  เวิร์กช็อป: 'eng',
+  TECH: 'eng',
+  CAREER: 'product',
+  COMMUNITY: 'access',
 };
 
-const CATEGORY_API = {
-  TECH: 'TECH',
-  DESIGN: 'DESIGN',
-  CAREER: 'CAREER',
-  COMMUNITY: 'COMMUNITY',
+const CATEGORY_ALIASES = {
   Design: 'DESIGN',
   Engineering: 'TECH',
-  สัตว์เลี้ยง: 'COMMUNITY',
-  ไลฟ์สไตล์: 'COMMUNITY',
-  เวิร์กช็อป: 'TECH',
 };
 
-const mapApiEvent = (event) => ({
-  id: event.id,
-  name: event.title,
-  desc: event.description ?? '',
-  place: event.location ?? '',
-  category: event.category ?? 'TECH',
-  thumbClass: CATEGORY_CLASS[event.category] ?? 'eng',
-  date: event.startsAt ?? '',
-  dateLabel: event.startsAt
-    ? new Date(event.startsAt).toLocaleDateString('th-TH')
-    : '',
-  seats: Number(event.registeredCount ?? 0),
-  max: Number(event.capacity ?? 0),
-  coverIndex: 0,
-  coverUrl: event.imageUrl ?? '',
-  attendees: [],
-  ticketTypes: Array.isArray(event.ticketTypes)
-    ? event.ticketTypes
-    : [],
-  detailImages: event.detailImages ?? [],
-  status: event.status,
-});
+const toApiCategory = (category) => {
+  const normalized = CATEGORY_ALIASES[category] || category;
+
+  return ['TECH', 'DESIGN', 'CAREER', 'COMMUNITY'].includes(normalized)
+    ? normalized
+    : 'COMMUNITY';
+};
+
+const toLocalDateTime = (value) => {
+  if (!value) return '';
+
+  const match = String(value).match(
+    /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/
+  );
+
+  if (match) return `${match[1]}T${match[2]}`;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return '';
+
+  const pad = (number) => String(number).padStart(2, '0');
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const formatDate = (value) => {
+  if (!value) return 'ไม่ระบุวันเวลา';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
+const mapApiEvent = (event) => {
+  const category = toApiCategory(event.category);
+
+  return {
+    ...event,
+    id: event.id,
+    name: event.title || event.name || '',
+    desc: event.description || event.desc || '',
+    place: event.location || event.place || '',
+    category,
+    thumbClass: CATEGORY_CLASS[category] || 'access',
+    date: toLocalDateTime(event.startsAt || event.date),
+    dateLabel: formatDate(event.startsAt || event.date),
+    seats: Number(event.registeredCount ?? event.seats ?? 0),
+    max: Number(event.capacity ?? event.max ?? 0),
+    coverUrl: event.imageUrl || event.coverUrl || '',
+    coverIndex: event.coverIndex ?? 0,
+    attendees: [],
+    detailImages: Array.isArray(event.detailImages)
+      ? event.detailImages
+      : [],
+    ticketTypes: Array.isArray(event.ticketTypes)
+      ? event.ticketTypes
+      : [],
+    status: event.status || '',
+  };
+};
+
+const getResponseItems = (response) => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(response?.content)) return response.content;
+  if (Array.isArray(response?.data)) return response.data;
+  return [];
+};
+
+/**
+ * เตรียม Ticket Types จากค่าที่ผู้ใช้แก้ในฟอร์ม
+ * - รักษา ID ของประเภทตั๋วเดิม
+ * - ใช้จำนวนตั๋วที่ขายแล้วจากข้อมูลประเภทตั๋วเดิม
+ * - ไม่ลดความจุต่ำกว่าจำนวนที่ขายแล้ว
+ * - ไม่จับคู่ประเภทตั๋วด้วยตำแหน่งใน array
+ */
+const prepareTicketTypes = (formTicketTypes, originalEvent) => {
+  if (!Array.isArray(formTicketTypes) || formTicketTypes.length === 0) {
+    return {
+      error: 'กรุณาเพิ่มประเภทตั๋วอย่างน้อย 1 ประเภท',
+    };
+  }
+
+  const originalTypes = Array.isArray(originalEvent?.ticketTypes)
+    ? originalEvent.ticketTypes
+    : [];
+
+  const ticketTypes = formTicketTypes.map((ticket) => {
+    const original = originalTypes.find(
+      (item) =>
+        item.id != null &&
+        ticket.id != null &&
+        String(item.id) === String(ticket.id)
+    );
+
+    const sold = Math.max(
+      0,
+      Number(original?.sold ?? ticket.sold ?? 0) || 0
+    );
+
+    return {
+      ...(ticket.id != null ? { id: ticket.id } : {}),
+      name: String(ticket.name ?? '').trim(),
+      description: String(ticket.description ?? '').trim(),
+      price: Number(ticket.price),
+      capacity: Number(ticket.capacity),
+      sold,
+    };
+  });
+
+  for (const ticket of ticketTypes) {
+    if (!ticket.name) {
+      return {
+        error: 'กรุณากรอกชื่อประเภทตั๋วให้ครบทุกประเภท',
+      };
+    }
+
+    if (!Number.isFinite(ticket.price) || ticket.price < 0) {
+      return {
+        error: 'ราคาตั๋วต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป',
+      };
+    }
+
+    if (
+      !Number.isInteger(ticket.capacity) ||
+      ticket.capacity < 1
+    ) {
+      return {
+        error: 'ความจุตั๋วแต่ละประเภทต้องเป็นจำนวนเต็มอย่างน้อย 1',
+      };
+    }
+
+    if (ticket.capacity < ticket.sold) {
+      return {
+        error: `ประเภทตั๋ว "${ticket.name}" มีผู้ซื้อแล้ว ${ticket.sold} ใบ จึงลดความจุต่ำกว่านี้ไม่ได้`,
+      };
+    }
+  }
+
+  return { ticketTypes };
+};
 
 export default function ManageEventsPage() {
   const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const [drawer, setDrawer] = useState({
     open: false,
@@ -64,85 +189,92 @@ export default function ManageEventsPage() {
     open: false,
     event: null,
     attendees: [],
+    loading: false,
+    error: '',
   });
 
-  const [attendeesLoading, setAttendeesLoading] = useState(false);
-  const [attendeesError, setAttendeesError] = useState('');
+  const attendeesRequestId = useRef(0);
 
-  // โหลดรายการอีเวนต์จาก Backend
-  useEffect(() => {
-    let cancelled = false;
+  const loadEvents = useCallback(async () => {
+    setLoading(true);
+    setPageError('');
 
-    const loadEvents = async () => {
-      try {
-        const response = await eventService.getAllEvents({
-          page: 0,
-          size: 100,
-        });
+    try {
+      const result = await eventService.getAllEventsAcrossPages({
+        size: 100,
+      });
 
-        const data = response?.data ?? response;
-        const items = Array.isArray(data?.items) ? data.items : [];
-
-        if (!cancelled) {
-          setEvents(items.map(mapApiEvent));
-        }
-      } catch (error) {
-        console.error('Failed to load events:', error);
-
-        if (!cancelled) {
-          window.alert(
-            'โหลดรายการอีเวนต์ไม่สำเร็จ กรุณาตรวจสอบ Backend'
-          );
-        }
-      }
-    };
-
-    loadEvents();
-
-    return () => {
-      cancelled = true;
-    };
+      setEvents(getResponseItems(result).map(mapApiEvent));
+    } catch (error) {
+      setPageError(
+        error?.message || 'ไม่สามารถโหลดรายการกิจกรรมจาก Backend ได้'
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
 
   const stats = useMemo(() => {
     const total = events.length;
-    const open = events.filter((event) => event.seats < event.max).length;
-    const totalSeats = events.reduce((sum, event) => sum + event.max, 0);
-    const totalRegistered = events.reduce(
-      (sum, event) => sum + event.seats,
+
+    const open = events.filter(
+      (event) =>
+        event.status === 'OPEN' ||
+        (!event.status && event.seats < event.max)
+    ).length;
+
+    const totalSeats = events.reduce(
+      (sum, event) => sum + Number(event.max || 0),
       0
     );
 
-    return { total, open, totalSeats, totalRegistered };
+    const totalRegistered = events.reduce(
+      (sum, event) => sum + Number(event.seats || 0),
+      0
+    );
+
+    return {
+      total,
+      open,
+      totalSeats,
+      totalRegistered,
+    };
   }, [events]);
 
-  const openCreateDrawer = () =>
-    setDrawer({ open: true, mode: 'create', event: null });
+  const openCreateDrawer = () => {
+    if (saving) return;
 
+    setDrawer({
+      open: true,
+      mode: 'create',
+      event: null,
+    });
+  };
+
+  // โหลดข้อมูลเต็มก่อนเปิดฟอร์มแก้ไข
   const openEditDrawer = async (event) => {
+    if (saving) return;
+
     try {
       const response = await eventService.getEventById(event.id);
-      const data = response?.data ?? response;
+      const detail = response?.data ?? response;
 
-      if (!data || data.id == null) {
-        throw new Error('Event details not found');
+      if (!detail || !Array.isArray(detail.ticketTypes)) {
+        throw new Error('ไม่พบข้อมูลประเภทบัตรของกิจกรรม');
       }
 
-      const fullEvent = {
-        ...mapApiEvent(data),
-        attendees: event.attendees ?? [],
-        ticketTypes: Array.isArray(data.ticketTypes)
-          ? data.ticketTypes.map((ticket) => ({
-              ...ticket,
-              id: ticket.id,
-              name: ticket.name ?? '',
-              description: ticket.description ?? '',
-              price: Number(ticket.price ?? 0),
-              capacity: Number(ticket.capacity ?? 0),
-              sold: Number(ticket.sold ?? 0),
-            }))
+      const fullEvent = mapApiEvent({
+        ...event,
+        ...detail,
+        detailImages: Array.isArray(detail.detailImages)
+          ? detail.detailImages
           : [],
-      };
+        ticketTypes: detail.ticketTypes,
+      });
 
       setDrawer({
         open: true,
@@ -151,108 +283,77 @@ export default function ManageEventsPage() {
       });
     } catch (error) {
       console.error('Failed to load event details:', error);
+
       window.alert(
-        'โหลดรายละเอียดอีเวนต์ไม่สำเร็จ กรุณาตรวจสอบ Backend'
+        `ไม่สามารถโหลดรายละเอียดกิจกรรมได้: ${
+          error?.message || 'กรุณาลองใหม่อีกครั้ง'
+        }`
       );
     }
   };
 
-  const closeDrawer = () =>
-    setDrawer((current) => ({ ...current, open: false }));
-
-  // ดึงรายชื่อผู้ลงทะเบียนของอีเวนต์จาก Backend
-  const openAttendees = async (event) => {
-    setAttendeesDrawer({
-      open: true,
-      event,
-      attendees: [],
-    });
-
-    setAttendeesLoading(true);
-    setAttendeesError('');
-
-    try {
-      const response = await eventService.getEventAttendees(event.id);
-      const data = response?.data ?? response;
-
-      const items = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.items)
-          ? data.items
-          : [];
-
-      const normalizedAttendees = items.map((attendee) => {
-        const combinedName = [
-          attendee.firstName,
-          attendee.lastName,
-        ]
-          .filter(Boolean)
-          .join(' ');
-
-        return {
-          ...attendee,
-          name:
-            attendee.name ||
-            attendee.fullName ||
-            attendee.user?.name ||
-            attendee.user?.fullName ||
-            attendee.attendeeName ||
-            combinedName ||
-            attendee.username ||
-            attendee.user?.username ||
-            'ไม่ระบุชื่อ',
-          email:
-            attendee.email ||
-            attendee.user?.email ||
-            attendee.attendeeEmail ||
-            '-',
-          registeredAt:
-            attendee.registeredAt ||
-            attendee.createdAt ||
-            attendee.registrationDate ||
-            attendee.registeredOn ||
-            '',
-        };
-      });
-
-      setAttendeesDrawer((current) => {
-        // ป้องกันผลลัพธ์เก่าไปแสดงในอีเวนต์ที่เปิดทีหลัง
-        if (String(current.event?.id) !== String(event.id)) {
-          return current;
-        }
-
-        return {
-          ...current,
-          attendees: normalizedAttendees,
-        };
-      });
-    } catch (error) {
-      console.error('Failed to load attendees:', error);
-
-      setAttendeesError(
-        error?.response?.data?.message ||
-          error?.message ||
-          'โหลดรายชื่อผู้ลงทะเบียนไม่สำเร็จ กรุณาตรวจสอบ Backend'
-      );
-    } finally {
-      setAttendeesLoading(false);
+  const closeDrawer = () => {
+    if (!saving) {
+      setDrawer((current) => ({
+        ...current,
+        open: false,
+      }));
     }
   };
 
   const closeAttendees = () => {
+    attendeesRequestId.current += 1;
+
     setAttendeesDrawer((current) => ({
       ...current,
       open: false,
+      loading: false,
     }));
-
-    setAttendeesError('');
   };
 
-  // ลบอีเวนต์ผ่าน Backend
-  const handleDelete = async (id) => {
-    if (!window.confirm('ยืนยันการลบอีเวนต์นี้หรือไม่?')) {
-      return;
+  const openAttendees = async (event) => {
+    const requestId = ++attendeesRequestId.current;
+
+    setAttendeesDrawer({
+      open: true,
+      event,
+      attendees: [],
+      loading: true,
+      error: '',
+    });
+
+    try {
+      const response = await eventService.getEventAttendees(event.id);
+      const attendees = getResponseItems(response);
+
+      if (requestId !== attendeesRequestId.current) return;
+
+      setAttendeesDrawer((current) => ({
+        ...current,
+        attendees,
+        loading: false,
+        error: '',
+      }));
+    } catch (error) {
+      if (requestId !== attendeesRequestId.current) return;
+
+      setAttendeesDrawer((current) => ({
+        ...current,
+        loading: false,
+        error:
+          error?.message || 'ไม่สามารถโหลดรายชื่อผู้เข้าร่วมได้',
+      }));
     }
+  };
+
+  const handleDelete = async (id) => {
+    if (saving) return;
+
+    const confirmed = window.confirm(
+      'ยืนยันการลบกิจกรรมนี้หรือไม่?'
+    );
+
+    if (!confirmed) return;
 
     try {
       await eventService.deleteEvent(id);
@@ -263,262 +364,163 @@ export default function ManageEventsPage() {
         )
       );
 
-      window.alert('ลบอีเวนต์เรียบร้อยแล้ว');
+      window.alert('ลบกิจกรรมเรียบร้อยแล้ว');
     } catch (error) {
-      console.error('Failed to delete event:', error);
-
       window.alert(
-        error?.response?.data?.message ||
-          'ลบอีเวนต์ไม่สำเร็จ กรุณาลองอีกครั้ง'
+        `ลบกิจกรรมไม่สำเร็จ: ${
+          error?.message || 'เกิดข้อผิดพลาด'
+        }`
       );
     }
   };
 
-  // สร้างหรือแก้ไขอีเวนต์ผ่าน Backend
   const handleSubmit = async (form, isEdit) => {
-    const max = Number(form.max);
-    const eventId = form.id ?? drawer.event?.id;
+    if (saving) return;
 
-    const requiredFields = [
-      ['name', 'ชื่ออีเวนต์'],
-      ['desc', 'รายละเอียดอีเวนต์'],
-      ['place', 'สถานที่'],
-      ['date', 'วันและเวลา'],
-    ];
+    const name = String(form.name || '').trim();
+    const place = String(form.place || '').trim();
+    const description = String(form.desc || '').trim();
+    const capacity = Number(form.max);
+    const startsAt = String(form.date || '').trim();
 
-    const missing = requiredFields.find(
-      ([key]) => !String(form[key] ?? '').trim()
-    );
-
-    if (missing) {
-      window.alert(`กรุณากรอก${missing[1]}`);
-      return;
-    }
-
-    if (!Number.isInteger(max) || max <= 0) {
-      window.alert('จำนวนผู้เข้าร่วมสูงสุดต้องเป็นจำนวนเต็มบวก');
-      return;
-    }
-
-    if (!Number.isFinite(new Date(form.date).getTime())) {
-      window.alert('วันและเวลาไม่ถูกต้อง');
-      return;
-    }
-
-    if (isEdit && eventId == null) {
-      window.alert('ไม่พบ ID ของอีเวนต์ที่ต้องการแก้ไข');
-      return;
-    }
-
-
-const currentEvent = isEdit
-  ? (
-      String(drawer.event?.id) === String(eventId)
-        ? drawer.event
-        : events.find(
-            (event) => String(event.id) === String(eventId)
-          )
-    )
-  : null;
-
-
-    const existingTickets = Array.isArray(currentEvent?.ticketTypes)
-      ? currentEvent.ticketTypes
-      : [];
-
-    // ใช้ Ticket Types ที่ผู้ใช้กรอกในฟอร์มเป็นข้อมูลหลัก
-    // และอ้างอิง Ticket Types เดิมเพื่อเก็บ ID กับจำนวนที่ขายแล้ว
-    const submittedTickets = Array.isArray(form.ticketTypes)
-      ? form.ticketTypes
-      : [];
-
-    let ticketTypes;
-
-    if (submittedTickets.length > 0) {
-      ticketTypes = submittedTickets.map((ticket) => {
-        const existingTicket = existingTickets.find(
-          (item) =>
-            ticket.id != null &&
-            String(item.id) === String(ticket.id)
-        );
-
-        return {
-          ...(ticket.id != null ? { id: ticket.id } : {}),
-          name: String(ticket.name ?? '').trim(),
-          description: String(ticket.description ?? ''),
-          price: Number(ticket.price ?? 0),
-          capacity: Number(ticket.capacity ?? 0),
-          sold: Math.max(
-            0,
-            Number(existingTicket?.sold ?? ticket.sold ?? 0)
-          ),
-        };
-      });
-    } else if (existingTickets.length > 0) {
-      // รองรับกรณีฟอร์มรุ่นเก่าที่ยังไม่ได้ส่ง ticketTypes
-      ticketTypes = existingTickets.map((ticket) => ({
-        ...(ticket.id != null ? { id: ticket.id } : {}),
-        name: ticket.name,
-        description: ticket.description ?? '',
-        price: Number(ticket.price ?? 0),
-        capacity: Number(ticket.capacity ?? 0),
-        sold: Number(ticket.sold ?? 0),
-      }));
-    } else {
-      ticketTypes = [
-        {
-          name: 'General Admission',
-          description: '',
-          price: 0,
-          capacity: max,
-          sold: 0,
-        },
-      ];
-    }
-
-    // ตรวจสอบข้อมูล Ticket Types ก่อนส่ง Backend
-    if (ticketTypes.length === 0) {
-      window.alert('กรุณาเพิ่ม Ticket Type อย่างน้อย 1 รายการ');
-      return;
-    }
-
-    const invalidTicket = ticketTypes.find(
-      (ticket) =>
-        !ticket.name ||
-        !Number.isFinite(ticket.price) ||
-        ticket.price < 0 ||
-        !Number.isInteger(ticket.capacity) ||
-        ticket.capacity < 1 ||
-        ticket.capacity < ticket.sold
-    );
-
-    if (invalidTicket) {
+    if (!name || !place || !startsAt) {
       window.alert(
-        'กรุณาตรวจสอบชื่อ ราคา และจำนวนที่นั่งของ Ticket Types โดยจำนวนที่นั่งต้องไม่น้อยกว่าจำนวนตั๋วที่ขายแล้ว'
+        'กรุณากรอกชื่อกิจกรรม สถานที่ และวันเวลา'
       );
       return;
     }
 
-    // ความจุรวมของ Ticket Types ต้องเท่ากับความจุ Event
-    const currentTicketCapacity = ticketTypes.reduce(
+    if (!Number.isInteger(capacity) || capacity <= 0) {
+      window.alert(
+        'ความจุของกิจกรรมต้องเป็นจำนวนเต็มที่มากกว่า 0'
+      );
+      return;
+    }
+
+    if (Number.isNaN(new Date(startsAt).getTime())) {
+      window.alert('วันเวลาไม่ถูกต้อง');
+      return;
+    }
+
+    const originalEvent = isEdit ? drawer.event : null;
+
+    if (isEdit && !originalEvent) {
+      window.alert(
+        'ไม่พบกิจกรรมที่ต้องการแก้ไข กรุณาปิดแล้วลองใหม่'
+      );
+      return;
+    }
+
+    const registeredCount = Number(originalEvent?.seats || 0);
+
+    if (isEdit && capacity < registeredCount) {
+      window.alert(
+        'ความจุใหม่ต้องไม่น้อยกว่าจำนวนผู้ลงทะเบียนปัจจุบัน'
+      );
+      return;
+    }
+
+    // ตรวจสอบประเภทตั๋วจากข้อมูลฟอร์ม
+    const result = prepareTicketTypes(
+      form.ticketTypes,
+      originalEvent
+    );
+
+    if (result.error) {
+      window.alert(result.error);
+      return;
+    }
+
+    const ticketTypes = result.ticketTypes;
+
+    const ticketCapacityTotal = ticketTypes.reduce(
       (sum, ticket) => sum + ticket.capacity,
       0
     );
 
-    let seatsToAdjust = max - currentTicketCapacity;
-
-    if (seatsToAdjust > 0) {
-      // หากความจุ Ticket Types รวมกันน้อยกว่า Event
-      // เพิ่มส่วนต่างให้ Ticket Type รายการแรก
-      ticketTypes[0].capacity += seatsToAdjust;
-    } else if (seatsToAdjust < 0) {
-      // หากความจุรวมมากเกินไป ให้ลดจากรายการท้ายก่อน
-      // โดยห้ามลดต่ำกว่าจำนวนที่ขายไปแล้ว
-      seatsToAdjust = Math.abs(seatsToAdjust);
-
-      for (const ticket of [...ticketTypes].reverse()) {
-        const sold = Math.max(0, Number(ticket.sold ?? 0));
-        const removable = Math.max(0, ticket.capacity - sold);
-        const reduction = Math.min(removable, seatsToAdjust);
-
-        ticket.capacity -= reduction;
-        seatsToAdjust -= reduction;
-
-        if (seatsToAdjust === 0) {
-          break;
-        }
-      }
-
-      if (seatsToAdjust > 0) {
-        window.alert(
-          'ไม่สามารถลดความจุ Event ได้ เพราะจำนวนที่นั่งที่เหลือไม่เพียงพอ'
-        );
-        return;
-      }
+    if (ticketCapacityTotal !== capacity) {
+      window.alert(
+        `ผลรวมความจุของประเภทตั๋ว (${ticketCapacityTotal}) ต้องเท่ากับความจุรวมของกิจกรรม (${capacity}) กรุณาปรับจำนวนตั๋วแต่ละประเภทก่อนบันทึก`
+      );
+      return;
     }
 
-    // ไม่ส่ง sold ไป เพราะ Backend คำนวณจำนวนขายจากข้อมูลการลงทะเบียน
-    const ticketTypesForRequest = ticketTypes.map(
-      ({ sold, ...ticket }) => ticket
-    );
-
-    const category = CATEGORY_API[form.category] ?? 'TECH';
-
-    // ใช้ URL เดิมถ้าไม่ได้เลือกรูปใหม่
-    let submittedImageUrl =
-      form.coverUrl && !form.coverUrl.startsWith('blob:')
-        ? form.coverUrl
-        : currentEvent?.coverUrl || '';
-
-    const payload = {
-      title: form.name.trim(),
-      description: form.desc.trim(),
-      location: form.place.trim(),
-      startsAt: form.date,
-      capacity: max,
-      category,
-      imageUrl: submittedImageUrl,
-      detailImages: currentEvent?.detailImages ?? [],
-      ticketTypes: ticketTypesForRequest,
-    };
+    setSaving(true);
 
     try {
-      // อัปโหลดไฟล์รูปใหม่ก่อนบันทึกอีเวนต์
+      let imageUrl = originalEvent?.coverUrl || '';
+
       if (form.coverFile) {
-        const uploadResponse = await eventService.uploadEventImage(
+        const uploadData = await eventService.uploadEventImage(
           form.coverFile
         );
 
-        const uploadData = uploadResponse?.data ?? uploadResponse;
+        const uploadedUrl =
+          typeof uploadData === 'string'
+            ? uploadData
+            : uploadData?.url ||
+              uploadData?.imageUrl ||
+              uploadData?.data?.url ||
+              uploadData?.data?.imageUrl;
 
-        if (!uploadData?.url) {
-          throw new Error('Backend ไม่ได้ส่ง URL รูปภาพกลับมา');
+        if (
+          !uploadedUrl ||
+          typeof uploadedUrl !== 'string'
+        ) {
+          throw new Error(
+            'อัปโหลดรูปแล้ว แต่ไม่พบ URL ในผลลัพธ์จาก Backend'
+          );
         }
 
-        submittedImageUrl = uploadData.url;
-        payload.imageUrl = submittedImageUrl;
+        imageUrl = uploadedUrl;
+      } else if (
+        form.coverUrl &&
+        !form.coverUrl.startsWith('blob:')
+      ) {
+        imageUrl = form.coverUrl;
       }
 
-      // บันทึกอีเวนต์โดยใช้ URL รูปที่อัปโหลดแล้ว
-      const response = isEdit
-        ? await eventService.updateEvent(eventId, payload)
-        : await eventService.createEvent(payload);
+      const payload = {
+        title: name,
+        description,
+        location: place,
+        startsAt,
+        capacity,
+        category: toApiCategory(form.category),
+        imageUrl,
+        detailImages: originalEvent?.detailImages || [],
+        ticketTypes,
+      };
 
-      const savedEvent = response?.data ?? response;
-
-      if (savedEvent?.id == null) {
-        throw new Error('Backend ไม่ได้ส่งข้อมูลอีเวนต์กลับมา');
+      if (isEdit) {
+        await eventService.updateEvent(
+          originalEvent.id,
+          payload
+        );
+      } else {
+        await eventService.createEvent(payload);
       }
 
-      const mappedEvent = mapApiEvent(savedEvent);
-
-      setEvents((previous) =>
-        isEdit
-          ? previous.map((event) =>
-              String(event.id) === String(savedEvent.id)
-                ? mappedEvent
-                : event
-            )
-          : [mappedEvent, ...previous]
-      );
+      setDrawer((current) => ({
+        ...current,
+        open: false,
+      }));
 
       window.alert(
         isEdit
-          ? 'บันทึกการแก้ไขเรียบร้อยแล้ว'
-          : 'สร้างอีเวนต์เรียบร้อยแล้ว'
+          ? 'บันทึกการแก้ไขกิจกรรมเรียบร้อยแล้ว'
+          : 'สร้างกิจกรรมเรียบร้อยแล้ว'
       );
 
-      closeDrawer();
+      await loadEvents();
     } catch (error) {
-      console.error('Failed to save event:', error);
-
       window.alert(
-        `บันทึกอีเวนต์ไม่สำเร็จ: ${
-          error?.response?.data?.message ||
-          error?.message ||
-          'กรุณาตรวจสอบ Backend'
+        `${isEdit ? 'บันทึกการแก้ไข' : 'สร้างกิจกรรม'}ไม่สำเร็จ: ${
+          error?.message || 'เกิดข้อผิดพลาด'
         }`
       );
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -533,6 +535,7 @@ const currentEvent = isEdit
             height="12"
             viewBox="0 0 100 100"
             fill="currentColor"
+            aria-hidden="true"
           >
             <circle cx="30" cy="20" r="9" />
             <circle cx="60" cy="20" r="9" />
@@ -545,7 +548,7 @@ const currentEvent = isEdit
           <div>
             <h1>จัดการอีเวนต์</h1>
             <p className="subtitle">
-              สร้างอีเวนต์ ตรวจสอบจำนวนที่นั่ง และดูรายชื่อผู้เข้าร่วม
+              สร้างกิจกรรม ตรวจสอบจำนวนที่นั่ง และดูรายชื่อผู้เข้าร่วม
             </p>
           </div>
 
@@ -553,12 +556,14 @@ const currentEvent = isEdit
             type="button"
             className="btn-primary"
             onClick={openCreateDrawer}
+            disabled={saving}
           >
             <svg
               width="16"
               height="16"
               viewBox="0 0 24 24"
               fill="none"
+              aria-hidden="true"
             >
               <path
                 d="M12 5v14M5 12h14"
@@ -593,140 +598,192 @@ const currentEvent = isEdit
           </div>
         </section>
 
-        <section className="table-card">
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>อีเวนต์</th>
-                  <th>วันเวลาและสถานที่</th>
-                  <th>จำนวนที่นั่ง</th>
-                  <th>สถานะ</th>
-                  <th className="align-right">จัดการ</th>
-                </tr>
-              </thead>
+        {loading && (
+          <p role="status">กำลังโหลดรายการกิจกรรม...</p>
+        )}
 
-              <tbody>
-                {events.map((event) => {
-                  const fillPct =
-                    event.max > 0
-                      ? Math.min(
-                          100,
-                          Math.round((event.seats / event.max) * 100)
-                        )
-                      : 0;
+        {!loading && pageError && (
+          <section role="alert">
+            <p>{pageError}</p>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={loadEvents}
+            >
+              ลองโหลดใหม่
+            </button>
+          </section>
+        )}
 
-                  const isOpen = event.seats < event.max;
+        {!loading && !pageError && events.length === 0 && (
+          <p>ยังไม่มีกิจกรรม</p>
+        )}
 
-                  return (
-                    <tr key={event.id}>
-                      <td>
-                        <div className="ev-cell">
-                          <div className={`ev-thumb ${event.thumbClass}`}>
-                            🐾
-                          </div>
-                          <div>
-                            <div className="ev-title">{event.name}</div>
-                            <div className="ev-cat">{event.category}</div>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td>
-                        <div className="dt-main">
-                          {event.dateLabel ||
-                            (event.date &&
-                              new Date(event.date).toLocaleDateString(
-                                'th-TH'
-                              ))}
-                        </div>
-                        <div className="dt-sub">{event.place}</div>
-                      </td>
-
-                      <td>
-                        <div className="seats-num">
-                          {event.seats} / {event.max}
-                        </div>
-                        <div className="seats-bar">
-                          <div
-                            className="seats-fill"
-                            style={{ '--fill': `${fillPct}%` }}
-                          />
-                        </div>
-                      </td>
-
-                      <td>
-                        <span className="status">
-                          <span className="dot" />
-                          {isOpen ? 'เปิดรับลงทะเบียน' : 'เต็มแล้ว'}
-                        </span>
-                      </td>
-
-                      <td>
-                        <div className="actions">
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            title="ดูรายชื่อผู้ลงทะเบียน"
-                            onClick={() => openAttendees(event)}
-                          >
-                            👁
-                          </button>
-
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            title="แก้ไข"
-                            onClick={() => openEditDrawer(event)}
-                          >
-                            ✏️
-                          </button>
-
-                          <button
-                            type="button"
-                            className="icon-btn danger"
-                            title="ลบ"
-                            onClick={() => handleDelete(event.id)}
-                          >
-                            🗑
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-
-                {events.length === 0 && (
+        {!loading && !pageError && events.length > 0 && (
+          <section className="table-card">
+            <div className="table-scroll">
+              <table>
+                <thead>
                   <tr>
-                    <td colSpan={5}>
-                      <div style={{ padding: '24px', textAlign: 'center' }}>
-                        ยังไม่มีอีเวนต์
-                      </div>
-                    </td>
+                    <th>อีเวนต์</th>
+                    <th>วันเวลาและสถานที่</th>
+                    <th>จำนวนที่นั่ง</th>
+                    <th>สถานะ</th>
+                    <th className="align-right">จัดการ</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                </thead>
+
+                <tbody>
+                  {events.map((event) => {
+                    const capacity = Number(event.max || 0);
+                    const registered = Number(event.seats || 0);
+
+                    const fillPct =
+                      capacity > 0
+                        ? Math.min(
+                            100,
+                            Math.round(
+                              (registered / capacity) * 100
+                            )
+                          )
+                        : 0;
+
+                    const isOpen =
+                      event.status === 'OPEN' ||
+                      (!event.status && registered < capacity);
+
+                    return (
+                      <tr key={event.id}>
+                        <td>
+                          <div className="ev-cell">
+                            <div
+                              className={`ev-thumb ${
+                                event.thumbClass || 'access'
+                              }`}
+                            >
+                              {event.coverUrl ? (
+                                <img
+                                  src={event.coverUrl}
+                                  alt=""
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                  }}
+                                />
+                              ) : (
+                                '🎟️'
+                              )}
+                            </div>
+
+                            <div>
+                              <div className="ev-title">
+                                {event.name}
+                              </div>
+                              <div className="ev-cat">
+                                {event.category}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td>
+                          <div className="dt-main">
+                            {event.dateLabel}
+                          </div>
+                          <div className="dt-sub">
+                            {event.place}
+                          </div>
+                        </td>
+
+                        <td>
+                          <div className="seats-num">
+                            {registered} / {capacity}
+                          </div>
+                          <div className="seats-bar">
+                            <div
+                              className="seats-fill"
+                              style={{
+                                '--fill': `${fillPct}%`,
+                              }}
+                            />
+                          </div>
+                        </td>
+
+                        <td>
+                          <span className="status">
+                            <span className="dot" />
+                            {event.status === 'ENDED'
+                              ? 'สิ้นสุดแล้ว'
+                              : event.status === 'FULL'
+                                ? 'เต็มแล้ว'
+                                : isOpen
+                                  ? 'เปิดรับลงทะเบียน'
+                                  : 'เต็มแล้ว'}
+                          </span>
+                        </td>
+
+                        <td>
+                          <div className="actions">
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              title="ดูรายชื่อผู้เข้าร่วม"
+                              onClick={() => openAttendees(event)}
+                            >
+                              👥
+                            </button>
+
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              title="แก้ไข"
+                              onClick={() => openEditDrawer(event)}
+                              disabled={saving}
+                            >
+                              ✏️
+                            </button>
+
+                            <button
+                              type="button"
+                              className="icon-btn danger"
+                              title="ลบ"
+                              onClick={() => handleDelete(event.id)}
+                              disabled={saving}
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
       </main>
 
       <EventDrawer
         open={drawer.open}
         mode={drawer.mode}
         initialEvent={
-          drawer.event && {
-            id: drawer.event.id,
-            name: drawer.event.name,
-            desc: drawer.event.desc,
-            place: drawer.event.place,
-            category: drawer.event.category,
-            date: drawer.event.date,
-            max: drawer.event.max,
-            coverIndex: drawer.event.coverIndex,
-            coverUrl: drawer.event.coverUrl,
-            ticketTypes: drawer.event.ticketTypes ?? [],
-          }
+          drawer.event
+            ? {
+                id: drawer.event.id,
+                name: drawer.event.name,
+                desc: drawer.event.desc,
+                place: drawer.event.place,
+                category: drawer.event.category,
+                date: drawer.event.date,
+                max: drawer.event.max,
+                coverIndex: drawer.event.coverIndex,
+                coverUrl: drawer.event.coverUrl,
+                ticketTypes: drawer.event.ticketTypes || [],
+                detailImages: drawer.event.detailImages || [],
+              }
+            : null
         }
         onClose={closeDrawer}
         onSubmit={handleSubmit}
@@ -740,9 +797,9 @@ const currentEvent = isEdit
             ? `${attendeesDrawer.event.seats} / ${attendeesDrawer.event.max}`
             : ''
         }
-        attendees={attendeesDrawer.attendees || []}
-        loading={attendeesLoading}
-        error={attendeesError}
+        attendees={attendeesDrawer.attendees}
+        loading={attendeesDrawer.loading}
+        error={attendeesDrawer.error}
         onClose={closeAttendees}
       />
     </>
