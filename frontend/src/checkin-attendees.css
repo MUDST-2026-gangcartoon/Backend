@@ -111,15 +111,21 @@ label.field-label{
   justify-content:center;
   overflow:hidden;
 }
-.scan-frame{
-  width:200px;
-  height:200px;
-  border-radius:24px;
-  border:2.5px dashed rgba(255,255,255,0.35);
-  position:relative;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+.scan-frame {
+  width: 220px;
+  height: 220px;
+  box-sizing: border-box;
+  border-radius: 24px;
+  border: 2.5px dashed rgba(255, 255, 255, 0.65);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 .scan-corner{
   position:absolute;
@@ -252,4 +258,156 @@ label.field-label{
   .cc-form{padding:22px;}
 
   .stats-row{grid-template-columns:1fr;}
+}
+
+/* จัดพื้นที่กล้องและกรอบสแกนให้อยู่ตำแหน่งเดียวกัน */
+.cc-scan {
+  flex-direction: column;
+  gap: 14px;
+}
+
+.scanner-viewport {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  min-height: 220px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 1 340px;
+  box-sizing: border-box;
+}
+
+.scanner-viewport #staff-qr-reader {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+.scanner-viewport .scan-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Eventfest check-in result popup */
+.checkin-toast {
+  position: fixed;
+  top: 88px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: min(400px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 16px;
+  background: #ffffff;
+  color: #24324a;
+  border: 1px solid #e5eaf0;
+  border-left: 5px solid #31c48d;
+  border-radius: 16px;
+  box-shadow: 0 12px 36px rgba(25, 48, 80, 0.2);
+  animation: checkin-toast-in 0.25s ease-out;
+}
+
+.checkin-toast--success {
+  border-left-color: #31c48d;
+}
+
+.checkin-toast--warning {
+  border-left-color: #f2a93b;
+}
+
+.checkin-toast--error {
+  border-left-color: #e05260;
+}
+
+.checkin-toast__icon {
+  display: flex;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #e7faf2;
+  color: #16845c;
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.checkin-toast--warning .checkin-toast__icon {
+  background: #fff4dc;
+  color: #9a6200;
+}
+
+.checkin-toast--error .checkin-toast__icon {
+  background: #fff0f1;
+  color: #c93646;
+}
+
+.checkin-toast__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.checkin-toast__content strong {
+  display: block;
+  margin: 2px 0 5px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.checkin-toast__content p {
+  margin: 0;
+  color: #5e6b7d;
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.checkin-toast__close {
+  flex: 0 0 auto;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: #8a96a6;
+  font-size: 23px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.checkin-toast__close:hover {
+  color: #24324a;
+}
+
+@keyframes checkin-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .checkin-toast {
+    top: 76px;
+    right: 12px;
+    width: calc(100vw - 24px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkin-toast {
+    animation: none;
+  }
 }

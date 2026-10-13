@@ -100,6 +100,7 @@ export default function CheckinAttendeesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [scannerActive, setScannerActive] = useState(false);
   const [scannerError, setScannerError] = useState('');
+  const [toast, setToast] = useState(null);
 
   const scannerRef = useRef(null);
   const scannerStartingRef = useRef(false);
@@ -160,6 +161,16 @@ export default function CheckinAttendeesPage() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+  if (!toast) return undefined;
+
+  const timeoutId = window.setTimeout(() => {
+    setToast(null);
+  }, 4500);
+
+  return () => window.clearTimeout(timeoutId);
+}, [toast]);
+
   const stopScanner = useCallback(async () => {
     const scanner = scannerRef.current;
 
@@ -193,6 +204,11 @@ export default function CheckinAttendeesPage() {
     if (!ticketCode) {
       setError('กรุณากรอกรหัสตั๋ว');
       setMessage('');
+      setToast({
+        type: 'error',
+        title: 'ยังไม่ได้กรอกรหัสตั๋ว',
+        text: 'กรอกรหัสตั๋วหรือสแกน QR Code ก่อนเช็กอิน',
+      });
       return;
     }
 
@@ -201,11 +217,7 @@ export default function CheckinAttendeesPage() {
     setMessage('');
 
     try {
-      const response = await staffService.checkIn(
-        eventId,
-        ticketCode
-      );
-
+      const response = await staffService.checkIn(eventId, ticketCode);
       const result = unwrapResponse(response);
 
       if (!result || result.checkedIn !== true) {
@@ -214,23 +226,41 @@ export default function CheckinAttendeesPage() {
         );
       }
 
-      setMessage(
-        `ตั๋วนี้เช็กอินแล้ว: ${
-          result.attendeeName || 'ผู้เข้าร่วม'
-        }`
-      );
+      const attendeeName = result.attendeeName || 'ผู้เข้าร่วม';
+
+      setMessage(`ตั๋วนี้เช็กอินแล้ว: ${attendeeName}`);
+      setToast({
+        type: 'success',
+        title: 'เช็กอินสำเร็จ',
+        text: `ตั๋วของ ${attendeeName} เช็กอินเรียบร้อยแล้ว`,
+      });
 
       setCode('');
       await loadData(false);
     } catch (err) {
-      setError(
-        err.message ||
-          'เช็กอินไม่สำเร็จ กรุณาตรวจสอบรหัสตั๋ว'
-      );
+      const errorMessage =
+        err.message || 'เช็กอินไม่สำเร็จ กรุณาตรวจสอบรหัสตั๋ว';
+
+      const alreadyCheckedIn =
+        /already.*check.?in|check.?in.*already|already used|ticket.*used|เช็กอินแล้ว|เช็คอินแล้ว|ถูกใช้แล้ว|ใช้ไปแล้ว/i.test(
+          errorMessage
+        );
+
+      setError(errorMessage);
+      setToast({
+        type: alreadyCheckedIn ? 'warning' : 'error',
+        title: alreadyCheckedIn
+          ? 'ตั๋วนี้เช็กอินไปแล้ว'
+          : 'เช็กอินไม่สำเร็จ',
+        text: alreadyCheckedIn
+          ? 'ตั๋วนี้ถูกใช้งานแล้ว ไม่ต้องเช็กอินซ้ำ'
+          : errorMessage,
+      });
     } finally {
       setSubmitting(false);
     }
   }, [code, eventId, loadData]);
+
 
   const startScanner = useCallback(async () => {
     if (scannerStartingRef.current || scannerRef.current) return;
@@ -384,9 +414,40 @@ export default function CheckinAttendeesPage() {
     );
   }
 
+
   return (
     <>
       <StaffNavbar />
+
+      {toast && (
+        <div
+          className={`checkin-toast checkin-toast--${toast.type}`}
+          role={toast.type === 'success' ? 'status' : 'alert'}
+          aria-live="polite"
+        >
+          <div className="checkin-toast__icon" aria-hidden="true">
+            {toast.type === 'success'
+              ? '✓'
+              : toast.type === 'warning'
+                ? '!'
+                : '×'}
+          </div>
+
+          <div className="checkin-toast__content">
+            <strong>{toast.title}</strong>
+            <p>{toast.text}</p>
+          </div>
+
+          <button
+            type="button"
+            className="checkin-toast__close"
+            aria-label="ปิดข้อความ"
+            onClick={() => setToast(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <main className="page">
         <div className="crumbs">
@@ -545,42 +606,47 @@ export default function CheckinAttendeesPage() {
               <ellipse cx="45" cy="55" rx="28" ry="26" />
             </svg>
 
-            {!scannerActive && (
-              <div className="scan-frame">
+            <div className="scanner-viewport">
+              <div className={`scan-frame ${scannerActive ? 'is-active' : ''}`}>
                 <span className="scan-corner tl" />
                 <span className="scan-corner tr" />
                 <span className="scan-corner bl" />
                 <span className="scan-corner br" />
                 <span className="scan-line" />
 
-                <svg
-                  className="scan-icon"
-                  width="52"
-                  height="52"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="#FFF3D1" strokeWidth="2" />
-                  <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="#FFF3D1" strokeWidth="2" />
-                  <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="#FFF3D1" strokeWidth="2" />
-                  <path
-                    d="M14 14h3v3h-3zM19 14h2v2h-2zM14 19h2v2h-2zM19 19h2v2h-2z"
-                    fill="#FFF3D1"
-                  />
-                </svg>
+                {!scannerActive && (
+                  <svg
+                    className="scan-icon"
+                    width="52"
+                    height="52"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <rect x="3" y="3" width="7" height="7" rx="1.5"
+                      stroke="#FFF3D1" strokeWidth="2" />
+                    <rect x="14" y="3" width="7" height="7" rx="1.5"
+                      stroke="#FFF3D1" strokeWidth="2" />
+                    <rect x="3" y="14" width="7" height="7" rx="1.5"
+                      stroke="#FFF3D1" strokeWidth="2" />
+                    <path
+                      d="M14 14h3v3h-3zM19 14h2v2h-2zM14 19h2v2h-2zM19 19h2v2h-2z"
+                      fill="#FFF3D1"
+                    />
+                  </svg>
+                )}
               </div>
-            )}
 
-            <div
-              id="staff-qr-reader"
-              style={{
-                display: scannerActive ? 'block' : 'none',
-                width: '100%',
-                maxWidth: 340,
-                minHeight: scannerActive ? 220 : 0,
-                margin: '0 auto',
-              }}
-            />
+              <div
+                id="staff-qr-reader"
+                style={{
+                  display: scannerActive ? 'block' : 'none',
+                  width: '100%',
+                  maxWidth: 340,
+                  minHeight: scannerActive ? 220 : 0,
+                  margin: '0 auto',
+                }}
+              />
+            </div>
 
             {!scannerActive ? (
               <button
@@ -606,13 +672,8 @@ export default function CheckinAttendeesPage() {
                 {scannerError}
               </p>
             )}
-
-            <p className="cc-scan-caption">
-              {scannerActive
-                ? 'วาง QR Code ให้อยู่ในกรอบกล้อง'
-                : 'กดเปิดกล้องเพื่อสแกน QR Code'}
-            </p>
           </div>
+
         </section>
 
         <section className="stats-row">
