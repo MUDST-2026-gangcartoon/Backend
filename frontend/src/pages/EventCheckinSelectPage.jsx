@@ -66,7 +66,7 @@ export default function EventCheckinSelectPage() {
 
         const response = await eventService.getAllEvents({
           page: 0,
-          size: 100,
+          size: 20,
         });
 
         const items = Array.isArray(response)
