@@ -9,11 +9,6 @@ const CATEGORY_CLASS = {
   DESIGN: 'design',
   CAREER: 'access',
   COMMUNITY: 'product',
-  Design: 'design',
-  Engineering: 'eng',
-  สัตว์เลี้ยง: 'product',
-  ไลฟ์สไตล์: 'product',
-  เวิร์กช็อป: 'eng',
 };
 
 const CATEGORY_API = {
@@ -21,11 +16,29 @@ const CATEGORY_API = {
   DESIGN: 'DESIGN',
   CAREER: 'CAREER',
   COMMUNITY: 'COMMUNITY',
-  Design: 'DESIGN',
-  Engineering: 'TECH',
-  สัตว์เลี้ยง: 'COMMUNITY',
-  ไลฟ์สไตล์: 'COMMUNITY',
-  เวิร์กช็อป: 'TECH',
+};
+
+const CATEGORY_LABEL = {
+  TECH: 'เทคโนโลยี',
+  DESIGN: 'ออกแบบ',
+  CAREER: 'อาชีพ',
+  COMMUNITY: 'ชุมชน',
+};
+
+const normalizeCategory = (category) => {
+  const value = String(category ?? '').trim().toUpperCase();
+
+  if (['TECH', 'ENGINEERING', 'เวิร์กช็อป'].includes(value)) {
+    return 'TECH';
+  }
+  if (value === 'DESIGN') return 'DESIGN';
+  if (value === 'CAREER') return 'CAREER';
+
+  if (['COMMUNITY', 'สัตว์เลี้ยง', 'ไลฟ์สไตล์'].includes(value)) {
+    return 'COMMUNITY';
+  }
+
+  return 'TECH';
 };
 
 const mapApiEvent = (event) => ({
@@ -33,8 +46,8 @@ const mapApiEvent = (event) => ({
   name: event.title,
   desc: event.description ?? '',
   place: event.location ?? '',
-  category: event.category ?? 'TECH',
-  thumbClass: CATEGORY_CLASS[event.category] ?? 'eng',
+  category: normalizeCategory(event.category),
+  thumbClass: CATEGORY_CLASS[normalizeCategory(event.category)],
   date: event.startsAt ?? '',
   dateLabel: event.startsAt
     ? new Date(event.startsAt).toLocaleDateString('th-TH')
@@ -77,7 +90,7 @@ export default function ManageEventsPage() {
       try {
         const response = await eventService.getAllEvents({
           page: 0,
-          size: 100,
+          size: 20,
         });
 
         const data = response?.data ?? response;
@@ -442,7 +455,7 @@ const currentEvent = isEdit
       ({ sold, ...ticket }) => ticket
     );
 
-    const category = CATEGORY_API[form.category] ?? 'TECH';
+    const category = form.category;
 
     // ใช้ URL เดิมถ้าไม่ได้เลือกรูปใหม่
     let submittedImageUrl =
@@ -627,7 +640,9 @@ const currentEvent = isEdit
                           </div>
                           <div>
                             <div className="ev-title">{event.name}</div>
-                            <div className="ev-cat">{event.category}</div>
+                            <div className="ev-cat">
+                              {CATEGORY_LABEL[normalizeCategory(event.category)]}
+                            </div>
                           </div>
                         </div>
                       </td>

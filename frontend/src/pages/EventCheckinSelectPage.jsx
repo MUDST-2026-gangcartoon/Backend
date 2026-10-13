@@ -66,7 +66,7 @@ export default function EventCheckinSelectPage() {
 
         const response = await eventService.getAllEvents({
           page: 0,
-          size: 100,
+          size: 20,
         });
 
         const items = Array.isArray(response)
@@ -74,14 +74,7 @@ export default function EventCheckinSelectPage() {
           : response?.items ?? [];
 
         if (active) {
-          // Use sample cards only when the real API returns an empty list
-          // and Vite is running in development mode.
-          const isDevelopment = import.meta.env.DEV;
-          setEvents(
-            isDevelopment && items.length === 0
-              ? DEMO_EVENTS
-              : items
-          );
+          setEvents(items);
         }
       } catch (err) {
         if (active) {

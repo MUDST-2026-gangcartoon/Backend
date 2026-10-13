@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from 'react';
 
-const CATEGORY_OPTIONS = ['สัตว์เลี้ยง', 'ไลฟ์สไตล์', 'เวิร์กช็อป', 'Design', 'Engineering'];
+const CATEGORY_OPTIONS = [
+  { value: 'TECH', label: 'เทคโนโลยี' },
+  { value: 'DESIGN', label: 'ออกแบบ' },
+  { value: 'CAREER', label: 'อาชีพ' },
+  { value: 'COMMUNITY', label: 'ชุมชน' },
+];
 
 const emptyForm = {
   id: null,
   name: '',
   desc: '',
   place: '',
-  category: CATEGORY_OPTIONS[0],
+  category: 'TECH',
   date: '',
   max: 30,
   coverIndex: 0,
@@ -30,7 +35,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
         name: initialEvent.name || '',
         desc: initialEvent.desc || '',
         place: initialEvent.place || '',
-        category: initialEvent.category || CATEGORY_OPTIONS[0],
+        category: initialEvent.category || 'TECH',
         date: initialEvent.date || '',
         max: initialEvent.max || 30,
         coverIndex: initialEvent.coverIndex ?? 0,
@@ -252,9 +257,9 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
             <div className="field">
               <label htmlFor="ev-cat">หมวดหมู่</label>
               <select id="ev-cat" value={form.category} onChange={set('category')}>
-                {CATEGORY_OPTIONS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                {CATEGORY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
