@@ -390,4 +390,53 @@ public record EventAnalyticsDto(
         long spotsLeft
 ) {
 }
+// =========================
+// Mock Payment
+// =========================
+
+    public record MockCheckoutRequest(
+
+            @NotNull(message = "Event ID is required")
+            Long eventId,
+
+            @NotNull(message = "Ticket type ID is required")
+            Long ticketTypeId,
+
+            @NotNull(message = "Quantity is required")
+            @Min(value = 1, message = "Quantity must be at least 1")
+            @Max(value = 10, message = "Quantity must not exceed 10")
+            Integer quantity
+    ) {
+    }
+
+    public record MockCheckoutDto(
+            Long paymentId,
+            String status,
+            Long eventId,
+            Long ticketTypeId,
+            int quantity,
+            BigDecimal unitPrice,
+            BigDecimal totalAmount,
+            String currency,
+            String qrPayload,
+            LocalDateTime expiresAt
+    ) {
+    }
+
+    public record MockConfirmDto(
+            Long paymentId,
+            String paymentStatus,
+            RegistrationDto registration
+    ) {
+    }
+
+    public record MockPaymentStatusDto(
+            Long paymentId,
+            String status,
+            BigDecimal totalAmount,
+            String currency,
+            LocalDateTime confirmedAt,
+            Long registrationId
+    ) {
+    }
 }
