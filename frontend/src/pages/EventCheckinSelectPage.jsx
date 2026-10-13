@@ -74,14 +74,7 @@ export default function EventCheckinSelectPage() {
           : response?.items ?? [];
 
         if (active) {
-          // Use sample cards only when the real API returns an empty list
-          // and Vite is running in development mode.
-          const isDevelopment = import.meta.env.DEV;
-          setEvents(
-            isDevelopment && items.length === 0
-              ? DEMO_EVENTS
-              : items
-          );
+          setEvents(items);
         }
       } catch (err) {
         if (active) {
