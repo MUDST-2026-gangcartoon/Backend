@@ -221,7 +221,7 @@ class MockPaymentStatusServiceTests
         stubPayment(order);
 
         // Registration ถูกยกเลิกไปแล้ว
-        when(registrations.findById(700L))
+        lenient().when(registrations.findById(700L))
                 .thenReturn(Optional.empty());
 
         ApiDtos.MockPaymentStatusDto result =
