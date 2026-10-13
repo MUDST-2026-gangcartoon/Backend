@@ -1,12 +1,21 @@
 spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
   h2:
     console:
       enabled: false
 
   jpa:
+    hibernate:
+      ddl-auto: validate
     open-in-view: false
 
 server:
+  forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:NONE}
+
   servlet:
     session:
       cookie:

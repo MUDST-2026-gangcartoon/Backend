@@ -9,3 +9,15 @@ server:
         name: EVENTHUB_SESSION
         http-only: true
         same-site: lax
+# Health endpoints for Infrastructure probes
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
