@@ -266,7 +266,12 @@ export default function CheckinAttendeesPage() {
         { facingMode: 'environment' },
         {
           fps: 10,
-          qrbox: { width: 220, height: 220 },
+          aspectRatio: 4 / 3,
+          // กรอบสแกนปรับตามขนาดภาพกล้อง (70% ของด้านที่สั้นกว่า)
+          qrbox: (w, h) => {
+            const size = Math.floor(Math.min(w, h) * 0.7);
+            return { width: size, height: size };
+          },
         },
         async (decodedText) => {
           if (scannerHandledRef.current) return;
@@ -458,7 +463,7 @@ export default function CheckinAttendeesPage() {
           </p>
         )}
 
-        <section className="checkin-card">
+        <section className={`checkin-card${scannerActive ? ' scanning' : ''}`}>
           <div className="cc-form">
             <span className="eyebrow">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -573,13 +578,8 @@ export default function CheckinAttendeesPage() {
 
             <div
               id="staff-qr-reader"
-              style={{
-                display: scannerActive ? 'block' : 'none',
-                width: '100%',
-                maxWidth: 340,
-                minHeight: scannerActive ? 220 : 0,
-                margin: '0 auto',
-              }}
+              className="qr-reader"
+              style={{ display: scannerActive ? 'block' : 'none' }}
             />
 
             {!scannerActive ? (
