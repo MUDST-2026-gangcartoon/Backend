@@ -130,7 +130,9 @@ export default function MyRegistrationsPage() {
       );
     } catch (error) {
       setCancelError(
-        error?.response?.data?.message ||
+        error?.data?.message ||
+          error?.data?.error ||
+          error?.response?.data?.message ||
           error?.message ||
           'ยกเลิกการลงทะเบียนไม่สำเร็จ กรุณาลองอีกครั้ง'
       );
