@@ -1368,12 +1368,12 @@ class EventServiceTests {
                         f.principal()
                 );
 
+        BigDecimal expectedTotalPrice = new BigDecimal("0.00");
+
         assertEquals(
                 0,
-                new BigDecimal("750.00")
-                        .compareTo(
-                                result.totalPrice()
-                        )
+                expectedTotalPrice.compareTo(result.totalPrice()),
+                "Free registration must have zero total price"
         );
     }
     // ============================================================
@@ -2016,8 +2016,8 @@ class EventServiceTests {
         );
 
         assertEquals(
-                0,
-                BigDecimal.ZERO.compareTo(result.totalPrice())
+                502L,
+                result.get(1).id()
         );
 
         verify(registrationRepository)
