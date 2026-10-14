@@ -10,6 +10,7 @@ import AdminNavbar from '../components/AdminNavbar.jsx';
 import EventDrawer from '../components/EventDrawer.jsx';
 import AttendeesDrawer from '../components/AttendeesDrawer.jsx';
 import { eventService } from '../api/eventService.js';
+import { resolveImageUrl } from '../api/apiClient.js';
 
 const CATEGORY_CLASS = {
   DESIGN: 'design',
@@ -271,8 +272,12 @@ export default function ManageEventsPage() {
     if (saving) return;
 
     try {
+      console.log('Selected event from list:', event);
+
       const response = await eventService.getEventById(event.id);
       const detail = response?.data ?? response;
+
+      console.log('Event detail from Backend:', detail);
 
       if (!detail || !Array.isArray(detail.ticketTypes)) {
         throw new Error('ไม่พบข้อมูลประเภทบัตรของกิจกรรม');
@@ -286,6 +291,12 @@ export default function ManageEventsPage() {
           : [],
         ticketTypes: detail.ticketTypes,
       });
+
+      console.log('Loaded event:', fullEvent);
+      console.log('Event ID:', fullEvent.id);
+      console.log('Event capacity:', fullEvent.max);
+      console.log('Registered count:', fullEvent.seats);
+      console.log('Ticket types:', fullEvent.ticketTypes);
 
       setDrawer({
         open: true,
@@ -388,6 +399,9 @@ export default function ManageEventsPage() {
   const handleSubmit = async (form, isEdit) => {
     if (saving) return;
 
+    console.log('Event capacity:', form.max);
+    console.log('Ticket types:', form.ticketTypes);
+
     const name = String(form.name || '').trim();
     const place = String(form.place || '').trim();
     const description = String(form.desc || '').trim();
@@ -480,6 +494,7 @@ export default function ManageEventsPage() {
           );
         }
 
+        // เก็บ path ที่ Backend ส่งกลับมาในข้อมูลกิจกรรม
         imageUrl = uploadedUrl;
       } else if (
         form.coverUrl &&
@@ -666,7 +681,7 @@ export default function ManageEventsPage() {
                             >
                               {event.coverUrl ? (
                                 <img
-                                  src={event.coverUrl}
+                                  src={resolveImageUrl(event.coverUrl)}
                                   alt=""
                                   style={{
                                     width: '100%',

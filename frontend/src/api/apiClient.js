@@ -1,10 +1,38 @@
+
 const BASE_URL = (
   import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 ).replace(/\/+$/, '');
 
+// ต้นทางของ Backend เช่น http://localhost:8080
+const API_ORIGIN = new URL(
+  BASE_URL,
+  window.location.origin
+).origin;
+
 let csrfToken = null;
 let csrfHeaderName = 'X-CSRF-TOKEN';
 let csrfPromise = null;
+
+// แปลง URL รูปจาก Backend ให้เป็น URL ที่ browser เปิดได้
+export const resolveImageUrl = (url) => {
+  if (typeof url !== 'string' || !url.trim()) {
+    return '';
+  }
+
+  const value = url.trim();
+
+  // URL เต็มและ URL สำหรับ preview ในเครื่อง ใช้ตามเดิม
+  if (/^(https?:\/\/|blob:|data:)/i.test(value)) {
+    return value;
+  }
+
+  // รูปที่เก็บอยู่ใน Backend เช่น /uploads/abc123.png
+  if (value.startsWith('/uploads/')) {
+    return `${API_ORIGIN}${value}`;
+  }
+
+  return value;
+};
 
 const buildUrl = (endpoint) => {
   const path = endpoint.startsWith('/')
@@ -97,6 +125,7 @@ const getCsrfToken = async () => {
 
 const request = async (method, endpoint, data) => {
   const normalizedMethod = method.toUpperCase();
+
   const path = endpoint.startsWith('/')
     ? endpoint
     : `/${endpoint}`;
@@ -109,7 +138,9 @@ const request = async (method, endpoint, data) => {
   ].includes(normalizedMethod);
 
   const refreshCsrfAfterRequest =
-    /^\/auth\/(login|signup|logout)$/.test(path.split('?')[0]);
+    /^\/auth\/(login|signup|logout)$/.test(
+      path.split('?')[0]
+    );
 
   const headers = {
     Accept: 'application/json',
@@ -127,8 +158,8 @@ const request = async (method, endpoint, data) => {
       data instanceof FormData;
 
     if (isFormData) {
-      // ห้ามกำหนด Content-Type เอง
-      // เพื่อให้ fetch ใส่ multipart boundary ให้อัตโนมัติ
+      // อย่ากำหนด Content-Type เอง
+      // fetch จะกำหนด multipart boundary ให้อัตโนมัติ
       options.body = data;
     } else {
       headers['Content-Type'] = 'application/json';
@@ -171,7 +202,9 @@ const apiClient = {
       typeof FormData === 'undefined' ||
       !(formData instanceof FormData)
     ) {
-      throw new TypeError('postForm ต้องรับค่าเป็น FormData');
+      throw new TypeError(
+        'postForm ต้องรับค่าเป็น FormData'
+      );
     }
 
     return request('POST', endpoint, formData);

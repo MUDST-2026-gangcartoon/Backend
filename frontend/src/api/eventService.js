@@ -28,45 +28,47 @@ export const eventService = {
   },
 
   // ดึงกิจกรรมทุกหน้า เช่น ใช้ในหน้า Staff Check-in
-  getAllEventsAcrossPages: async (params = {}) => {
-    const size = params.size ?? 100;
-    let page = params.page ?? 0;
-    const allEvents = [];
+  
+getAllEventsAcrossPages: async (params = {}) => {
+  const size = Math.min(Math.max(params.size ?? 20, 1), 20);
+  let page = params.page ?? 0;
+  const allEvents = [];
 
-    while (true) {
-      const response = await eventService.getAllEvents({
-        ...params,
-        page,
-        size,
-      });
+  while (true) {
+    const response = await eventService.getAllEvents({
+      ...params,
+      page,
+      size,
+    });
 
-      const items = Array.isArray(response)
-        ? response
-        : Array.isArray(response?.items)
-          ? response.items
-          : Array.isArray(response?.content)
-            ? response.content
-            : Array.isArray(response?.data)
-              ? response.data
-              : [];
+    // Backend ส่ง EventPageDto: { items, totalPages, hasNext, ... }
+    const items = Array.isArray(response)
+      ? response
+      : Array.isArray(response?.items)
+        ? response.items
+        : [];
 
-      allEvents.push(...items);
+    allEvents.push(...items);
 
-      if (Array.isArray(response)) break;
+    if (Array.isArray(response)) break;
 
-      if (typeof response?.hasNext === 'boolean') {
-        if (!response.hasNext) break;
-      } else if (Number.isFinite(response?.totalPages)) {
-        if (page + 1 >= response.totalPages) break;
-      } else if (items.length < size) {
-        break;
-      }
-
-      page += 1;
+    if (typeof response?.hasNext === 'boolean') {
+      if (!response.hasNext) break;
+    } else if (Number.isFinite(response?.totalPages)) {
+      if (page + 1 >= response.totalPages) break;
+    } else if (items.length < size) {
+      break;
     }
 
-    return allEvents;
-  },
+    // ป้องกันวนต่อโดยไม่มีข้อมูล
+    if (items.length === 0) break;
+
+    page += 1;
+  }
+
+  return allEvents;
+},
+
 
   // ดึงรายละเอียดกิจกรรม
   getEventById: (eventId) =>

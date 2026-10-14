@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import StaffNavbar from '../components/StaffNavbar.jsx';
 import { eventService } from '../api/eventService.js';
 import '../staff-shell.css';
@@ -52,6 +53,11 @@ const formatDate = (value) => {
 
 export default function EventCheckinSelectPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const searchText = (searchParams.get('search') || '')
+    .trim()
+    .toLocaleLowerCase();
 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +70,6 @@ export default function EventCheckinSelectPage() {
       try {
         setLoading(true);
         setError('');
-
 
         // Load every page from the backend.
         const items = await eventService.getAllEventsAcrossPages({
@@ -107,6 +112,23 @@ export default function EventCheckinSelectPage() {
     events.every((event) =>
       String(event.id).startsWith('demo-')
     );
+
+  // Filter events using the search box in StaffNavbar.
+  const filteredEvents = events.filter((ev) => {
+    const searchableText = [
+      ev.title,
+      ev.name,
+      ev.location,
+      ev.category,
+      ev.description,
+      ev.topic,
+    ]
+      .filter((value) => value != null)
+      .join(' ')
+      .toLocaleLowerCase();
+
+    return searchableText.includes(searchText);
+  });
 
   return (
     <>
@@ -183,86 +205,100 @@ export default function EventCheckinSelectPage() {
               </p>
             )}
 
-            <section className="event-grid">
-              {events.map((ev) => {
-                const category = ev.category || 'COMMUNITY';
-                const isDemo = String(ev.id).startsWith('demo-');
+            {searchText && (
+              <p role="status">
+                พบ {filteredEvents.length} อีเวนต์
+                จากคำค้นหา "{searchParams.get('search')}"
+              </p>
+            )}
 
-                return (
-                  <a
-                    className="event-card"
-                    key={ev.id}
-                    href={
-                      isDemo
-                        ? '#'
-                        : `/staff/checkin/${ev.id}`
-                    }
-                    onClick={(e) => {
-                      e.preventDefault();
+            {filteredEvents.length === 0 ? (
+              <p role="status">
+                ไม่พบอีเวนต์ที่ตรงกับคำค้นหา
+                "{searchParams.get('search')}"
+              </p>
+            ) : (
+              <section className="event-grid">
+                {filteredEvents.map((ev) => {
+                  const category = ev.category || 'COMMUNITY';
+                  const isDemo = String(ev.id).startsWith('demo-');
 
-                      if (isDemo) {
-                        window.alert(
-                          'นี่คืออีเวนต์ตัวอย่างสำหรับดู UI เท่านั้น ยังไม่สามารถเช็กอินจริงได้'
-                        );
-                        return;
+                  return (
+                    <a
+                      className="event-card"
+                      key={ev.id}
+                      href={
+                        isDemo
+                          ? '#'
+                          : `/staff/checkin/${ev.id}`
                       }
+                      onClick={(e) => {
+                        e.preventDefault();
 
-                      navigate(`/staff/checkin/${ev.id}`);
-                    }}
-                  >
-                    <div
-                      className={`event-thumb ${String(
-                        category
-                      ).toLowerCase()}`}
+                        if (isDemo) {
+                          window.alert(
+                            'นี่คืออีเวนต์ตัวอย่างสำหรับดู UI เท่านั้น ยังไม่สามารถเช็กอินจริงได้'
+                          );
+                          return;
+                        }
+
+                        navigate(`/staff/checkin/${ev.id}`);
+                      }}
                     >
-                      <span className="event-tag">
-                        {category}
-                      </span>
-
-                      <span style={{ fontSize: 30 }}>
-                        {ICONS[category] || '🎟️'}
-                      </span>
-                    </div>
-
-                    <div className="event-body">
-                      <h2 className="event-title">
-                        {ev.title || ev.name || 'ไม่มีชื่ออีเวนต์'}
-                      </h2>
-
-                      <p className="event-meta">
-                        {formatDate(ev.startsAt)}
-                        <span className="mdot">·</span>
-                        {ev.location || 'ไม่ระบุสถานที่'}
-                      </p>
-
-                      <p className="event-meta">
-                        ผู้ลงทะเบียน {ev.registeredCount ?? 0} คน
-                        <span className="mdot">·</span>
-                        {ev.status || 'ไม่ระบุสถานะ'}
-                      </p>
-                    </div>
-
-                    <span className="event-arrow">
-                      <svg
-                        width="17"
-                        height="17"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        aria-hidden="true"
+                      <div
+                        className={`event-thumb ${String(
+                          category
+                        ).toLowerCase()}`}
                       >
-                        <path
-                          d="M5 12h14M13 6l6 6-6 6"
-                          stroke="currentColor"
-                          strokeWidth="2.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                  </a>
-                );
-              })}
-            </section>
+                        <span className="event-tag">
+                          {category}
+                        </span>
+
+                        <span style={{ fontSize: 30 }}>
+                          {ICONS[category] || '🎟️'}
+                        </span>
+                      </div>
+
+                      <div className="event-body">
+                        <h2 className="event-title">
+                          {ev.title || ev.name || 'ไม่มีชื่ออีเวนต์'}
+                        </h2>
+
+                        <p className="event-meta">
+                          {formatDate(ev.startsAt)}
+                          <span className="mdot">·</span>
+                          {ev.location || 'ไม่ระบุสถานที่'}
+                        </p>
+
+                        <p className="event-meta">
+                          ผู้ลงทะเบียน {ev.registeredCount ?? 0} คน
+                          <span className="mdot">·</span>
+                          {ev.status || 'ไม่ระบุสถานะ'}
+                        </p>
+                      </div>
+
+                      <span className="event-arrow">
+                        <svg
+                          width="17"
+                          height="17"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M5 12h14M13 6l6 6-6 6"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                    </a>
+                  );
+                })}
+              </section>
+            )}
           </>
         )}
       </main>
