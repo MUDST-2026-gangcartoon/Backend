@@ -725,8 +725,18 @@ public class EventService {
                     HttpStatus.CONFLICT,
                     "Ticket type does not belong to this event"
             );
-        }
 
+        }
+// Paid tickets must go through Mock Payment checkout.
+// The direct Registration API is reserved for free tickets.
+        if (ticket.getPrice() != null
+                && ticket.getPrice().signum() > 0) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Paid tickets require mock payment checkout"
+            );
+        }
         int quantity = request.quantity();
 
         long eventSeats =

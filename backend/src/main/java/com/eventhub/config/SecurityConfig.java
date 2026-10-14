@@ -218,6 +218,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/h2-console/**"
                         ).permitAll()
+                        // Mock Payment APIs are available only to ROLE_USER.
+                        // Individual payment ownership is checked in MockPaymentService.
+                        .requestMatchers(
+                                "/api/payments/mock/**"
+                        ).hasRole("USER")
 
                         // ADMIN only
                         .requestMatchers(
