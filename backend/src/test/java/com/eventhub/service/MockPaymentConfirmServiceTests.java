@@ -231,7 +231,6 @@ class MockPaymentConfirmServiceTests
         stubCommonRepositories();
         stubPayment(pendingPayment());
 
-        when(events.findById(100L)).thenReturn(Optional.empty());
         when(events.findByIdForUpdate(100L))
                 .thenReturn(Optional.empty());
 
