@@ -151,3 +151,35 @@ jobs:
           path: backend/target/failsafe-reports/
           if-no-files-found: warn
           retention-days: 14
+
+
+  kubernetes-manifests:
+    name: Kubernetes - Validate Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Validate Kubernetes schemas
+        run: |
+          docker run --rm \
+            -v "$PWD/infra/minikube/e2e:/manifests:ro" \
+            ghcr.io/yannh/kubeconform:v0.8.0-alpine \
+            -strict -summary /manifests
+
+  docker-build:
+    name: Docker - Build Both Images
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Build backend container
+        run: docker build --file backend/Dockerfile --tag eventhub-backend:ci backend/
+
+      - name: Build frontend container
+        run: docker build --file infra/minikube/docker/frontend.Dockerfile --tag eventhub-frontend:ci .
+
+      - name: Show built images
+        run: docker image ls --filter reference='eventhub-*'
