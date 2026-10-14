@@ -107,10 +107,43 @@ label.field-label{
   position:relative;
   min-height:340px;
   display:flex;
+  flex-direction:column;      /* เดิมเป็นแถว ทำให้กล้อง/ปุ่มบีบกัน */
   align-items:center;
   justify-content:center;
+  gap:16px;
+  padding:28px 24px;
   overflow:hidden;
 }
+.cc-scan > *{position:relative;z-index:1;}
+.cc-scan > .paw-deco{position:absolute;z-index:0;}
+.cc-scan .btn-primary{
+  width:100%;
+  max-width:360px;
+  background:#fff;
+  color:var(--gold-900);
+  flex-shrink:0;
+}
+.cc-scan .btn-primary:hover{background:var(--gold-50);}
+
+/* พื้นที่กล้อง (html5-qrcode) */
+.qr-reader{
+  width:100%;
+  max-width:560px;
+  aspect-ratio:4 / 3;
+  border-radius:20px;
+  overflow:hidden;
+  background:#0f172a;
+  box-shadow:0 10px 30px -10px rgba(15,23,42,0.45);
+}
+.qr-reader video{
+  width:100% !important;
+  height:100% !important;
+  object-fit:cover;
+  display:block;
+}
+.qr-reader > div{border:none !important;}
+.qr-reader img[alt="Info icon"]{display:none;}
+
 .scan-frame{
   width:200px;
   height:200px;
@@ -148,15 +181,12 @@ label.field-label{
 }
 .scan-icon{opacity:0.9;}
 .cc-scan-caption{
-  position:absolute;
-  bottom:24px;
-  left:0;right:0;
+  margin:0;
   text-align:center;
-  color:rgba(255,255,255,0.75);
-  font-size:12.5px;
+  color:#fff;
+  font-size:13.5px;
   font-weight:600;
   letter-spacing:0.3px;
-  padding:0 20px;
 }
 .paw-deco{
   position:absolute;
@@ -248,8 +278,15 @@ label.field-label{
   .cc-scan{
     order:-1;
     min-height:220px;
+    padding:20px 16px;
   }
+  .qr-reader{max-width:100%;}
   .cc-form{padding:22px;}
 
   .stats-row{grid-template-columns:1fr;}
+}
+/* เมื่อเปิดกล้อง: ให้ฝั่งสแกนกว้างกว่าฟอร์ม (จอแท็บเล็ต/เดสก์ท็อป) */
+@media (min-width:861px){
+  .checkin-card.scanning{grid-template-columns:minmax(300px,0.8fr) 1.4fr;}
+  .checkin-card.scanning .cc-scan{min-height:520px;}
 }

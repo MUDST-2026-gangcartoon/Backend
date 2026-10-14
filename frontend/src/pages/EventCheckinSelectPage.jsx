@@ -218,14 +218,14 @@ export default function EventCheckinSelectPage() {
                 "{searchParams.get('search')}"
               </p>
             ) : (
-              <section className="event-grid">
+              <section className="ci-grid">
                 {filteredEvents.map((ev) => {
                   const category = ev.category || 'COMMUNITY';
                   const isDemo = String(ev.id).startsWith('demo-');
 
                   return (
                     <a
-                      className="event-card"
+                      className="ci-card"
                       key={ev.id}
                       href={
                         isDemo
@@ -246,38 +246,38 @@ export default function EventCheckinSelectPage() {
                       }}
                     >
                       <div
-                        className={`event-thumb ${String(
+                        className={`ci-thumb ${String(
                           category
                         ).toLowerCase()}`}
                       >
-                        <span className="event-tag">
+                        <span className="ci-tag">
                           {category}
                         </span>
 
-                        <span style={{ fontSize: 30 }}>
+                        <span className="ci-icon">
                           {ICONS[category] || '🎟️'}
                         </span>
                       </div>
 
-                      <div className="event-body">
-                        <h2 className="event-title">
+                      <div className="ci-body">
+                        <h2 className="ci-title">
                           {ev.title || ev.name || 'ไม่มีชื่ออีเวนต์'}
                         </h2>
 
-                        <p className="event-meta">
+                        <p className="ci-meta">
                           {formatDate(ev.startsAt)}
                           <span className="mdot">·</span>
                           {ev.location || 'ไม่ระบุสถานที่'}
                         </p>
 
-                        <p className="event-meta">
+                        <p className="ci-meta">
                           ผู้ลงทะเบียน {ev.registeredCount ?? 0} คน
                           <span className="mdot">·</span>
                           {ev.status || 'ไม่ระบุสถานะ'}
                         </p>
                       </div>
 
-                      <span className="event-arrow">
+                      <span className="ci-arrow">
                         <svg
                           width="17"
                           height="17"
