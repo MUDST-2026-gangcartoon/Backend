@@ -1,10 +1,38 @@
+
 const BASE_URL = (
-  import.meta.env.VITE_API_URL || '/api'
+  import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 ).replace(/\/+$/, '');
+
+// ต้นทางของ Backend เช่น http://localhost:8080
+const API_ORIGIN = new URL(
+  BASE_URL,
+  window.location.origin
+).origin;
 
 let csrfToken = null;
 let csrfHeaderName = 'X-CSRF-TOKEN';
 let csrfPromise = null;
+
+// แปลง URL รูปจาก Backend ให้เป็น URL ที่ browser เปิดได้
+export const resolveImageUrl = (url) => {
+  if (typeof url !== 'string' || !url.trim()) {
+    return '';
+  }
+
+  const value = url.trim();
+
+  // URL เต็มและ URL สำหรับ preview ในเครื่อง ใช้ตามเดิม
+  if (/^(https?:\/\/|blob:|data:)/i.test(value)) {
+    return value;
+  }
+
+  // รูปที่เก็บอยู่ใน Backend เช่น /uploads/abc123.png
+  if (value.startsWith('/uploads/')) {
+    return `${API_ORIGIN}${value}`;
+  }
+
+  return value;
+};
 
 const buildUrl = (endpoint) => {
   const path = endpoint.startsWith('/')
@@ -74,7 +102,9 @@ const getCsrfToken = async () => {
     }
 
     if (!data?.token) {
-      throw new Error('ไม่สามารถดึง CSRF token จาก Backend ได้');
+      throw new Error(
+        'ไม่สามารถดึง CSRF token จาก Backend ได้'
+      );
     }
 
     csrfToken = data.token;
@@ -95,16 +125,22 @@ const getCsrfToken = async () => {
 
 const request = async (method, endpoint, data) => {
   const normalizedMethod = method.toUpperCase();
+
   const path = endpoint.startsWith('/')
     ? endpoint
     : `/${endpoint}`;
 
-  const requiresCsrf = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(
-    normalizedMethod
-  );
+  const requiresCsrf = [
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+  ].includes(normalizedMethod);
 
   const refreshCsrfAfterRequest =
-    /^\/auth\/(login|signup|logout)$/.test(path.split('?')[0]);
+    /^\/auth\/(login|signup|logout)$/.test(
+      path.split('?')[0]
+    );
 
   const headers = {
     Accept: 'application/json',
@@ -116,8 +152,14 @@ const request = async (method, endpoint, data) => {
     credentials: 'include',
   };
 
-  if (data !== undefined) {
-    if (typeof FormData !== 'undefined' && data instanceof FormData) {
+  if (data !== undefined && data !== null) {
+    const isFormData =
+      typeof FormData !== 'undefined' &&
+      data instanceof FormData;
+
+    if (isFormData) {
+      // อย่ากำหนด Content-Type เอง
+      // fetch จะกำหนด multipart boundary ให้อัตโนมัติ
       options.body = data;
     } else {
       headers['Content-Type'] = 'application/json';
@@ -140,7 +182,7 @@ const request = async (method, endpoint, data) => {
 
     return result;
   } finally {
-    // Backend ล้าง CSRF token หลัง Login, Signup และ Logout
+    // ล้าง CSRF token หลัง Login, Signup และ Logout
     if (refreshCsrfAfterRequest) {
       csrfToken = null;
       csrfPromise = null;
@@ -150,11 +192,32 @@ const request = async (method, endpoint, data) => {
 
 const apiClient = {
   get: (endpoint) => request('GET', endpoint),
-  post: (endpoint, data) => request('POST', endpoint, data),
-  postForm: (endpoint, formData) => request('POST', endpoint, formData),
-  put: (endpoint, data) => request('PUT', endpoint, data),
-  patch: (endpoint, data) => request('PATCH', endpoint, data),
-  delete: (endpoint, data) => request('DELETE', endpoint, data),
+
+  post: (endpoint, data) =>
+    request('POST', endpoint, data),
+
+  // สำหรับอัปโหลดไฟล์ด้วย FormData
+  postForm: (endpoint, formData) => {
+    if (
+      typeof FormData === 'undefined' ||
+      !(formData instanceof FormData)
+    ) {
+      throw new TypeError(
+        'postForm ต้องรับค่าเป็น FormData'
+      );
+    }
+
+    return request('POST', endpoint, formData);
+  },
+
+  put: (endpoint, data) =>
+    request('PUT', endpoint, data),
+
+  patch: (endpoint, data) =>
+    request('PATCH', endpoint, data),
+
+  delete: (endpoint, data) =>
+    request('DELETE', endpoint, data),
 };
 
 export default apiClient;

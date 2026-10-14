@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import StaffNavbar from '../components/StaffNavbar.jsx';
 import { eventService } from '../api/eventService.js';
 import '../staff-shell.css';
@@ -52,6 +53,12 @@ const formatDate = (value) => {
 
 export default function EventCheckinSelectPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const searchText = (searchParams.get('search') || '')
+    .trim()
+    .toLocaleLowerCase();
+
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -64,24 +71,27 @@ export default function EventCheckinSelectPage() {
         setLoading(true);
         setError('');
 
-        const response = await eventService.getAllEvents({
-          page: 0,
-          size: 20,
+        // Load every page from the backend.
+        const items = await eventService.getAllEventsAcrossPages({
+          size: 100,
         });
 
-        const items = Array.isArray(response)
-          ? response
-          : response?.items ?? [];
+        if (!active) return;
 
-        if (active) {
-          setEvents(items);
-        }
+        // Demo data is used only during development when no events exist.
+        const isDevelopment = import.meta.env.DEV;
+
+        setEvents(
+          isDevelopment && items.length === 0
+            ? DEMO_EVENTS
+            : items
+        );
       } catch (err) {
-        if (active) {
-          setError(
-            err.message || 'ไม่สามารถโหลดรายการอีเวนต์ได้'
-          );
-        }
+        if (!active) return;
+
+        setError(
+          err?.message || 'ไม่สามารถโหลดรายการอีเวนต์ได้'
+        );
       } finally {
         if (active) {
           setLoading(false);
@@ -96,14 +106,47 @@ export default function EventCheckinSelectPage() {
     };
   }, []);
 
+  const isShowingDemoEvents =
+    import.meta.env.DEV &&
+    events.length > 0 &&
+    events.every((event) =>
+      String(event.id).startsWith('demo-')
+    );
+
+  // Filter events using the search box in StaffNavbar.
+  const filteredEvents = events.filter((ev) => {
+    const searchableText = [
+      ev.title,
+      ev.name,
+      ev.location,
+      ev.category,
+      ev.description,
+      ev.topic,
+    ]
+      .filter((value) => value != null)
+      .join(' ')
+      .toLocaleLowerCase();
+
+    return searchableText.includes(searchText);
+  });
+
   return (
     <>
       <StaffNavbar />
 
       <main className="page">
         <div className="crumbs">
-          <a href="#" onClick={(e) => e.preventDefault()}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+          <a
+            href="#"
+            onClick={(e) => e.preventDefault()}
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
               <path
                 d="M17 3l4 4-4 4M3 7h18M7 21l-4-4 4-4M21 17H3"
                 stroke="currentColor"
@@ -128,14 +171,20 @@ export default function EventCheckinSelectPage() {
         <hr className="rule" />
 
         {loading && (
-          <p role="status">กำลังโหลดรายการอีเวนต์...</p>
+          <p role="status">
+            กำลังโหลดรายการอีเวนต์...
+          </p>
         )}
 
         {!loading && error && (
           <div role="alert">
-            <p>โหลดรายการอีเวนต์ไม่สำเร็จ: {error}</p>
+            <p>
+              โหลดรายการอีเวนต์ไม่สำเร็จ: {error}
+            </p>
+
             <button
               type="button"
+              className="btn-primary"
               onClick={() => window.location.reload()}
             >
               ลองใหม่
@@ -149,68 +198,107 @@ export default function EventCheckinSelectPage() {
 
         {!loading && !error && events.length > 0 && (
           <>
-            {import.meta.env.DEV && events === DEMO_EVENTS && (
+            {isShowingDemoEvents && (
               <p role="status">
-                โหมดตัวอย่างสำหรับพัฒนา Frontend — ข้อมูลนี้ไม่ใช่อีเวนต์จริง
+                โหมดตัวอย่างสำหรับพัฒนา Frontend
+                — ข้อมูลนี้ไม่ใช่อีเวนต์จริง
               </p>
             )}
 
-            <section className="event-grid">
-              {events.map((ev) => {
-                const category = ev.category || 'COMMUNITY';
-                const isDemo = String(ev.id).startsWith('demo-');
+            {searchText && (
+              <p role="status">
+                พบ {filteredEvents.length} อีเวนต์
+                จากคำค้นหา "{searchParams.get('search')}"
+              </p>
+            )}
 
-                return (
-                  <a
-                    className="event-card"
-                    key={ev.id}
-                    href={isDemo ? '#' : `/staff/checkin/${ev.id}`}
-                    onClick={(e) => {
-                      e.preventDefault();
+            {filteredEvents.length === 0 ? (
+              <p role="status">
+                ไม่พบอีเวนต์ที่ตรงกับคำค้นหา
+                "{searchParams.get('search')}"
+              </p>
+            ) : (
+              <section className="event-grid">
+                {filteredEvents.map((ev) => {
+                  const category = ev.category || 'COMMUNITY';
+                  const isDemo = String(ev.id).startsWith('demo-');
 
-                      if (isDemo) {
-                        window.alert(
-                          'นี่คืออีเวนต์ตัวอย่างสำหรับดู UI เท่านั้น ยังไม่สามารถเช็กอินจริงได้'
-                        );
-                        return;
+                  return (
+                    <a
+                      className="event-card"
+                      key={ev.id}
+                      href={
+                        isDemo
+                          ? '#'
+                          : `/staff/checkin/${ev.id}`
                       }
+                      onClick={(e) => {
+                        e.preventDefault();
 
-                      navigate(`/staff/checkin/${ev.id}`);
-                    }}
-                  >
-                    <div
-                      className={`event-thumb ${String(category).toLowerCase()}`}
+                        if (isDemo) {
+                          window.alert(
+                            'นี่คืออีเวนต์ตัวอย่างสำหรับดู UI เท่านั้น ยังไม่สามารถเช็กอินจริงได้'
+                          );
+                          return;
+                        }
+
+                        navigate(`/staff/checkin/${ev.id}`);
+                      }}
                     >
-                      <span className="event-tag">{category}</span>
-                      <span style={{ fontSize: 30 }}>
-                        {ICONS[category] || '🎟️'}
+                      <div
+                        className={`event-thumb ${String(
+                          category
+                        ).toLowerCase()}`}
+                      >
+                        <span className="event-tag">
+                          {category}
+                        </span>
+
+                        <span style={{ fontSize: 30 }}>
+                          {ICONS[category] || '🎟️'}
+                        </span>
+                      </div>
+
+                      <div className="event-body">
+                        <h2 className="event-title">
+                          {ev.title || ev.name || 'ไม่มีชื่ออีเวนต์'}
+                        </h2>
+
+                        <p className="event-meta">
+                          {formatDate(ev.startsAt)}
+                          <span className="mdot">·</span>
+                          {ev.location || 'ไม่ระบุสถานที่'}
+                        </p>
+
+                        <p className="event-meta">
+                          ผู้ลงทะเบียน {ev.registeredCount ?? 0} คน
+                          <span className="mdot">·</span>
+                          {ev.status || 'ไม่ระบุสถานะ'}
+                        </p>
+                      </div>
+
+                      <span className="event-arrow">
+                        <svg
+                          width="17"
+                          height="17"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M5 12h14M13 6l6 6-6 6"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
                       </span>
-                    </div>
-
-                    <div className="event-body">
-                      <h2 className="event-title">{ev.title}</h2>
-                      <p className="event-meta">
-                        {formatDate(ev.startsAt)}
-                        <span className="mdot">·</span>
-                        {ev.location || 'ไม่ระบุสถานที่'}
-                      </p>
-                    </div>
-
-                    <span className="event-arrow">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-                        <path
-                          d="M5 12h14M13 6l6 6-6 6"
-                          stroke="currentColor"
-                          strokeWidth="2.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                  </a>
-                );
-              })}
-            </section>
+                    </a>
+                  );
+                })}
+              </section>
+            )}
           </>
         )}
       </main>

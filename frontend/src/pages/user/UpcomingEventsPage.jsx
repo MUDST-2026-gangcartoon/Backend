@@ -1,8 +1,11 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import { eventService } from '../../api/eventService';
 import './UpcomingEventsPage.css';
+
+const PAGE_SIZE = 20;
 
 const categories = [
   'ทุกความสนใจ',
@@ -78,13 +81,42 @@ const mapEvent = (item) => {
   };
 };
 
+const getPageItems = (response) => {
+  const payload = response?.data ?? response;
+
+  const items = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.items)
+      ? payload.items
+      : [];
+
+  return { payload, items };
+};
+
+const getHasMore = (payload, items) => {
+  if (Array.isArray(payload)) {
+    return false;
+  }
+
+  if (typeof payload?.hasNext === 'boolean') {
+    return payload.hasNext;
+  }
+
+  if (Number.isFinite(payload?.totalPages)) {
+    return Number(payload.page ?? 0) + 1 < payload.totalPages;
+  }
+
+  return items.length === PAGE_SIZE;
+};
+
 export default function UpcomingEventsPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
   const handleRegisterClick = (event, eventId) => {
     event.preventDefault();
     navigate(`/event-detail/${eventId}`);
   };
-  const [searchParams] = useSearchParams();
 
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState(
@@ -96,6 +128,11 @@ export default function UpcomingEventsPage() {
   const [expandedTickets, setExpandedTickets] = useState([]);
   const [reloadKey, setReloadKey] = useState(0);
 
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState('');
+  const [nextPage, setNextPage] = useState(1);
+
   const eventsSectionRef = useRef(null);
 
   // Sync search query from the URL
@@ -103,18 +140,23 @@ export default function UpcomingEventsPage() {
     setSearchQuery(searchParams.get('search') || '');
   }, [searchParams]);
 
-  // Load events when search or category changes
+  // Load the first page whenever the search or category changes
   useEffect(() => {
     let cancelled = false;
 
     setLoading(true);
     setLoadError('');
+    setLoadMoreError('');
+    setHasMore(false);
+    setNextPage(1);
+    setEvents([]);
+    setExpandedTickets([]);
 
     const timer = setTimeout(async () => {
       try {
         const response = await eventService.getAllEvents({
           page: 0,
-          size: 20,
+          size: PAGE_SIZE,
           search: searchQuery.trim() || undefined,
           category:
             activeCategory === 'ALL' ? undefined : activeCategory,
@@ -122,19 +164,17 @@ export default function UpcomingEventsPage() {
 
         if (cancelled) return;
 
-        const payload = response?.data ?? response;
-
-        const items = Array.isArray(payload)
-          ? payload
-          : Array.isArray(payload?.items)
-            ? payload.items
-            : [];
+        const { payload, items } = getPageItems(response);
 
         setEvents(items.map(mapEvent));
-        setExpandedTickets([]);
+        setHasMore(getHasMore(payload, items));
+
+        const currentPage = Number(payload?.page ?? 0);
+        setNextPage(currentPage + 1);
       } catch (error) {
         if (!cancelled) {
           setEvents([]);
+          setHasMore(false);
           setLoadError(
             error?.message || 'ไม่สามารถโหลดรายการอีเวนต์ได้'
           );
@@ -152,6 +192,48 @@ export default function UpcomingEventsPage() {
     };
   }, [activeCategory, searchQuery, reloadKey]);
 
+  // Load the next page without replacing the events already displayed
+  const loadMoreEvents = async () => {
+    if (loading || loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    setLoadMoreError('');
+
+    try {
+      const response = await eventService.getAllEvents({
+        page: nextPage,
+        size: PAGE_SIZE,
+        search: searchQuery.trim() || undefined,
+        category:
+          activeCategory === 'ALL' ? undefined : activeCategory,
+      });
+
+      const { payload, items } = getPageItems(response);
+
+      setEvents((previousEvents) => {
+        const existingIds = new Set(
+          previousEvents.map((event) => String(event.id))
+        );
+
+        const newEvents = items.filter(
+          (event) => !existingIds.has(String(event.id))
+        );
+
+        return [...previousEvents, ...newEvents.map(mapEvent)];
+      });
+
+      const currentPage = Number(payload?.page ?? nextPage);
+
+      setNextPage(currentPage + 1);
+      setHasMore(getHasMore(payload, items));
+    } catch (error) {
+      setLoadMoreError(
+        error?.message || 'ไม่สามารถโหลดอีเวนต์เพิ่มเติมได้'
+      );
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const scrollToEvents = () => {
     eventsSectionRef.current?.scrollIntoView({
@@ -160,10 +242,10 @@ export default function UpcomingEventsPage() {
   };
 
   const toggleTicketExpand = (eventId) => {
-    setExpandedTickets((prev) =>
-      prev.includes(eventId)
-        ? prev.filter((id) => id !== eventId)
-        : [...prev, eventId]
+    setExpandedTickets((previous) =>
+      previous.includes(eventId)
+        ? previous.filter((id) => id !== eventId)
+        : [...previous, eventId]
     );
   };
 
@@ -316,9 +398,7 @@ export default function UpcomingEventsPage() {
                 color: '#dc2626',
               }}
             >
-              <p>
-                ไม่สามารถโหลดอีเวนต์ได้: {loadError}
-              </p>
+              <p>ไม่สามารถโหลดอีเวนต์ได้: {loadError}</p>
 
               <button
                 type="button"
@@ -337,7 +417,6 @@ export default function UpcomingEventsPage() {
                       ? `linear-gradient(rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.4)), url("${event.imageUrl}") center / cover no-repeat`
                       : event.bannerBg,
                   }}
-
                 >
                   <span className="status-badge">
                     {event.statusBadge}
@@ -365,9 +444,7 @@ export default function UpcomingEventsPage() {
                   </div>
 
                   <div className="card-content">
-                    <h3 className="event-title">
-                      {event.title}
-                    </h3>
+                    <h3 className="event-title">{event.title}</h3>
 
                     <p className="event-description">
                       {event.description}
@@ -394,9 +471,7 @@ export default function UpcomingEventsPage() {
                       <button
                         type="button"
                         aria-expanded={expandedTickets.includes(event.id)}
-                        onClick={() =>
-                          toggleTicketExpand(event.id)
-                        }
+                        onClick={() => toggleTicketExpand(event.id)}
                         style={{
                           background: 'none',
                           border: 'none',
@@ -461,9 +536,7 @@ export default function UpcomingEventsPage() {
                               </div>
                             ))
                           ) : (
-                            <div>
-                              ยังไม่มีข้อมูลประเภทบัตร
-                            </div>
+                            <div>ยังไม่มีข้อมูลประเภทบัตร</div>
                           )}
                         </div>
                       )}
@@ -505,6 +578,30 @@ export default function UpcomingEventsPage() {
             </div>
           )}
         </section>
+
+        {!loading && !loadError && hasMore && (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '1.5rem',
+            }}
+          >
+            {loadMoreError && (
+              <p role="alert" style={{ color: '#dc2626' }}>
+                {loadMoreError}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={loadMoreEvents}
+              disabled={loadingMore}
+              className="btn-register"
+            >
+              {loadingMore ? 'กำลังโหลด...' : 'โหลดอีเวนต์เพิ่มเติม'}
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );

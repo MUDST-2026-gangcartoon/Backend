@@ -164,7 +164,7 @@ function AppRoutes() {
       <Route path="/MyTicketsPage" element={<MyTicketsPage />} />
       <Route path="/UpcomingEventsPage" element={<UpcomingEventsPage />} />
       <Route path="/events" element={<UpcomingEventsPage />} />
-
+      <Route path="/upcoming-events" element={<UpcomingEventsPage />} />
       {/* ไม่พบ Route */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

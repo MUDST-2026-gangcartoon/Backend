@@ -1,3 +1,4 @@
+
 import apiClient from './apiClient';
 
 export const registrationService = {
@@ -9,5 +10,11 @@ export const registrationService = {
     apiClient.post(
       `/events/${encodeURIComponent(eventId)}/registrations`,
       payload
+    ),
+
+  // ยกเลิกการลงทะเบียนอีเวนต์
+  cancelRegistration: (eventId) =>
+    apiClient.delete(
+      `/events/${encodeURIComponent(eventId)}/registrations`
     ),
 };

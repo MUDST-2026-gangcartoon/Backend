@@ -34,11 +34,13 @@ const formatEventTime = (dateString) => {
     return 'ไม่ระบุเวลา';
   }
 
-  return new Intl.DateTimeFormat('th-TH', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(date) + ' น.';
+  return (
+    new Intl.DateTimeFormat('th-TH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(date) + ' น.'
+  );
 };
 
 const getErrorMessage = (error) => {
@@ -55,6 +57,8 @@ export default function MyRegistrationsPage() {
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [cancellingId, setCancellingId] = useState(null);
+  const [cancelError, setCancelError] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -64,10 +68,9 @@ export default function MyRegistrationsPage() {
         setLoading(true);
         setErrorMessage('');
 
-        const response = await registrationService.getMyRegistrations();
+        const response =
+          await registrationService.getMyRegistrations();
 
-        // รองรับทั้ง API ที่คืน array โดยตรง
-        // และ API ที่ห่อรายการไว้ใน items หรือ registrations
         const items = Array.isArray(response)
           ? response
           : response?.items ?? response?.registrations ?? [];
@@ -94,6 +97,48 @@ export default function MyRegistrationsPage() {
     };
   }, []);
 
+  const handleCancelRegistration = async (item) => {
+    const eventId = item.event?.id;
+    const registrationId = item.id ?? item.ticketCode;
+
+    if (eventId == null || registrationId == null) {
+      setCancelError(
+        'ไม่พบข้อมูลอีเวนต์หรือรายการลงทะเบียนที่ต้องการยกเลิก'
+      );
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `คุณต้องการยกเลิกการลงทะเบียน "${item.event?.title ?? 'อีเวนต์นี้'}" ใช่หรือไม่?`
+    );
+
+    if (!confirmed) return;
+
+    setCancelError('');
+    setCancellingId(registrationId);
+
+    try {
+      await registrationService.cancelRegistration(eventId);
+
+      // Backend ยกเลิกด้วย userId + eventId
+      // จึงนำรายการทั้งหมดของอีเวนต์นี้ออกจากหน้าจอ
+      setRegistrations((current) =>
+        current.filter(
+          (registration) =>
+            String(registration.event?.id) !== String(eventId)
+        )
+      );
+    } catch (error) {
+      setCancelError(
+        error?.response?.data?.message ||
+          error?.message ||
+          'ยกเลิกการลงทะเบียนไม่สำเร็จ กรุณาลองอีกครั้ง'
+      );
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -101,8 +146,16 @@ export default function MyRegistrationsPage() {
       <main className="registrations-container">
         <div className="page-header">
           <h1>การลงทะเบียนของฉัน</h1>
-          <p>รายการอีเวนต์ทั้งหมดที่คุณลงทะเบียนเข้าร่วมไว้</p>
+          <p>
+            รายการอีเวนต์ทั้งหมดที่คุณลงทะเบียนเข้าร่วมไว้
+          </p>
         </div>
+
+        {cancelError && (
+          <div className="empty-state" role="alert">
+            {cancelError}
+          </div>
+        )}
 
         <div className="registrations-list">
           {loading ? (
@@ -116,8 +169,9 @@ export default function MyRegistrationsPage() {
           ) : registrations.length === 0 ? (
             <div className="empty-state">
               ยังไม่มีรายการลงทะเบียนอีเวนต์ในขณะนี้
+
               <div style={{ marginTop: '12px' }}>
-                <Link to="/upcoming-events">
+                <Link to="/UpcomingEventsPage">
                   ค้นหาอีเวนต์ที่น่าสนใจ
                 </Link>
               </div>
@@ -128,6 +182,8 @@ export default function MyRegistrationsPage() {
               const eventDate = formatEventDate(event.startsAt);
               const ticketId = item.ticketCode || item.id;
               const registrationKey = item.id ?? ticketId;
+              const isCancelling =
+                cancellingId === registrationKey;
 
               return (
                 <div
@@ -139,6 +195,7 @@ export default function MyRegistrationsPage() {
                       <span className="reg-month">
                         {eventDate.month}
                       </span>
+
                       <span className="reg-day">
                         {eventDate.day}
                       </span>
@@ -188,10 +245,21 @@ export default function MyRegistrationsPage() {
                         ดูตั๋วของฉัน →
                       </Link>
                     ) : (
-                      <span>
-                        ไม่มีรหัสตั๋ว
-                      </span>
+                      <span>ไม่มีรหัสตั๋ว</span>
                     )}
+
+                    <button
+                      type="button"
+                      className="btn-cancel-registration"
+                      disabled={isCancelling}
+                      onClick={() =>
+                        handleCancelRegistration(item)
+                      }
+                    >
+                      {isCancelling
+                        ? 'กำลังยกเลิก...'
+                        : 'ยกเลิกการลงทะเบียน'}
+                    </button>
                   </div>
                 </div>
               );
