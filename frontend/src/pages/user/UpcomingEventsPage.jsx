@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import { eventService } from '../../api/eventService';
 import './UpcomingEventsPage.css';
@@ -80,9 +80,16 @@ const mapEvent = (item) => {
 
 export default function UpcomingEventsPage() {
   const navigate = useNavigate();
+  const handleRegisterClick = (event, eventId) => {
+    event.preventDefault();
+    navigate(`/event-detail/${eventId}`);
+  };
+  const [searchParams] = useSearchParams();
 
   const [activeCategory, setActiveCategory] = useState('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(
+    () => searchParams.get('search') || ''
+  );
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -91,6 +98,12 @@ export default function UpcomingEventsPage() {
 
   const eventsSectionRef = useRef(null);
 
+  // Sync search query from the URL
+  useEffect(() => {
+    setSearchQuery(searchParams.get('search') || '');
+  }, [searchParams]);
+
+  // Load events when search or category changes
   useEffect(() => {
     let cancelled = false;
 
@@ -109,7 +122,6 @@ export default function UpcomingEventsPage() {
 
         if (cancelled) return;
 
-        // รองรับทั้ง response.items และ response.data.items
         const payload = response?.data ?? response;
 
         const items = Array.isArray(payload)
@@ -140,10 +152,6 @@ export default function UpcomingEventsPage() {
     };
   }, [activeCategory, searchQuery, reloadKey]);
 
-  const handleRegisterClick = (event, eventId) => {
-    event.preventDefault();
-    navigate(`/event-detail/${eventId}`);
-  };
 
   const scrollToEvents = () => {
     eventsSectionRef.current?.scrollIntoView({
@@ -273,7 +281,7 @@ export default function UpcomingEventsPage() {
         <div className="gather-picks-banner">
           <div className="gather-left">
             <span className="gather-badge">
-              PETOPIA PICKS
+              EVENTFEST PICKS
             </span>
 
             <h3 className="gather-title">

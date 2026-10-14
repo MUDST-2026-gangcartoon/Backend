@@ -65,6 +65,7 @@ export default function EventCheckinSelectPage() {
         setLoading(true);
         setError('');
 
+
         // Load every page from the backend.
         const items = await eventService.getAllEventsAcrossPages({
           size: 100,

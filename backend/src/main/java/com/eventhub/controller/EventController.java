@@ -5,6 +5,7 @@ import com.eventhub.service.EventService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
 import java.util.List;
@@ -29,6 +30,12 @@ public class EventController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String status
     ) {
+        if (page < 0 || size < 1 || size > 20) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "page must be >= 0 and size must be between 1 and 20"
+                );
+        }
         return eventService.list(
                 principal,
                 page,

@@ -171,6 +171,15 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
+                                // Allow Kubernetes health probes without authentication
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/actuator/health",
+                                        "/actuator/health/**"
+                                ).permitAll()
+
+// Deny access to all other Actuator paths
+                                .requestMatchers("/actuator/**").denyAll()
                         // Static frontend
                         .requestMatchers(
                                 "/",

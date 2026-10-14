@@ -1,3 +1,4 @@
+
 import React, {
   useCallback,
   useEffect,
@@ -20,12 +21,30 @@ const CATEGORY_CLASS = {
 const CATEGORY_ALIASES = {
   Design: 'DESIGN',
   Engineering: 'TECH',
+  TECH: 'TECH',
+  DESIGN: 'DESIGN',
+  CAREER: 'CAREER',
+  COMMUNITY: 'COMMUNITY',
+  'เวิร์กช็อป': 'TECH',
+  'สัตว์เลี้ยง': 'COMMUNITY',
+  'ไลฟ์สไตล์': 'COMMUNITY',
+};
+
+const CATEGORY_LABEL = {
+  TECH: 'เทคโนโลยี',
+  DESIGN: 'ออกแบบ',
+  CAREER: 'อาชีพ',
+  COMMUNITY: 'ชุมชน',
 };
 
 const toApiCategory = (category) => {
-  const normalized = CATEGORY_ALIASES[category] || category;
+  const value = String(category ?? '').trim();
+  const normalized =
+    CATEGORY_ALIASES[value] || value.toUpperCase();
 
-  return ['TECH', 'DESIGN', 'CAREER', 'COMMUNITY'].includes(normalized)
+  return ['TECH', 'DESIGN', 'CAREER', 'COMMUNITY'].includes(
+    normalized
+  )
     ? normalized
     : 'COMMUNITY';
 };
@@ -100,13 +119,6 @@ const getResponseItems = (response) => {
   return [];
 };
 
-/**
- * เตรียม Ticket Types จากค่าที่ผู้ใช้แก้ในฟอร์ม
- * - รักษา ID ของประเภทตั๋วเดิม
- * - ใช้จำนวนตั๋วที่ขายแล้วจากข้อมูลประเภทตั๋วเดิม
- * - ไม่ลดความจุต่ำกว่าจำนวนที่ขายแล้ว
- * - ไม่จับคู่ประเภทตั๋วด้วยตำแหน่งใน array
- */
 const prepareTicketTypes = (formTicketTypes, originalEvent) => {
   if (!Array.isArray(formTicketTypes) || formTicketTypes.length === 0) {
     return {
@@ -255,7 +267,6 @@ export default function ManageEventsPage() {
     });
   };
 
-  // โหลดข้อมูลเต็มก่อนเปิดฟอร์มแก้ไข
   const openEditDrawer = async (event) => {
     if (saving) return;
 
@@ -384,16 +395,12 @@ export default function ManageEventsPage() {
     const startsAt = String(form.date || '').trim();
 
     if (!name || !place || !startsAt) {
-      window.alert(
-        'กรุณากรอกชื่อกิจกรรม สถานที่ และวันเวลา'
-      );
+      window.alert('กรุณากรอกชื่อกิจกรรม สถานที่ และวันเวลา');
       return;
     }
 
     if (!Number.isInteger(capacity) || capacity <= 0) {
-      window.alert(
-        'ความจุของกิจกรรมต้องเป็นจำนวนเต็มที่มากกว่า 0'
-      );
+      window.alert('ความจุของกิจกรรมต้องเป็นจำนวนเต็มที่มากกว่า 0');
       return;
     }
 
@@ -420,7 +427,6 @@ export default function ManageEventsPage() {
       return;
     }
 
-    // ตรวจสอบประเภทตั๋วจากข้อมูลฟอร์ม
     const result = prepareTicketTypes(
       form.ticketTypes,
       originalEvent
@@ -447,6 +453,11 @@ export default function ManageEventsPage() {
 
     setSaving(true);
 
+    // ไม่ส่ง sold ไป เพราะ Backend คำนวณจำนวนขายจากข้อมูลการลงทะเบียน
+    const ticketTypesForRequest = ticketTypes.map(
+      ({ sold, ...ticket }) => ticket
+    );
+
     try {
       let imageUrl = originalEvent?.coverUrl || '';
 
@@ -463,10 +474,7 @@ export default function ManageEventsPage() {
               uploadData?.data?.url ||
               uploadData?.data?.imageUrl;
 
-        if (
-          !uploadedUrl ||
-          typeof uploadedUrl !== 'string'
-        ) {
+        if (!uploadedUrl || typeof uploadedUrl !== 'string') {
           throw new Error(
             'อัปโหลดรูปแล้ว แต่ไม่พบ URL ในผลลัพธ์จาก Backend'
           );
@@ -489,14 +497,11 @@ export default function ManageEventsPage() {
         category: toApiCategory(form.category),
         imageUrl,
         detailImages: originalEvent?.detailImages || [],
-        ticketTypes,
+        ticketTypes: ticketTypesForRequest,
       };
 
       if (isEdit) {
-        await eventService.updateEvent(
-          originalEvent.id,
-          payload
-        );
+        await eventService.updateEvent(originalEvent.id, payload);
       } else {
         await eventService.createEvent(payload);
       }
@@ -642,9 +647,7 @@ export default function ManageEventsPage() {
                       capacity > 0
                         ? Math.min(
                             100,
-                            Math.round(
-                              (registered / capacity) * 100
-                            )
+                            Math.round((registered / capacity) * 100)
                           )
                         : 0;
 
@@ -681,7 +684,8 @@ export default function ManageEventsPage() {
                                 {event.name}
                               </div>
                               <div className="ev-cat">
-                                {event.category}
+                                {CATEGORY_LABEL[event.category] ||
+                                  event.category}
                               </div>
                             </div>
                           </div>

@@ -1,0 +1,43 @@
+
+# =========================================================
+# EventHub E2E Environment
+# Isolated, disposable database for automated testing only
+# =========================================================
+
+spring:
+  datasource:
+    # E2E uses its own in-memory H2 database.
+    # Never use a production database with this profile.
+    url: jdbc:h2:mem:eventhub_e2e;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      # Recreate the schema for each application lifecycle.
+      # Never enable this setting in production.
+      ddl-auto: create-drop
+    open-in-view: false
+
+  h2:
+    console:
+      enabled: false
+
+server:
+  # Reverse proxy support is opt-in.
+  # Infrastructure must configure trusted forwarded headers.
+  forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:NONE}
+
+  servlet:
+    session:
+      cookie:
+        # Local HTTP E2E can use false.
+        # Use true when testing behind HTTPS.
+        secure: ${SERVER_SERVLET_SESSION_COOKIE_SECURE:false}
+
+app:
+  e2e:
+    seed:
+      # Required at startup. Never commit real credentials.
+      password: ${APP_E2E_SEED_PASSWORD}
