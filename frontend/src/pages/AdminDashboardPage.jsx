@@ -74,7 +74,9 @@ export default function AdminDashboardPage() {
       setLoadState('loading');
 
       try {
-        const response = await eventService.getAllEvents();
+        const response = await eventService.getAllEventsAcrossPages({
+          size: 20,
+        });
         const result = extractEvents(response);
 
         if (!result) {
