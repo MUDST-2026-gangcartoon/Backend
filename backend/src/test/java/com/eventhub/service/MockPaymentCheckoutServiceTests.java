@@ -101,7 +101,6 @@ class MockPaymentCheckoutServiceTests
     void missingEventReturns404() {
         stubCommonRepositories();
 
-        when(events.findById(100L)).thenReturn(Optional.empty());
         when(events.findByIdForUpdate(100L))
                 .thenReturn(Optional.empty());
 
