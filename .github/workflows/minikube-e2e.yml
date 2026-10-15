@@ -3,6 +3,7 @@ name: Minikube - Deploy and Smoke Test
 on:
   pull_request:
     branches:
+      - main
       - 'feat/infra-docker-minikube'
   workflow_dispatch:
 
