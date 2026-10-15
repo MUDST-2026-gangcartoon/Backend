@@ -18,8 +18,11 @@ command -v kubectl >/dev/null 2>&1 || {
 echo "==> Starting Minikube..."
 minikube status >/dev/null 2>&1 || minikube start
 
-echo "==> Enabling Ingress addon..."
+eecho "==> Enabling Ingress addon..."
 minikube addons enable ingress
+
+# รอให้ ingress controller พร้อมใช้งาน และลบ validating webhook
+kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx --timeout=120s || true
 kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission --ignore-not-found=true || true
 
 echo "==> Applying Kubernetes manifests..."
@@ -32,7 +35,8 @@ if ! kubectl get secret eventhub-local-tls -n "$NAMESPACE" >/dev/null 2>&1; then
     --cert=/dev/null --key=/dev/null \
     -n "$NAMESPACE" || true
 fi
-done
+
+kubectl apply -f "$MANIFEST_DIR/eventhub-backend-deployment.yaml"
 
 kubectl apply -f "$MANIFEST_DIR/eventhub-backend-deployment.yaml"
 kubectl apply -f "$MANIFEST_DIR/eventhub-backend-service.yaml"
