@@ -31,10 +31,9 @@ jobs:
 
       - name: Install pinned Minikube
         run: |
-          curl -fsSL \
-            https://github.com/kubernetes/minikube/releases/download/v1.39.0/minikube-linux-amd64 \
-            -o "$RUNNER_TEMP/minikube"
-          echo "099477eaf248bcb5bcea8ce78a2898e93ac01461c35189da1848c3de82ecd22e  $RUNNER_TEMP/minikube" | sha256sum --check
+          curl -fsSL https://github.com/kubernetes/minikube/releases/download/v1.39.0/minikube-linux-amd64 -o "$RUNNER_TEMP/minikube"
+          curl -fsSL https://github.com/kubernetes/minikube/releases/download/v1.39.0/minikube-linux-amd64.sha256 -o "$RUNNER_TEMP/minikube.sha256"
+          echo "$(cat $RUNNER_TEMP/minikube.sha256)  $RUNNER_TEMP/minikube" | sha256sum --check
           sudo install -m 0755 "$RUNNER_TEMP/minikube" /usr/local/bin/minikube
           minikube version
 
