@@ -232,6 +232,7 @@ export default function CheckinAttendeesPage() {
     }
   }, [code, eventId, loadData]);
 
+
   const startScanner = useCallback(async () => {
     if (scannerStartingRef.current || scannerRef.current) return;
 
@@ -241,55 +242,90 @@ export default function CheckinAttendeesPage() {
     setScannerError('');
     setError('');
     setMessage('');
-
-    // Show the camera container before initializing the scanner.
     setScannerActive(true);
 
     try {
-      const { Html5Qrcode } = await import('html5-qrcode');
+      const {
+        Html5Qrcode,
+        Html5QrcodeSupportedFormats,
+      } = await import('html5-qrcode');
 
-      // Wait for React to render the visible camera container.
+      // รอให้ React แสดงพื้นที่กล้องและคำนวณ Layout ก่อน
       await new Promise((resolve) => {
-        requestAnimationFrame(() => resolve());
+        requestAnimationFrame(() => {
+          requestAnimationFrame(resolve);
+        });
       });
 
       const reader = document.getElementById('staff-qr-reader');
 
-      if (!reader) {
-        throw new Error('ไม่พบพื้นที่แสดงกล้อง');
+      if (!reader || reader.clientWidth <= 0) {
+        throw new Error('ไม่พบพื้นที่แสดงกล้อง หรือพื้นที่กล้องมีขนาดเป็นศูนย์');
       }
 
-      const scanner = new Html5Qrcode('staff-qr-reader');
+      // อ่านเฉพาะ QR Code และใช้ ZXing Decoder
+      // ลดปัญหาความแตกต่างของ Native BarcodeDetector บางเครื่อง
+      const scanner = new Html5Qrcode('staff-qr-reader', {
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.QR_CODE,
+        ],
+        useBarCodeDetectorIfSupported: false,
+      });
+
       scannerRef.current = scanner;
+
+      let lastErrorLogAt = 0;
 
       await scanner.start(
         { facingMode: 'environment' },
         {
           fps: 10,
-          aspectRatio: 4 / 3,
-          // กรอบสแกนปรับตามขนาดภาพกล้อง (70% ของด้านที่สั้นกว่า)
-          qrbox: (w, h) => {
-            const size = Math.floor(Math.min(w, h) * 0.7);
-            return { width: size, height: size };
-          },
+
+          // ไม่บังคับ aspectRatio
+          // ไม่กำหนด qrbox เพื่อให้อ่านจากภาพกล้องเต็มเฟรม
         },
+
+        // อ่าน QR สำเร็จ
         async (decodedText) => {
           if (scannerHandledRef.current) return;
 
-          const ticketCode = decodedText.trim();
+          const ticketCode = String(decodedText ?? '')
+            .trim()
+            .toUpperCase();
+
           if (!ticketCode) return;
 
           scannerHandledRef.current = true;
-          setCode(ticketCode);
 
+          console.log('[QR Scanner] Decoded successfully:', ticketCode);
+
+          setCode(ticketCode);
+          setScannerError('');
+
+          // หยุดกล้องก่อนเรียก API เพื่อป้องกันสแกนซ้ำ
           await stopScanner();
+
+          // ใช้ Business Logic เช็กอินเดิม
           await handleCheckin(ticketCode);
         },
-        () => {
-          // Ignore frames without a readable QR code.
+
+        // อ่าน QR ยังไม่สำเร็จ (เกิดขึ้นได้ตามปกติระหว่างสแกน)
+        (decodeError) => {
+          const now = Date.now();
+
+          // Debug ไม่เกิน 1 ครั้งต่อ 5 วินาที
+          if (now - lastErrorLogAt >= 5000) {
+            console.debug('[QR Scanner] Waiting for QR:', decodeError);
+            lastErrorLogAt = now;
+          }
         }
       );
+
+      console.log('[QR Scanner] Camera started successfully');
+
     } catch (err) {
+      console.error('[QR Scanner] Start failed:', err);
+
       const scanner = scannerRef.current;
 
       if (scanner) {
@@ -298,18 +334,20 @@ export default function CheckinAttendeesPage() {
             await scanner.stop();
           }
           scanner.clear();
-        } catch (stopError) {
-          console.error('Unable to clean up QR scanner:', stopError);
+        } catch (cleanupError) {
+          console.error('[QR Scanner] Cleanup failed:', cleanupError);
         }
       }
 
       scannerRef.current = null;
       setScannerActive(false);
+
       setScannerError(
-        'เปิดกล้องไม่ได้ กรุณาอนุญาตการใช้กล้องและเข้าเว็บผ่าน HTTPS หรือ localhost'
+        `ไม่สามารถเริ่มสแกน QR ได้: ${
+          err?.message || String(err)
+        }`
       );
 
-      console.error('Unable to start QR scanner:', err);
     } finally {
       scannerStartingRef.current = false;
     }

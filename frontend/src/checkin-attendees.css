@@ -47,7 +47,7 @@ label.field-label{
   letter-spacing:1px;
   color:var(--ink);
   background:var(--canvas);
-  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 .ticket-input::placeholder{color:#B4AEC9;letter-spacing:1px;}
 .ticket-input:focus{
@@ -75,7 +75,7 @@ label.field-label{
   font-weight:700;
   cursor:pointer;
   box-shadow:0 8px 18px -8px rgba(112,197,255,0.55);
-  transition:transform .12s ease, background .15s ease, box-shadow .15s ease;
+  transition: transform .12s ease, background .15s ease, box-shadow .15s ease;
 }
 .btn-primary:hover{background:var(--gold-600);transform:translateY(-1px);}
 .btn-primary:active{transform:translateY(0);}
@@ -125,24 +125,13 @@ label.field-label{
 }
 .cc-scan .btn-primary:hover{background:var(--gold-50);}
 
-/* พื้นที่กล้อง (html5-qrcode) */
-.qr-reader{
-  width:100%;
-  max-width:560px;
-  aspect-ratio:4 / 3;
-  border-radius:20px;
-  overflow:hidden;
-  background:#0f172a;
-  box-shadow:0 10px 30px -10px rgba(15,23,42,0.45);
+.qr-reader {
+  width: 100%;
+  max-width: 560px;
+  border-radius: 20px;
+  background: #0f172a;
+  box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.45);
 }
-.qr-reader video{
-  width:100% !important;
-  height:100% !important;
-  object-fit:cover;
-  display:block;
-}
-.qr-reader > div{border:none !important;}
-.qr-reader img[alt="Info icon"]{display:none;}
 
 .scan-frame{
   width:200px;
