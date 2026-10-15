@@ -46,21 +46,24 @@ jobs:
       - name: Make Maven wrapper executable
         run: chmod +x mvnw
 
-      - name: Run backend tests
-        run: ./mvnw --batch-mode --no-transfer-progress clean test
+      - name: Run backend tests and generate coverage
+        run: ./mvnw --batch-mode --no-transfer-progress clean verify
 
-      - name: Build backend JAR
-        run: ./mvnw --batch-mode --no-transfer-progress package -DskipTests
-
-      - name: Generate JaCoCo report
-        run: ./mvnw --batch-mode --no-transfer-progress -DskipTests org.jacoco:jacoco-maven-plugin:report
+      - name: Validate JaCoCo Coverage Evidence
+        run: |
+          test -f target/jacoco.exec
+          test -f target/site/jacoco/index.html
+          test -f target/site/jacoco/jacoco.xml
+          test -f target/site/jacoco/jacoco.csv
 
       - name: Upload backend test reports
         if: always()
         uses: actions/upload-artifact@v5
         with:
           name: backend-test-reports-${{ github.sha }}
-          path: backend/target/surefire-reports/
+          path: |
+            backend/target/surefire-reports/
+            backend/target/failsafe-reports/
           if-no-files-found: warn
           retention-days: 14
 
@@ -74,6 +77,9 @@ jobs:
             backend/target/jacoco.exec
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Build backend JAR
+        run: ./mvnw --batch-mode --no-transfer-progress package -DskipTests
 
       - name: Upload backend artifact
         uses: actions/upload-artifact@v5
@@ -151,26 +157,6 @@ jobs:
           path: backend/target/failsafe-reports/
           if-no-files-found: warn
           retention-days: 14
-
-
-  kubernetes-manifests:
-    name: Kubernetes - Validate Manifests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Validate JaCoCo Coverage Evidence
-        run: |
-          test -f backend/target/jacoco.exec
-          test -f backend/target/site/jacoco/index.html
-          test -f backend/target/site/jacoco/jacoco.xml
-
-      - name: Upload JaCoCo Coverage Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacoco-coverage-report
-          path: backend/target/site/jacoco/
 
   docker-build:
     name: Docker - Build Both Images
