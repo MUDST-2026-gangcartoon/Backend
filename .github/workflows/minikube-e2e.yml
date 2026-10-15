@@ -1,0 +1,111 @@
+name: Minikube - Deploy and Smoke Test
+
+on:
+  pull_request:
+    branches:
+      - 'feat/infra-docker-minikube'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: minikube-e2e
+  cancel-in-progress: false
+
+jobs:
+  deploy-smoke:
+    name: Deploy Backend + Frontend to Minikube
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.37.0
+
+      - name: Install pinned Minikube
+        run: |
+          curl -fsSL \
+            https://github.com/kubernetes/minikube/releases/download/v1.39.0/minikube-linux-amd64 \
+            -o "$RUNNER_TEMP/minikube"
+          echo "099477eaf248bcb5bcea8ce78a2898e93ac01461c35189da1848c3de82ecd22e  $RUNNER_TEMP/minikube" | sha256sum --check
+          sudo install -m 0755 "$RUNNER_TEMP/minikube" /usr/local/bin/minikube
+          minikube version
+
+      - name: Start disposable Kubernetes cluster
+        run: minikube start --driver=docker --cpus=2 --memory=4000mb --kubernetes-version=v1.37.0
+
+      - name: Build E2E images
+        run: |
+          docker build -f backend/Dockerfile -t eventhub-backend:e2e backend/
+          docker build -f infra/minikube/docker/frontend.Dockerfile -t eventhub-frontend:e2e .
+
+      - name: Load images into Minikube
+        run: |
+          minikube image load eventhub-backend:e2e
+          minikube image load eventhub-frontend:e2e
+
+      - name: Create ephemeral test-only Kubernetes secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl apply -f infra/minikube/e2e/eventhub-namespace.yaml
+
+          seed_password="$(openssl rand -hex 24)"
+          kubectl create secret generic eventhub-backend-secret \
+            --namespace eventhub-e2e \
+            --from-literal=APP_E2E_SEED_PASSWORD="$seed_password"
+          unset seed_password
+
+          openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 1 \
+            -subj "/CN=eventhub.local" \
+            -addext "subjectAltName=DNS:eventhub.local" \
+            -keyout "$RUNNER_TEMP/eventhub-test.key" \
+            -out "$RUNNER_TEMP/eventhub-test.crt"
+          kubectl create secret tls eventhub-local-tls \
+            --namespace eventhub-e2e \
+            --key="$RUNNER_TEMP/eventhub-test.key" \
+            --cert="$RUNNER_TEMP/eventhub-test.crt"
+          rm -f "$RUNNER_TEMP/eventhub-test.key" "$RUNNER_TEMP/eventhub-test.crt"
+
+      - name: Deploy application using Infra script
+        run: bash infra/minikube/scripts/start.sh
+
+      - name: Verify readiness and HTTP smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl --namespace eventhub-e2e port-forward service/eventhub-backend 18081:8080 > "$RUNNER_TEMP/backend-forward.log" 2>&1 &
+          backend_pid=$!
+          kubectl --namespace eventhub-e2e port-forward service/eventhub-frontend 18080:80 > "$RUNNER_TEMP/frontend-forward.log" 2>&1 &
+          frontend_pid=$!
+          trap 'kill "$backend_pid" "$frontend_pid" 2>/dev/null || true' EXIT
+
+          curl --fail --silent --show-error --retry 15 --retry-delay 3 \
+            --retry-connrefused --max-time 10 \
+            http://127.0.0.1:18081/actuator/health/readiness
+
+          curl --fail --silent --show-error --retry 15 --retry-delay 3 \
+            --retry-connrefused --max-time 10 \
+            http://127.0.0.1:18080/ > "$RUNNER_TEMP/frontend.html"
+          grep -qi '<html' "$RUNNER_TEMP/frontend.html"
+
+          curl --fail --silent --show-error --retry 15 --retry-delay 3 \
+            --retry-connrefused --max-time 10 \
+            http://127.0.0.1:18080/api/events > "$RUNNER_TEMP/events.json"
+          python3 -m json.tool "$RUNNER_TEMP/events.json" > /dev/null
+
+      - name: Show cluster status on failure
+        if: failure()
+        run: |
+          kubectl get pods,services,ingress -n eventhub-e2e || true
+          kubectl describe pods -n eventhub-e2e || true
+
+      - name: Stop disposable Minikube
+        if: always()
+        run: minikube delete || true
