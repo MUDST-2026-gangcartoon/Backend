@@ -108,10 +108,17 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(
-                List.of("http://localhost:5173")
+        configuration.setAllowedOriginPatterns(
+                List.of(
+                        "http://localhost:[5173,5174]",
+                        "http://127.0.0.1:[5173,5174]",
+                        "http://192.168.*:[5173,5174]",
+                        "http://10.*:[5173,5174]",
+                        "https://*.trycloudflare.com"
+                )
         );
 
+        configuration.setAllowCredentials(true);
         configuration.setAllowedMethods(
                 List.of(
                         "GET",
