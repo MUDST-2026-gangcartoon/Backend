@@ -34,3 +34,20 @@ build/
 
 node_modules/
 **/node_modules/
+
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.secret.env
+
+# Private keys and certificates
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Temporary logs
+eventhub-check-temp.log
+*.log
