@@ -100,11 +100,39 @@ jobs:
             http://127.0.0.1:18080/api/events > "$RUNNER_TEMP/events.json"
           python3 -m json.tool "$RUNNER_TEMP/events.json" > /dev/null
 
-      - name: Show cluster status on failure
+      - name: Show cluster diagnostics on failure
         if: failure()
+        shell: bash
         run: |
-          kubectl get pods,services,ingress -n eventhub-e2e || true
-          kubectl describe pods -n eventhub-e2e || true
+          echo "=== Kubernetes resources ==="
+          kubectl get pods,services,deployments,ingress \
+            -n eventhub-e2e || true
+
+          echo "=== Pod descriptions ==="
+          kubectl describe pods \
+            -n eventhub-e2e || true
+
+          echo "=== Backend logs ==="
+          kubectl logs \
+            deployment/eventhub-backend \
+            -n eventhub-e2e \
+            --tail=100 || true
+
+          echo "=== Frontend logs ==="
+          kubectl logs \
+            deployment/eventhub-frontend \
+            -n eventhub-e2e \
+            --tail=100 || true
+
+          echo "=== Backend port-forward diagnostics ==="
+          if [ -f "$RUNNER_TEMP/backend-forward.log" ]; then
+            tail -n 50 "$RUNNER_TEMP/backend-forward.log"
+          fi
+
+          echo "=== Frontend port-forward diagnostics ==="
+          if [ -f "$RUNNER_TEMP/frontend-forward.log" ]; then
+            tail -n 50 "$RUNNER_TEMP/frontend-forward.log"
+          fi
 
       - name: Stop disposable Minikube
         if: always()
