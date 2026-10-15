@@ -20,6 +20,7 @@ minikube status >/dev/null 2>&1 || minikube start
 
 echo "==> Enabling Ingress addon..."
 minikube addons enable ingress
+kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission --ignore-not-found=true || true
 
 echo "==> Applying Kubernetes manifests..."
 kubectl apply -f "$MANIFEST_DIR/eventhub-namespace.yaml"
