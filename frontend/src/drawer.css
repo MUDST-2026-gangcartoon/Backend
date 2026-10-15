@@ -286,3 +286,47 @@
     transform: translateX(0);
   }
 }
+
+
+.ticket-types-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.ticket-types-heading,
+.ticket-type-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ticket-types-heading h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.ticket-type-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--light-blue);
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.ticket-type-card .hint {
+  margin: 0;
+}
+
+.ticket-remove {
+  color: #c62828;
+}
+
+.ticket-remove:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
