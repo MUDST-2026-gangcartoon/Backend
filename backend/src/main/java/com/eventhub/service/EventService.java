@@ -1,42 +1,35 @@
 package com.eventhub.service;
 
-import com.eventhub.dto.ApiDtos;
-import com.eventhub.repository.EventRepository;
-import com.eventhub.repository.RegistrationRepository;
-import com.eventhub.repository.TicketTypeRepository;
-import com.eventhub.repository.UserRepository;
+import java.math.BigDecimal;
+import java.security.Principal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.security.Principal;
-import java.util.List;
-
+import com.eventhub.dto.ApiDtos;
+import com.eventhub.dto.EventListRow;
+import com.eventhub.dto.TicketTypeRow;
 import com.eventhub.model.DetailImage;
 import com.eventhub.model.Event;
 import com.eventhub.model.Registration;
 import com.eventhub.model.TicketType;
 import com.eventhub.model.UserAccount;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.math.BigDecimal;
-
-import java.time.LocalDateTime;
-
-import java.util.Locale;
-import java.util.Objects;
-
-import com.eventhub.dto.EventListRow;
-import com.eventhub.dto.TicketTypeRow;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import com.eventhub.repository.EventRepository;
+import com.eventhub.repository.RegistrationRepository;
+import com.eventhub.repository.TicketTypeRepository;
+import com.eventhub.repository.UserRepository;
 @Service
 public class EventService {
 
@@ -697,10 +690,10 @@ public class EventService {
                 );
 
         if (!event.getStartsAt().isAfter(LocalDateTime.now())) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Registration has closed"
-            );
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Registration has closed"
+                );
         }
 
         if (registrationRepository.existsByUserIdAndEventId(
@@ -732,8 +725,18 @@ public class EventService {
                     HttpStatus.CONFLICT,
                     "Ticket type does not belong to this event"
             );
-        }
 
+        }
+// Paid tickets must go through Mock Payment checkout.
+// The direct Registration API is reserved for free tickets.
+        if (ticket.getPrice() != null
+                && ticket.getPrice().signum() > 0) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Paid tickets require mock payment checkout"
+            );
+        }
         int quantity = request.quantity();
 
         long eventSeats =

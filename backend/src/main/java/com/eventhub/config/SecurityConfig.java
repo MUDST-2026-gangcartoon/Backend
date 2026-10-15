@@ -1,8 +1,9 @@
 package com.eventhub.config;
 
-import com.eventhub.model.UserAccount;
-import com.eventhub.repository.UserRepository;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -27,9 +28,14 @@ import org.springframework.security.web.context.RequestAttributeSecurityContextR
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.io.IOException;
-import java.util.Locale;
+import com.eventhub.model.UserAccount;
+import com.eventhub.repository.UserRepository;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 public class SecurityConfig {
@@ -44,10 +50,7 @@ public class SecurityConfig {
             UserRepository userRepository
     ) {
         return username -> {
-
-            String email = username
-                    .trim()
-                    .toLowerCase(Locale.ROOT);
+            String email = username.trim().toLowerCase(Locale.ROOT);
 
             UserAccount user = userRepository
                     .findByEmail(email)
@@ -79,7 +82,6 @@ public class SecurityConfig {
 
     @Bean
     public SecurityContextRepository securityContextRepository() {
-
         return new DelegatingSecurityContextRepository(
                 new RequestAttributeSecurityContextRepository(),
                 new HttpSessionSecurityContextRepository()
@@ -93,7 +95,6 @@ public class SecurityConfig {
 
     @Bean
     public CsrfTokenRepository csrfTokenRepository() {
-
         HttpSessionCsrfTokenRepository repository =
                 new HttpSessionCsrfTokenRepository();
 
@@ -102,14 +103,68 @@ public class SecurityConfig {
         return repository;
     }
 
+    // CORS: อนุญาตให้ Frontend เรียก Backend ข้าม origin ได้
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        configuration.setAllowedOriginPatterns(
+                List.of(
+                        "http://localhost:[5173,5174]",
+                        "http://127.0.0.1:[5173,5174]",
+                        "http://192.168.*:[5173,5174]",
+                        "http://10.*:[5173,5174]",
+                        "https://*.trycloudflare.com"
+                )
+        );
+
+        configuration.setAllowCredentials(true);
+        configuration.setAllowedMethods(
+                List.of(
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "PATCH",
+                        "DELETE",
+                        "OPTIONS"
+                )
+        );
+
+        configuration.setAllowedHeaders(
+                List.of(
+                        "Authorization",
+                        "Content-Type",
+                        "Accept",
+                        "X-CSRF-TOKEN"
+                )
+        );
+
+        // จำเป็นสำหรับการส่ง Session Cookie
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             SecurityContextRepository securityContextRepository,
-            CsrfTokenRepository csrfTokenRepository
+            CsrfTokenRepository csrfTokenRepository,
+            CorsConfigurationSource corsConfigurationSource
     ) throws Exception {
 
         http
+                // เปิด CORS ก่อนจัดการ Authentication
+                .cors(cors ->
+                        cors.configurationSource(corsConfigurationSource)
+                )
+
                 .securityContext(context ->
                         context.securityContextRepository(
                                 securityContextRepository
@@ -118,8 +173,6 @@ public class SecurityConfig {
 
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository)
-
-                        // H2 console ใช้เฉพาะ development
                         .ignoringRequestMatchers("/h2-console/**")
                 )
 
@@ -172,23 +225,24 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/h2-console/**"
                         ).permitAll()
+                        // Mock Payment APIs are available only to ROLE_USER.
+                        // Individual payment ownership is checked in MockPaymentService.
+                        .requestMatchers(
+                                "/api/payments/mock/**"
+                        ).hasRole("USER")
 
-                        // ADMIN
+                        // ADMIN only
                         .requestMatchers(
                                 "/api/admin/**"
                         ).hasRole("ADMIN")
 
-                        // STAFF + ADMIN
+                        // STAFF and ADMIN
                         .requestMatchers(
                                 "/api/staff/**"
-                        ).hasAnyRole(
-                                "STAFF",
-                                "ADMIN"
-                        )
+                        ).hasAnyRole("STAFF", "ADMIN")
 
-                        // ทุก route ที่เหลือต้อง login
-                        .anyRequest()
-                        .authenticated()
+                        // Other routes require authentication
+                        .anyRequest().authenticated()
                 )
 
                 .exceptionHandling(errors -> errors
@@ -218,7 +272,7 @@ public class SecurityConfig {
 
                 .httpBasic(AbstractHttpConfigurer::disable)
 
-                // เรามี /api/auth/logout ของเราเอง
+                // ใช้ /api/auth/logout ของโปรเจกต์เอง
                 .logout(AbstractHttpConfigurer::disable)
 
                 .headers(headers ->

@@ -35,6 +35,9 @@ build/
 node_modules/
 **/node_modules/
 
+# Local runtime data
+/backend/data/
+/backend/uploads/
 
 # Local environment and secrets
 .env

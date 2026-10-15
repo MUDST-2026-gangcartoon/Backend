@@ -1,8 +1,14 @@
+
 spring:
   datasource:
     url: jdbc:h2:file:./data/eventhub;AUTO_SERVER=TRUE
     username: sa
     password:
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
 
   jpa:
     hibernate:
