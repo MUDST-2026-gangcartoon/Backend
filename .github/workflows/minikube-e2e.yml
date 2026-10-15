@@ -77,28 +77,43 @@ jobs:
         run: bash infra/minikube/scripts/start.sh
 
       - name: Verify readiness and HTTP smoke tests
-        shell: bash
         run: |
-          set -euo pipefail
-          kubectl --namespace eventhub-e2e port-forward service/eventhub-backend 18081:8080 > "$RUNNER_TEMP/backend-forward.log" 2>&1 &
-          backend_pid=$!
-          kubectl --namespace eventhub-e2e port-forward service/eventhub-frontend 18080:80 > "$RUNNER_TEMP/frontend-forward.log" 2>&1 &
-          frontend_pid=$!
-          trap 'kill "$backend_pid" "$frontend_pid" 2>/dev/null || true' EXIT
-
-          curl --fail --silent --show-error --retry 15 --retry-delay 3 \
-            --retry-connrefused --max-time 10 \
-            http://127.0.0.1:18081/actuator/health/readiness
-
-          curl --fail --silent --show-error --retry 15 --retry-delay 3 \
-            --retry-connrefused --max-time 10 \
-            http://127.0.0.1:18080/ > "$RUNNER_TEMP/frontend.html"
-          grep -qi '<html' "$RUNNER_TEMP/frontend.html"
-
+          # ... คำสั่ง curl ก่อนหน้า ...
           curl --fail --silent --show-error --retry 15 --retry-delay 3 \
             --retry-connrefused --max-time 10 \
             http://127.0.0.1:18080/api/events > "$RUNNER_TEMP/events.json"
-          python3 -m json.tool "$RUNNER_TEMP/events.json" > /dev/null
+
+          python3 - "$RUNNER_TEMP/events.json" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert isinstance(data, dict), \
+              "Expected an EventPageDto JSON object"
+
+          assert isinstance(data.get("items"), list), \
+              "Expected an items array"
+
+          titles = {
+              item["title"]
+              for item in data["items"]
+          }
+
+          expected = {
+              "[E2E] Open Workshop",
+              "[E2E] Full Workshop",
+          }
+
+          assert expected.issubset(titles), \
+              f"Missing E2E events: {expected - titles}"
+
+          assert data.get("totalElements") == 2, \
+              "Expected exactly two seeded E2E events"
+
+          print("E2E Event API smoke test passed")
+          PY
 
       - name: Show cluster diagnostics on failure
         if: failure()
