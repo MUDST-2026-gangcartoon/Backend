@@ -221,6 +221,12 @@ export default function CheckinAttendeesPage() {
       );
 
       setCode('');
+
+      // สั่นเบา ๆ ให้รู้ว่าเช็กอินสำเร็จโดยไม่ต้องมองจอ (เฉพาะอุปกรณ์ที่รองรับ)
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(60);
+      }
+
       await loadData(false);
     } catch (err) {
       setError(
@@ -540,7 +546,7 @@ export default function CheckinAttendeesPage() {
               />
 
               <p
-                className={`helper-text${error ? ' err' : ''}`}
+                className={`helper-text${error ? ' err' : message ? ' ok' : ''}`}
                 role={error ? 'alert' : 'status'}
               >
                 {error || message || 'กรอกรหัสตั๋ว แล้วกดเช็กอิน'}
@@ -719,6 +725,25 @@ export default function CheckinAttendeesPage() {
 
             <div className="stat-sub" style={{ marginTop: 8 }}>
               เช็กอินแล้ว {checkedIn} ราย · เหลืออีก {remaining} ราย
+            </div>
+
+            <div
+              className="ticket-progress"
+              role="progressbar"
+              aria-label="ความคืบหน้าการเช็กอิน"
+              aria-valuemin={0}
+              aria-valuemax={totalGuests}
+              aria-valuenow={checkedIn}
+            >
+              <div
+                style={{
+                  width: `${
+                    totalGuests > 0
+                      ? Math.min(100, (checkedIn / totalGuests) * 100)
+                      : 0
+                  }%`,
+                }}
+              />
             </div>
           </div>
         </section>

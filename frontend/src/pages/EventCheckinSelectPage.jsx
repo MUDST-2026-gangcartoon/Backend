@@ -53,7 +53,7 @@ const formatDate = (value) => {
 
 export default function EventCheckinSelectPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const searchText = (searchParams.get('search') || '')
     .trim()
@@ -169,6 +169,37 @@ export default function EventCheckinSelectPage() {
         </div>
 
         <hr className="rule" />
+
+        {/* มือถือ: ช่องค้นหาบน navbar ถูกซ่อน จึงมีช่องค้นหาในหน้านี้แทน */}
+        <label className="mobile-search">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="search"
+            placeholder="ค้นหาชื่อ สถานที่ หรือหมวดหมู่"
+            aria-label="ค้นหาอีเวนต์"
+            value={searchParams.get('search') || ''}
+            onChange={(e) => {
+              const next = new URLSearchParams(searchParams);
+              if (e.target.value.trim()) {
+                next.set('search', e.target.value);
+              } else {
+                next.delete('search');
+              }
+              setSearchParams(next, { replace: true });
+            }}
+          />
+        </label>
 
         {loading && (
           <p role="status">

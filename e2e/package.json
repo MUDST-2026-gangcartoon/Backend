@@ -1,0 +1,17 @@
+{
+  "name": "eventhub-browser-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report artifacts/html",
+    "test:fast": "playwright test --grep-invert @slow",
+    "test:critical": "playwright test --grep E2E-AUTO-001"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  }
+}

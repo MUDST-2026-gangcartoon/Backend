@@ -4,6 +4,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthModal from './AuthModal.jsx';
 import LanguageToggle from './LanguageToggle.jsx';
+import BottomTabBar from './BottomTabBar.jsx';
 import logo from '../../assets/public/logo.png';
 
 export default function StaffNavbar() {
@@ -165,6 +166,9 @@ export default function StaffNavbar() {
           )}
         </div>
       </nav>
+
+      {/* มือถือ: แถบแท็บด้านล่าง */}
+      <BottomTabBar />
 
       <AuthModal />
     </>

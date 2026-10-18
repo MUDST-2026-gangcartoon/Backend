@@ -1,16 +1,89 @@
 
-import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  NavLink,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthModal from './AuthModal.jsx';
 import LanguageToggle from './LanguageToggle.jsx';
-import MobileNav from './MobileNav.jsx';
+import BottomTabBar from './BottomTabBar.jsx';
 import logo from '../../assets/public/logo.png';
 
 export default function AdminNavbar() {
   const { isLoggedIn, user, openModal, logout } = useAuth();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchRef = useRef(null);
+  const [looseQuery, setLooseQuery] = useState('');
+
+  // หน้าที่ค้นหาในหน้าได้: ใช้ ?q= ร่วมกับตัวกรองในหน้า / หน้าอื่น: กด Enter เพื่อไปค้นในหน้าจัดการอีเวนต์
+  const isDashboard = location.pathname === '/admin/dashboard';
+  const isManage = location.pathname === '/manage-events';
+  const searchesInPage = isDashboard || isManage;
+  const searchValue = searchesInPage
+    ? searchParams.get('q') || ''
+    : looseQuery;
+
+  const searchPlaceholder = isDashboard
+    ? 'ค้นหาอีเวนต์หรือชื่อผู้ลงทะเบียน  ( / )'
+    : isManage
+      ? 'ค้นหาชื่อ สถานที่ หรือหมวดหมู่  ( / )'
+      : 'ค้นหาอีเวนต์  ( / )';
+
+  const handleSearchChange = (value) => {
+    if (!searchesInPage) {
+      setLooseQuery(value);
+      return;
+    }
+
+    const next = new URLSearchParams(searchParams);
+    if (value) {
+      next.set('q', value);
+    } else {
+      next.delete('q');
+    }
+    setSearchParams(next, { replace: true });
+  };
+
+  const handleSearchKeyDown = (event) => {
+    if (event.key === 'Enter' && !searchesInPage && looseQuery.trim()) {
+      navigate(`/manage-events?q=${encodeURIComponent(looseQuery.trim())}`);
+      setLooseQuery('');
+    }
+
+    if (event.key === 'Escape') {
+      handleSearchChange('');
+      event.currentTarget.blur();
+    }
+  };
+
+  // กด "/" เพื่อโฟกัสช่องค้นหาได้จากทุกที่ในหน้า (ยกเว้นตอนกำลังพิมพ์อยู่)
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key !== '/' || event.metaKey || event.ctrlKey) return;
+
+      const tag = event.target?.tagName;
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        event.target?.isContentEditable
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      searchRef.current?.focus();
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const handleLogout = () => {
     setIsDropdownOpen(false);
@@ -49,8 +122,13 @@ export default function AdminNavbar() {
             </svg>
 
             <input
+              ref={searchRef}
               type="text"
-              placeholder="ค้นหาชื่อ สถานที่ หรือหัวข้อ"
+              value={searchValue}
+              placeholder={searchPlaceholder}
+              aria-label="ค้นหา"
+              onChange={(event) => handleSearchChange(event.target.value)}
+              onKeyDown={handleSearchKeyDown}
             />
           </div>
         </div>
@@ -161,9 +239,10 @@ export default function AdminNavbar() {
           )}
         </div>
 
-        {/* Mobile Navigation - Admin */}
-        <MobileNav />
       </nav>
+
+      {/* มือถือ: แถบแท็บด้านล่างแทน hamburger */}
+      <BottomTabBar />
 
       <AuthModal />
     </>
