@@ -42,11 +42,15 @@ const buildUrl = (endpoint) => {
 };
 
 const parseResponse = async (response) => {
-  if (response.status === 204) return null;
+  if (response.status === 204) {
+    return null;
+  }
 
   const text = await response.text();
 
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
 
   try {
     return JSON.parse(text);
@@ -86,13 +90,16 @@ const getCsrfToken = async () => {
   }
 
   csrfPromise = (async () => {
-    const response = await fetch(buildUrl('/auth/csrf'), {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        Accept: 'application/json',
-      },
-    });
+    const response = await fetch(
+      buildUrl('/auth/csrf'),
+      {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          Accept: 'application/json',
+        },
+      }
+    );
 
     const data = await parseResponse(response);
 
@@ -168,11 +175,16 @@ const request = async (method, endpoint, data) => {
 
   if (requiresCsrf) {
     const csrf = await getCsrfToken();
+
     headers[csrf.headerName] = csrf.token;
   }
 
   try {
-    const response = await fetch(buildUrl(path), options);
+    const response = await fetch(
+      buildUrl(path),
+      options
+    );
+
     const result = await parseResponse(response);
 
     if (!response.ok) {
@@ -190,7 +202,8 @@ const request = async (method, endpoint, data) => {
 };
 
 const apiClient = {
-  get: (endpoint) => request('GET', endpoint),
+  get: (endpoint) =>
+    request('GET', endpoint),
 
   post: (endpoint, data) =>
     request('POST', endpoint, data),

@@ -43,6 +43,16 @@ const formatEventTime = (dateString) => {
   );
 };
 
+// ตั๋วที่เช็กอินแล้ว: ใช้เงื่อนไขเดียวกับหน้ารายชื่อผู้ลงทะเบียนของ admin
+const isTicketCheckedIn = (item) =>
+  Boolean(
+    item?.checkedIn === true ||
+      item?.isCheckedIn === true ||
+      item?.checkedInAt ||
+      item?.checkInAt ||
+      item?.status === 'CHECKED_IN'
+  );
+
 const getErrorMessage = (error) => {
   const status = error?.status ?? error?.response?.status;
 
@@ -104,6 +114,21 @@ export default function MyRegistrationsPage() {
     if (eventId == null || registrationId == null) {
       setCancelError(
         'ไม่พบข้อมูลอีเวนต์หรือรายการลงทะเบียนที่ต้องการยกเลิก'
+      );
+      return;
+    }
+
+    // Backend ยกเลิกด้วย userId + eventId (ทุกตั๋วของอีเวนต์นั้น)
+    // ถ้ามีตั๋วใบใดเช็กอินแล้ว จึงต้องไม่ให้ยกเลิก
+    const lockedByCheckin = registrations.some(
+      (registration) =>
+        String(registration.event?.id) === String(eventId) &&
+        isTicketCheckedIn(registration)
+    );
+
+    if (lockedByCheckin) {
+      setCancelError(
+        'ไม่สามารถยกเลิกได้ เพราะเช็กอินเข้าร่วมอีเวนต์นี้แล้ว'
       );
       return;
     }
@@ -187,6 +212,17 @@ export default function MyRegistrationsPage() {
               const isCancelling =
                 cancellingId === registrationKey;
 
+              // 2 สถานะ: 1) ลงทะเบียนแล้วยังไม่เช็กอิน = ยกเลิกได้
+              //          2) เช็กอินแล้ว (ทั้งตั๋วนี้ หรือตั๋วอื่นของอีเวนต์เดียวกัน) = ยกเลิกไม่ได้
+              const checkedIn = isTicketCheckedIn(item);
+              const cancelLocked =
+                checkedIn ||
+                registrations.some(
+                  (registration) =>
+                    String(registration.event?.id) === String(event.id) &&
+                    isTicketCheckedIn(registration)
+                );
+
               return (
                 <div
                   key={registrationKey}
@@ -233,8 +269,12 @@ export default function MyRegistrationsPage() {
                   </div>
 
                   <div className="reg-right-actions">
-                    <span className="status-pill success">
-                      ลงทะเบียนสำเร็จ
+                    <span
+                      className={`status-pill ${
+                        checkedIn ? 'checked' : 'success'
+                      }`}
+                    >
+                      {checkedIn ? 'เช็กอินแล้ว' : 'ลงทะเบียนสำเร็จ'}
                     </span>
 
                     {ticketId != null ? (
@@ -250,18 +290,28 @@ export default function MyRegistrationsPage() {
                       <span>ไม่มีรหัสตั๋ว</span>
                     )}
 
-                    <button
-                      type="button"
-                      className="btn-cancel-registration"
-                      disabled={isCancelling}
-                      onClick={() =>
-                        handleCancelRegistration(item)
-                      }
-                    >
-                      {isCancelling
-                        ? 'กำลังยกเลิก...'
-                        : 'ยกเลิกการลงทะเบียน'}
-                    </button>
+                    <div className="cancel-block">
+                      <button
+                        type="button"
+                        className="btn-cancel-registration"
+                        disabled={isCancelling || cancelLocked}
+                        onClick={() =>
+                          handleCancelRegistration(item)
+                        }
+                      >
+                        {cancelLocked
+                          ? 'ยกเลิกไม่ได้'
+                          : isCancelling
+                            ? 'กำลังยกเลิก...'
+                            : 'ยกเลิกการลงทะเบียน'}
+                      </button>
+
+                      <span className="cancel-note">
+                        {cancelLocked
+                          ? 'เช็กอินแล้ว จึงยกเลิกไม่ได้'
+                          : 'ยกเลิกได้จนกว่าจะเช็กอิน'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );

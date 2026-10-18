@@ -216,3 +216,54 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+
+/* สถานะที่ 2: เช็กอินแล้ว */
+.status-pill.checked {
+  background-color: #ECFCCB;
+  color: #3F6212;
+}
+
+.cancel-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.cancel-note {
+  font-size: 12px;
+  color: #64748B;
+}
+
+.btn-cancel-registration:disabled {
+  border-color: #CBD5E1;
+  color: #94A3B8;
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .reg-right-actions {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .status-pill {
+    white-space: nowrap;
+  }
+
+  /* ปุ่มยกเลิกกินเต็มแถวใหม่ กดง่ายและข้อความไม่ถูกบีบ */
+  .cancel-block {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .btn-cancel-registration {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .cancel-note {
+    text-align: center;
+  }
+}

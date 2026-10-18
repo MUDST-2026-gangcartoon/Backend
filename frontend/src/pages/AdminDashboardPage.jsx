@@ -1,12 +1,23 @@
-
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar.jsx';
+import EventAttendeesPanel from '../components/EventAttendeesPanel.jsx';
+import EventFilterBar, { Highlight } from '../components/EventFilterBar.jsx';
+import { useEventFilters } from '../hooks/useEventFilters.js';
+import {
+  applyEventFilters,
+  getFacetCounts,
+  matchesTokens,
+  sortEvents,
+} from '../utils/eventFilters.js';
 import { eventService } from '../api/eventService.js';
 import '../admin-dashboard.css';
-
-const CIRCLE_RADIUS = 50;
-const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
 
 function toNumber(value) {
   if (value === null || value === undefined || value === '') return null;
@@ -54,6 +65,20 @@ function formatNumber(value) {
   return new Intl.NumberFormat('th-TH').format(value);
 }
 
+function formatEventDate(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return 'ยังไม่ระบุวันเวลา';
+
+  return `${date.toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })} ${date.toLocaleTimeString('th-TH', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })} น.`;
+}
+
 function getStatusLabel(status) {
   return String(status ?? '').trim().toUpperCase();
 }
@@ -66,6 +91,10 @@ export default function AdminDashboardPage() {
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoadState, setAnalyticsLoadState] = useState('loading');
   const [retryCount, setRetryCount] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [attendees, setAttendees] = useState([]);
+  const [attendeesLoading, setAttendeesLoading] = useState(false);
+  const [attendeesError, setAttendeesError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -211,17 +240,142 @@ export default function AdminDashboardPage() {
     };
   }, [analytics]);
 
+  // ---- ค้นหา/กรอง ----
+  const { filters, setFilter, clear, activeCount } = useEventFilters();
+  const [allAttendees, setAllAttendees] = useState({});
+  const [indexLoading, setIndexLoading] = useState(false);
+  const [focusPerson, setFocusPerson] = useState('');
+  const indexStarted = useRef(false);
+
+  const needsPersonIndex = filters.q.trim().length >= 2;
+
+  // โหลดรายชื่อผู้ลงทะเบียนของทุกอีเวนต์ "ครั้งเดียว" เมื่อเริ่มพิมพ์ค้นหา
+  // เพื่อให้ค้นหาชื่อคนข้ามอีเวนต์ได้ (ไม่โหลดถ้าไม่มีการค้นหา)
+  useEffect(() => {
+    if (!needsPersonIndex || indexStarted.current || events.length === 0) {
+      return;
+    }
+
+    indexStarted.current = true;
+    setIndexLoading(true);
+
+    Promise.allSettled(
+      events.map((event) => eventService.getEventAttendees(event.id)),
+    ).then((results) => {
+      const map = {};
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          map[events[index].id] = extractEvents(result.value) ?? [];
+        }
+      });
+      setAllAttendees(map);
+      setIndexLoading(false);
+    });
+  }, [needsPersonIndex, events]);
+
+  // ข้อความของผู้ลงทะเบียน ใช้ให้อีเวนต์ "ติดผล" เมื่อค้นเจอชื่อคนในอีเวนต์นั้น
+  const extraText = useCallback(
+    (event) =>
+      (allAttendees[event.id] || [])
+        .map((a) =>
+          [a.name || a.attendeeName, a.email, a.ticketCode].join(' '),
+        )
+        .join(' '),
+    [allAttendees],
+  );
+
+  const filteredEvents = useMemo(
+    () =>
+      sortEvents(
+        applyEventFilters(events, filters, { extraText }),
+        filters.sort,
+      ),
+    [events, filters, extraText],
+  );
+
+  const facetCounts = useMemo(
+    () => getFacetCounts(events, filters, { extraText }),
+    [events, filters, extraText],
+  );
+
+  // รายชื่อคนที่ตรงกับคำค้น (ข้ามทุกอีเวนต์)
+  const personMatches = useMemo(() => {
+    if (!needsPersonIndex) return [];
+
+    const found = [];
+    events.forEach((event) => {
+      (allAttendees[event.id] || []).forEach((a, index) => {
+        const name = a.name || a.attendeeName || '';
+        if (!matchesTokens([name, a.email, a.ticketCode].join(' '), filters.q)) {
+          return;
+        }
+
+        found.push({
+          key: `${event.id}-${a.id ?? a.registrationId ?? index}`,
+          name: name || 'ไม่ระบุชื่อ',
+          email: a.email || '',
+          eventId: event.id,
+          eventName: event.title || event.name || '',
+        });
+      });
+    });
+
+    return found;
+  }, [allAttendees, events, filters.q, needsPersonIndex]);
+
+  // อีเวนต์ที่เลือกดูรายละเอียด (อ่านจาก ?event= ได้ เพื่อให้ลิงก์จากหน้าจัดการอีเวนต์เปิดตรงอีเวนต์นั้น)
+  const requestedEventId = searchParams.get('event');
+  const selectedEvent =
+    filteredEvents.find((event) => String(event.id) === requestedEventId) ??
+    filteredEvents[0] ??
+    null;
+  const selectedEventId = selectedEvent?.id ?? null;
+
+  useEffect(() => {
+    if (selectedEventId === null) {
+      setAttendees([]);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setAttendeesLoading(true);
+    setAttendeesError('');
+    setAttendees([]);
+
+    eventService
+      .getEventAttendees(selectedEventId)
+      .then((response) => {
+        if (cancelled) return;
+        setAttendees(extractEvents(response) ?? []);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setAttendeesError(
+          error?.message || 'ไม่สามารถโหลดรายชื่อผู้ลงทะเบียนได้',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setAttendeesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedEventId]);
+
+  const selectEvent = (id, person = '') => {
+    const next = new URLSearchParams(searchParams);
+    next.set('event', String(id));
+    setSearchParams(next, { replace: true });
+    setFocusPerson(person);
+  };
+
   const isLoading = loadState === 'loading';
   const hasError = loadState === 'error';
   const hasNoEvents = loadState === 'success' && events.length === 0;
 
   const isAnalyticsLoading = analyticsLoadState === 'loading';
   const hasAnalyticsError = analyticsLoadState === 'error';
-
-  const donutOffset =
-    stats.utilization === null
-      ? CIRCLE_CIRCUMFERENCE
-      : CIRCLE_CIRCUMFERENCE * (1 - stats.utilization / 100);
 
   const siteViews = analyticsStats.siteViews;
   const eventDetailViews = analyticsStats.eventDetailViews;
@@ -517,88 +671,168 @@ export default function AdminDashboardPage() {
               )}
             </div>
           </article>
+        </section>
 
-          <article className="dashboard-chart-card dashboard-donut-card">
-            <div className="dashboard-chart-header">
-              <div>
-                <div className="dashboard-chart-label">การใช้ความจุ</div>
-                <h2>ที่นั่งในอีเวนต์</h2>
-              </div>
-              <div className="dashboard-chart-tag">จาก Event API</div>
+        <section className="dashboard-events" aria-busy={isLoading}>
+          <div className="dashboard-chart-header">
+            <div>
+              <div className="dashboard-chart-label">รายละเอียดรายอีเวนต์</div>
+              <h2>ผู้ลงทะเบียนของแต่ละอีเวนต์</h2>
             </div>
+            <div className="dashboard-chart-tag">เลือกอีเวนต์เพื่อดูรายชื่อ</div>
+          </div>
 
-            <div className="dashboard-donut-content" aria-busy={isLoading}>
-              <div className="dashboard-donut">
-                <svg
-                  width="130"
-                  height="130"
-                  viewBox="0 0 130 130"
-                  aria-hidden="true"
-                >
-                  <circle
-                    cx="65"
-                    cy="65"
-                    r={CIRCLE_RADIUS}
-                    fill="none"
-                    stroke="#BAE6FD"
-                    strokeWidth="14"
-                  />
-                  {stats.hasCapacityData && !isLoading && !hasError && (
-                    <circle
-                      cx="65"
-                      cy="65"
-                      r={CIRCLE_RADIUS}
-                      fill="none"
-                      stroke="#FF6B4A"
-                      strokeWidth="14"
-                      strokeDasharray={`${CIRCLE_CIRCUMFERENCE - donutOffset} ${CIRCLE_CIRCUMFERENCE}`}
-                      strokeLinecap="round"
-                      transform="rotate(-90 65 65)"
-                    />
-                  )}
-                </svg>
+          {isLoading ? (
+            <p role="status" className="dashboard-events-empty">
+              กำลังโหลดข้อมูล…
+            </p>
+          ) : hasError ? (
+            <p role="status" className="dashboard-events-empty">
+              โหลดรายการอีเวนต์ไม่สำเร็จ
+            </p>
+          ) : events.length === 0 ? (
+            <p role="status" className="dashboard-events-empty">
+              ยังไม่มีอีเวนต์ในระบบ
+            </p>
+          ) : (
+            <>
+              <EventFilterBar
+                filters={filters}
+                setFilter={setFilter}
+                clear={clear}
+                activeCount={activeCount}
+                counts={facetCounts}
+                total={events.length}
+                shown={filteredEvents.length}
+                searchPlaceholder="ค้นหาอีเวนต์หรือชื่อผู้ลงทะเบียน"
+              />
 
-                <div className="dashboard-donut-center">
-                  {isLoading
-                    ? '…'
-                    : hasError || stats.utilization === null
-                      ? '—'
-                      : `${stats.utilization}%`}
+              {needsPersonIndex && (indexLoading || personMatches.length > 0) && (
+                <div className="dashboard-people" aria-live="polite">
+                  {indexLoading ? (
+                    <p>กำลังค้นหาในรายชื่อผู้ลงทะเบียนทุกอีเวนต์…</p>
+                  ) : personMatches.length > 0 ? (
+                    <>
+                      <div className="dashboard-people-title">
+                        พบในรายชื่อผู้ลงทะเบียน {personMatches.length} รายการ
+                      </div>
+                      <ul>
+                        {personMatches.slice(0, 6).map((person) => (
+                          <li key={person.key}>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                selectEvent(
+                                  person.eventId,
+                                  person.email || person.name,
+                                )
+                              }
+                            >
+                              <span className="dashboard-people-name">
+                                <Highlight
+                                  text={person.name}
+                                  query={filters.q}
+                                />
+                              </span>
+                              <span className="dashboard-people-meta">
+                                {person.email && (
+                                  <Highlight
+                                    text={`${person.email} · `}
+                                    query={filters.q}
+                                  />
+                                )}
+                                {person.eventName}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      {personMatches.length > 6 && (
+                        <p className="dashboard-people-more">
+                          และอีก {personMatches.length - 6} รายการ
+                          ลองพิมพ์ให้เจาะจงขึ้น
+                        </p>
+                      )}
+                    </>
+                  ) : null}
                 </div>
+              )}
+
+              {!selectedEvent ? (
+                <div className="ef-empty">
+                  <strong>
+                    {indexLoading
+                      ? 'กำลังค้นหา…'
+                      : 'ไม่พบอีเวนต์ที่ตรงกับเงื่อนไข'}
+                  </strong>
+                  ลองลดคำค้นหา หรือเอาตัวกรองบางอย่างออก
+                  <div>
+                    <button type="button" className="ef-clear" onClick={clear}>
+                      ล้างตัวกรองทั้งหมด
+                    </button>
+                  </div>
+                </div>
+              ) : (
+            <>
+              <div
+                className="dashboard-event-picker"
+                role="tablist"
+                aria-label="เลือกอีเวนต์"
+              >
+                {filteredEvents.map((event) => {
+                  const isSelected = event.id === selectedEventId;
+
+                  return (
+                    <button
+                      key={event.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={isSelected}
+                      className={`dashboard-event-chip${
+                        isSelected ? ' is-active' : ''
+                      }`}
+                      onClick={() => selectEvent(event.id)}
+                    >
+                      <span className="dashboard-event-chip-name">
+                        <Highlight
+                          text={event.title || event.name || 'ไม่มีชื่ออีเวนต์'}
+                          query={filters.q}
+                        />
+                      </span>
+                      <span className="dashboard-event-chip-count">
+                        {formatNumber(toNumber(event.registeredCount) ?? 0)}
+                        {toNumber(event.capacity) !== null
+                          ? ` / ${formatNumber(toNumber(event.capacity))}`
+                          : ''}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
-              <div className="dashboard-donut-info">
-                <div className="dashboard-seat-number">
-                  {isLoading
-                    ? '…'
-                    : hasError || !stats.hasCapacityData
-                      ? '—'
-                      : (
-                        <>
-                          {formatNumber(stats.bookedSeats)}
-                          <span> / {formatNumber(stats.totalCapacity)}</span>
-                        </>
-                      )}
-                </div>
+              <div className="dashboard-event-info">
+                <h3>{selectedEvent.title || selectedEvent.name}</h3>
                 <p>
-                  {stats.hasCapacityData
-                    ? 'จำนวนที่นั่งที่ใช้ไปจากความจุของอีเวนต์ที่มีข้อมูลครบ'
-                    : 'ยังไม่มีข้อมูลความจุและที่นั่งว่างที่เพียงพอสำหรับคำนวณ'}
+                  {formatEventDate(selectedEvent.startsAt)}
+                  {selectedEvent.location
+                    ? ` · ${selectedEvent.location}`
+                    : ''}
                 </p>
               </div>
-            </div>
 
-            <div className="dashboard-legend">
-              <div className="dashboard-legend-item">
-                <span className="dashboard-legend-dot dashboard-booked" />
-                <span>จองแล้ว</span>
-              </div>
-              <div className="dashboard-legend-item">
-                <span className="dashboard-legend-dot dashboard-open" />
-                <span>ที่ว่าง</span>
-              </div>
-            </div>
-          </article>
+              <EventAttendeesPanel
+                key={`${selectedEventId}-${focusPerson}`}
+                initialSearch={focusPerson}
+                capacity={toNumber(selectedEvent.capacity)}
+                registered={toNumber(selectedEvent.registeredCount)}
+                attendees={attendees}
+                loading={attendeesLoading}
+                error={attendeesError}
+              />
+            </>
+              )}
+            </>
+          )}
         </section>
       </main>
     </>
