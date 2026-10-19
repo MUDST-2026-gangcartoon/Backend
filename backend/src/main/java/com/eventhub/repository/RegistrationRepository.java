@@ -18,6 +18,11 @@ public interface RegistrationRepository
             Long eventId
     );
 
+    Optional<Registration> findByUserIdAndEventId(
+            Long userId,
+            Long eventId
+    );
+
     List<Registration>
     findByUserIdOrderByEventStartsAtAsc(Long userId);
 
