@@ -286,33 +286,37 @@ public final class ApiDtos {
     ) {
     }
 
-    public record RegistrationDto(
-            Long id,
-            LocalDateTime registeredAt,
-            int quantity,
-            String ticketCode,
-            String ticketTypeName,
-            BigDecimal totalPrice,
-            EventDto event
-    ) {
-    }
-
-
-    // =========================
-    // Attendee / Check-in
-    // =========================
-
-    public record AttendeeDto(
-            Long id,
-            String name,
-            String email,
-            LocalDateTime registeredAt,
-            String ticketType,
-            int quantity,
-            String ticketCode,
-            LocalDateTime checkedInAt
-    ) {
-    }
+        public record RegistrationDto(
+                Long id,
+                LocalDateTime registeredAt,
+                int quantity,
+                String ticketCode,
+                String ticketTypeName,
+                BigDecimal totalPrice,
+                EventDto event,
+                LocalDateTime checkedInAt
+        ) {
+        public RegistrationDto(
+                Long id,
+                LocalDateTime registeredAt,
+                int quantity,
+                String ticketCode,
+                String ticketTypeName,
+                BigDecimal totalPrice,
+                EventDto event
+        ) {
+                this(
+                        id,
+                        registeredAt,
+                        quantity,
+                        ticketCode,
+                        ticketTypeName,
+                        totalPrice,
+                        event,
+                        null
+                );
+        }
+        }
 
     public record CheckInRequest(
 
@@ -335,6 +339,17 @@ public final class ApiDtos {
             LocalDateTime checkedInAt
     ) {
     }
+        public record AttendeeDto(
+                Long id,
+                String name,
+                String email,
+                LocalDateTime registeredAt,
+                String ticketType,
+                int quantity,
+                String ticketCode,
+                LocalDateTime checkedInAt
+        ) {
+        }
 
 
     // =========================
