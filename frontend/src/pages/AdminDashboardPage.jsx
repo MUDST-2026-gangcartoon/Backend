@@ -1,3 +1,4 @@
+
 import React, {
   useCallback,
   useEffect,
@@ -7,7 +8,8 @@ import React, {
 } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar.jsx';
-import EventAttendeesPanel from '../components/EventAttendeesPanel.jsx';
+import BookingTools from '../components/BookingTools.jsx';
+import { MOCK_BOOKINGS, MOCK_CAPACITY, isMockMode } from '../data/mockBookings.js';
 import EventFilterBar, { Highlight } from '../components/EventFilterBar.jsx';
 import { useEventFilters } from '../hooks/useEventFilters.js';
 import {
@@ -16,6 +18,14 @@ import {
   matchesTokens,
   sortEvents,
 } from '../utils/eventFilters.js';
+import {
+  attendeesToCsv,
+  copyText,
+  downloadTextFile,
+  getUniqueEmails,
+  safeFileName,
+} from '../utils/attendeeExport.js';
+import Icon from '../components/Icon.jsx';
 import { eventService } from '../api/eventService.js';
 import '../admin-dashboard.css';
 
@@ -242,6 +252,8 @@ export default function AdminDashboardPage() {
 
   // ---- ค้นหา/กรอง ----
   const { filters, setFilter, clear, activeCount } = useEventFilters();
+  const [attendeesReload, setAttendeesReload] = useState(0);
+  const [toolbarNote, setToolbarNote] = useState('');
   const [allAttendees, setAllAttendees] = useState({});
   const [indexLoading, setIndexLoading] = useState(false);
   const [focusPerson, setFocusPerson] = useState('');
@@ -361,13 +373,52 @@ export default function AdminDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedEventId]);
+  }, [selectedEventId, attendeesReload]);
 
   const selectEvent = (id, person = '') => {
     const next = new URLSearchParams(searchParams);
     next.set('event', String(id));
     setSearchParams(next, { replace: true });
     setFocusPerson(person);
+  };
+
+  // ---- เครื่องมือของอีเวนต์ที่เลือก ----
+  const attendeeEmails = useMemo(
+    () => getUniqueEmails(attendees),
+    [attendees],
+  );
+  const hasAttendees = attendees.length > 0 && !attendeesLoading;
+
+  const showNote = (text) => {
+    setToolbarNote(text);
+    window.setTimeout(() => setToolbarNote(''), 3500);
+  };
+
+  const handleExportCsv = () => {
+    if (!selectedEvent || !hasAttendees) return;
+
+    const title = selectedEvent.title || selectedEvent.name || 'event';
+    const date = new Date().toISOString().slice(0, 10);
+
+    downloadTextFile(
+      `ผู้ลงทะเบียน-${safeFileName(title)}-${date}.csv`,
+      attendeesToCsv(attendees),
+    );
+    showNote(`ส่งออกรายชื่อ ${attendees.length} รายการแล้ว`);
+  };
+
+  const handleCopyEmails = async () => {
+    try {
+      await copyText(attendeeEmails.join(', '));
+      showNote(`คัดลอก ${attendeeEmails.length} อีเมลแล้ว`);
+    } catch {
+      showNote('คัดลอกไม่สำเร็จ กรุณาลองอีกครั้ง');
+    }
+  };
+
+  const handleRefresh = () => {
+    setAttendeesReload((count) => count + 1);
+    showNote('กำลังโหลดรายชื่อล่าสุด…');
   };
 
   const isLoading = loadState === 'loading';
@@ -705,7 +756,62 @@ export default function AdminDashboardPage() {
                 total={events.length}
                 shown={filteredEvents.length}
                 searchPlaceholder="ค้นหาอีเวนต์หรือชื่อผู้ลงทะเบียน"
-              />
+              >
+                <div
+                  className="dashboard-toolbar"
+                  role="toolbar"
+                  aria-label="เครื่องมือรายชื่อผู้ลงทะเบียน"
+                >
+                  <div className="dashboard-toolbar-head">
+                    <span className="dashboard-toolbar-title">
+                      เครื่องมือรายชื่อผู้ลงทะเบียน
+                    </span>
+                    <span className="dashboard-toolbar-target">
+                      {selectedEvent
+                        ? selectedEvent.title || selectedEvent.name
+                        : 'ยังไม่ได้เลือกอีเวนต์'}
+                    </span>
+                    <span
+                      className="dashboard-toolbar-note"
+                      role="status"
+                      aria-live="polite"
+                    >
+                      {toolbarNote}
+                    </span>
+                  </div>
+
+                  <div className="dashboard-toolbar-actions">
+                    <button
+                      type="button"
+                      onClick={handleExportCsv}
+                      disabled={!hasAttendees}
+                    >
+                      <Icon name="download" /> ส่งออก CSV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCopyEmails}
+                      disabled={!hasAttendees || attendeeEmails.length === 0}
+                    >
+                      <Icon name="copy" /> คัดลอกอีเมล
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      disabled={!selectedEvent}
+                    >
+                      <Icon name="print" /> พิมพ์รายชื่อ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRefresh}
+                      disabled={!selectedEvent || attendeesLoading}
+                    >
+                      <Icon name="refresh" /> รีเฟรช
+                    </button>
+                  </div>
+                </div>
+              </EventFilterBar>
 
               {needsPersonIndex && (indexLoading || personMatches.length > 0) && (
                 <div className="dashboard-people" aria-live="polite">
@@ -820,14 +926,20 @@ export default function AdminDashboardPage() {
                 </p>
               </div>
 
-              <EventAttendeesPanel
+              {isMockMode() && (
+                <p className="bt-mock-note">โหมดข้อมูลจำลอง (?mock=1) — ไม่ใช่ข้อมูลจริง</p>
+              )}
+              <BookingTools
                 key={`${selectedEventId}-${focusPerson}`}
                 initialSearch={focusPerson}
-                capacity={toNumber(selectedEvent.capacity)}
-                registered={toNumber(selectedEvent.registeredCount)}
-                attendees={attendees}
-                loading={attendeesLoading}
-                error={attendeesError}
+                eventName={selectedEvent.title || selectedEvent.name || 'event'}
+                capacity={
+                  isMockMode() ? MOCK_CAPACITY : toNumber(selectedEvent.capacity)
+                }
+                bookings={isMockMode() ? MOCK_BOOKINGS : attendees}
+                loading={isMockMode() ? false : attendeesLoading}
+                error={isMockMode() ? '' : attendeesError}
+                onRetry={() => setAttendeesReload((count) => count + 1)}
               />
             </>
               )}

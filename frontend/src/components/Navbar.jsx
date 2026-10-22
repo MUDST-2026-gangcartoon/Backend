@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import Icon from './Icon.jsx';
+import ProfileMenu from './ProfileMenu.jsx';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthModal from './AuthModal.jsx';
@@ -12,7 +14,6 @@ export default function Navbar({ onSearchChange }) {
 
   // STATES
   const [searchQuery, setSearchQuery] = useState('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // HANDLERS
   const handleSearchKeyDown = (e) => {
@@ -25,19 +26,9 @@ export default function Navbar({ onSearchChange }) {
     }
   };
 
-  const handleLogout = () => {
-    setIsDropdownOpen(false);
-    logout();
-  };
 
   const getNavLinkClass = ({ isActive }) =>
     `nav-link${isActive ? ' active' : ''}`;
-
-  const userRole = user?.role?.toLowerCase() || '';
-  const isAdmin =
-    userRole === 'admin' || userRole === 'ผู้ดูแลระบบ';
-  const isStaff =
-    userRole === 'staff' || userRole === 'พนักงาน';
 
   return (
     <>
@@ -82,55 +73,19 @@ export default function Navbar({ onSearchChange }) {
 
         {/* ตรงกลาง: เมนูตาม Role */}
         <div className="nav-center">
-          {isAdmin ? (
+          <NavLink to="/UpcomingEventsPage" className={getNavLinkClass}>
+            ค้นหาอีเวนต์
+          </NavLink>
+
+          {isLoggedIn && (
             <>
-              <NavLink
-                to="/admin/dashboard"
-                className={getNavLinkClass}
-              >
-                แดชบอร์ด
+              <NavLink to="/MyRegistrationsPage" className={getNavLinkClass}>
+                การลงทะเบียนของฉัน
               </NavLink>
 
-              <NavLink
-                to="/manage-events"
-                className={getNavLinkClass}
-              >
-                จัดการอีเวนต์
+              <NavLink to="/MyTicketsPage" className={getNavLinkClass}>
+                ตั๋วของฉัน
               </NavLink>
-            </>
-          ) : isStaff ? (
-            <NavLink
-              to="/staff/checkin"
-              className={getNavLinkClass}
-            >
-              เช็กอินหน้างาน
-            </NavLink>
-          ) : (
-            <>
-              <NavLink
-                to="/UpcomingEventsPage"
-                className={getNavLinkClass}
-              >
-                ค้นหาอีเวนต์
-              </NavLink>
-
-              {isLoggedIn && (
-                <>
-                  <NavLink
-                    to="/MyRegistrationsPage"
-                    className={getNavLinkClass}
-                  >
-                    การลงทะเบียนของฉัน
-                  </NavLink>
-
-                  <NavLink
-                    to="/MyTicketsPage"
-                    className={getNavLinkClass}
-                  >
-                    ตั๋วของฉัน
-                  </NavLink>
-                </>
-              )}
             </>
           )}
         </div>
@@ -179,61 +134,14 @@ export default function Navbar({ onSearchChange }) {
               </a>
             </div>
           ) : (
-            <div
-              className="user-profile-container"
-              style={{ position: 'relative' }}
-            >
-              <div
-                className="user-profile"
-                onClick={() =>
-                  setIsDropdownOpen((previous) => !previous)
-                }
-                style={{
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
-                <div className="avatar">
-                  {user?.avatarLetter || 'U'}
-                </div>
-
-                <div className="user-info">
-                  <div className="username">
-                    {user?.username}
-                  </div>
-
-                  <div className="role">
-                    {user?.roleLabel || user?.role}
-                  </div>
-                </div>
-
-                <span
-                  className="dropdown-icon"
-                  style={{
-                    transform: isDropdownOpen
-                      ? 'rotate(180deg)'
-                      : 'rotate(0deg)',
-                    transition: '0.2s',
-                    marginLeft: '8px',
-                  }}
-                >
-                  ▼
-                </span>
-              </div>
-
-              {isDropdownOpen && (
-                <div className="profile-dropdown-menu">
-                  <button
-                    type="button"
-                    className="dropdown-item logout-btn"
-                    onClick={handleLogout}
-                  >
-                    🚪 ออกจากระบบ
-                  </button>
-                </div>
-              )}
-            </div>
+            <ProfileMenu
+              user={user}
+              items={[
+                { to: '/MyRegistrationsPage', label: 'การลงทะเบียนของฉัน', icon: 'list' },
+                { to: '/MyTicketsPage', label: 'ตั๋วของฉัน', icon: 'ticket' },
+              ]}
+              onLogout={logout}
+            />
           )}
         </div>
 

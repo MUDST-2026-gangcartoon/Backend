@@ -1,10 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { showAppAlert } from './AppDialog.jsx';
-import { resolveImageUrl } from '../api/apiClient.js';
-
-const COVER_SLOT_COUNT = 4;
-const STORAGE_PREFIX = 'event-cover-slots:';
+import Icon from './Icon.jsx';
 
 const CATEGORY_OPTIONS = [
   { value: 'TECH', label: 'เทคโนโลยี' },
@@ -13,7 +8,7 @@ const CATEGORY_OPTIONS = [
   { value: 'COMMUNITY', label: 'ชุมชน' },
 ];
 
-const createEmptyForm = () => ({
+const emptyForm = {
   id: null,
   name: '',
   desc: '',
@@ -24,371 +19,173 @@ const createEmptyForm = () => ({
   coverIndex: 0,
   coverUrl: '',
   coverFile: null,
-  ticketTypes: [
-    {
-      name: 'General Admission',
-      description: '',
-      price: 0,
-      capacity: 30,
-      sold: 0,
-    },
-  ],
-});
-
-const getInitialCoverUrl = (event) =>
-  event?.imageUrl ||
-  event?.coverUrl ||
-  event?.image ||
-  event?.coverImage ||
-  '';
-
-const getStorageKey = (event, draftKey) =>
-  `${STORAGE_PREFIX}${
-    event?.id != null ? String(event.id) : draftKey
-  }`;
-
-const createEmptyCoverSlots = () =>
-  Array.from({ length: COVER_SLOT_COUNT }, () => ({
-    url: '',
-    file: null,
-  }));
-
-const readStoredCoverSlots = (key) => {
-  const emptySlots = createEmptyCoverSlots();
-
-  try {
-    const saved = localStorage.getItem(key);
-    if (!saved) return emptySlots;
-
-    const parsed = JSON.parse(saved);
-    if (!Array.isArray(parsed)) return emptySlots;
-
-    return emptySlots.map((_, index) => ({
-      url:
-        typeof parsed[index]?.url === 'string'
-          ? parsed[index].url
-          : '',
-      file: null,
-    }));
-  } catch (error) {
-    console.warn('อ่านรูปปกที่บันทึกไว้ไม่สำเร็จ:', error);
-    return emptySlots;
-  }
+  endsAt: '',
+  registrationClosesAt: '',
+  checkinEnabled: true,
+  organizerName: '',
+  contactInfo: '',
+  locationType: 'ONSITE',
+  onlineUrl: '',
+  ticketTypes: [{ name: 'General Admission', description: '', price: 0, capacity: 30, sold: 0, saleOpen: true }],
 };
 
-const saveCoverSlots = (key, slots) => {
+const isHttpUrl = (value) => {
   try {
-    // เก็บ URL ของแต่ละช่องแยกกัน
-    // File object ไม่สามารถเก็บลง localStorage โดยตรงได้
-    const serializableSlots = slots.map((slot) => ({
-      url: slot.url || '',
-    }));
-
-    localStorage.setItem(key, JSON.stringify(serializableSlots));
-    return true;
-  } catch (error) {
-    console.error('บันทึกรูปปกไม่สำเร็จ:', error);
-
-    showAppAlert(
-      'ไม่สามารถบันทึกรูปในเบราว์เซอร์ได้ อาจเป็นเพราะพื้นที่จัดเก็บเต็ม กรุณาเลือกรูปที่มีขนาดเล็กลง',
-      { title: 'บันทึกรูปไม่สำเร็จ' }
-    );
-
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
     return false;
   }
 };
 
-const createInitialCoverSlots = (event, storageKey) => {
-  const slots = readStoredCoverSlots(storageKey);
-  const initialUrl = getInitialCoverUrl(event);
-
-  const rawIndex = Number(event?.coverIndex ?? 0);
-  const index =
-    Number.isInteger(rawIndex) &&
-    rawIndex >= 0 &&
-    rawIndex < COVER_SLOT_COUNT
-      ? rawIndex
-      : 0;
-
-  // เติมรูปจาก Backend เฉพาะช่องที่ยังไม่มีรูป
-  if (initialUrl && !slots[index].url) {
-    slots[index] = { url: initialUrl, file: null };
-  }
-
-  return slots;
-};
-
-export default function EventDrawer({
-  open,
-  mode,
-  initialEvent,
-  onClose,
-  onSubmit,
-}) {
-  const [form, setForm] = useState(createEmptyForm);
+export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmit, serverErrors = null }) {
+  const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
-  const [coverSlots, setCoverSlots] = useState(createEmptyCoverSlots);
-  const [coverImageError, setCoverImageError] = useState(false);
-
-  // สร้าง key สำหรับกิจกรรมใหม่หนึ่งชุดตลอดอายุของ Drawer
-  const [draftKey] = useState(
-    () =>
-      `draft-${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2)}`
-  );
-
   const isEdit = mode === 'edit';
-
-  const storageKey = getStorageKey(
-    isEdit ? initialEvent : null,
-    draftKey
-  );
-
-  const selectedIndex = Number(form.coverIndex ?? 0);
-
-  const selectedSlot = coverSlots[selectedIndex] || {
-    url: '',
-    file: null,
-  };
-
-  const resolvedCoverUrl = resolveImageUrl(selectedSlot.url);
 
   useEffect(() => {
     if (!open) return;
-
-    setErrors({});
-    setCoverImageError(false);
-
-    const slots = createInitialCoverSlots(
-      isEdit ? initialEvent : null,
-      storageKey
-    );
-
-    setCoverSlots(slots);
-
     if (isEdit && initialEvent) {
-      const max = Number(initialEvent.max ?? 30) || 30;
-
-      const rawIndex = Number(initialEvent.coverIndex ?? 0);
-      const index =
-        Number.isInteger(rawIndex) &&
-        rawIndex >= 0 &&
-        rawIndex < COVER_SLOT_COUNT
-          ? rawIndex
-          : 0;
-
+      setErrors({});
       setForm({
-        id: initialEvent.id ?? null,
+        id: initialEvent.id,
         name: initialEvent.name || '',
         desc: initialEvent.desc || '',
         place: initialEvent.place || '',
         category: initialEvent.category || 'TECH',
         date: initialEvent.date || '',
-        max,
-        coverIndex: index,
-        coverUrl: slots[index]?.url || '',
+        max: initialEvent.max || 30,
+        coverIndex: initialEvent.coverIndex ?? 0,
+        coverUrl: initialEvent.coverUrl || '',
         coverFile: null,
-        ticketTypes:
-          Array.isArray(initialEvent.ticketTypes) &&
-          initialEvent.ticketTypes.length > 0
-            ? initialEvent.ticketTypes.map((ticket) => ({
-                ...ticket,
-                name: ticket.name ?? '',
-                description: ticket.description ?? '',
-                price: Number(ticket.price ?? 0),
-                capacity: Number(ticket.capacity ?? 0),
-                sold: Number(ticket.sold ?? 0),
-              }))
-            : [
-                {
-                  name: 'General Admission',
-                  description: '',
-                  price: 0,
-                  capacity: max,
-                  sold: 0,
-                },
-              ],
+        endsAt: initialEvent.endsAt || '',
+        registrationClosesAt: initialEvent.registrationClosesAt || '',
+        checkinEnabled: initialEvent.checkinEnabled !== false,
+        organizerName: initialEvent.organizerName || '',
+        contactInfo: initialEvent.contactInfo || '',
+        locationType: initialEvent.locationType === 'ONLINE' ? 'ONLINE' : 'ONSITE',
+        onlineUrl: initialEvent.onlineUrl || '',
+        ticketTypes: Array.isArray(initialEvent.ticketTypes) && initialEvent.ticketTypes.length
+          ? initialEvent.ticketTypes.map((ticket) => ({
+              ...ticket,
+              name: ticket.name ?? '',
+              description: ticket.description ?? '',
+              price: Number(ticket.price ?? 0),
+              capacity: Number(ticket.capacity ?? 0),
+              sold: Number(ticket.sold ?? 0),
+              saleOpen: ticket.saleOpen !== false,
+            }))
+          : [{
+              name: 'General Admission',
+              description: '',
+              price: 0,
+              capacity: Number(initialEvent.max || 30),
+              sold: 0,
+              saleOpen: true,
+            }],
       });
     } else {
-      setForm(createEmptyForm());
+      setErrors({});
+      setForm(emptyForm);
     }
-  }, [open, isEdit, initialEvent, storageKey]);
+  }, [open, isEdit, initialEvent]);
+
+  // แสดง error จากหลังบ้านใต้ช่องเดิม (รูปแบบ { field: 'ข้อความ' })
+  useEffect(() => {
+    if (serverErrors && typeof serverErrors === 'object') {
+      setErrors((prev) => ({ ...prev, ...serverErrors }));
+    }
+  }, [serverErrors]);
 
   if (!open) return null;
 
-  const persistSlots = (nextSlots) => {
-    saveCoverSlots(storageKey, nextSlots);
-  };
-
-  const selectCoverSlot = (index) => {
-    const slot = coverSlots[index] || {
-      url: '',
-      file: null,
-    };
-
-    setForm((current) => ({
-      ...current,
-      coverIndex: index,
-      coverUrl: slot.url,
-      coverFile: slot.file,
-    }));
-
-    setCoverImageError(false);
-
-    setErrors((previous) => ({
-      ...previous,
-      coverUrl: '',
-    }));
-  };
+  // มีประวัติ = มีผู้ลงทะเบียนหรือขายบัตรแล้ว ยังแก้รายละเอียด/ลิงก์ได้ แต่สลับรูปแบบไม่ได้
+  const hasHistory =
+    isEdit &&
+    (Number(initialEvent?.seats ?? 0) > 0 ||
+      (initialEvent?.ticketTypes ?? []).some((t) => Number(t.sold ?? 0) > 0));
 
   const set = (key) => (e) => {
     const value = e.target.value;
 
-    if (key === 'coverUrl') {
-      const nextSlots = coverSlots.map((slot, index) =>
-        index === selectedIndex
-          ? { url: value, file: null }
-          : slot
-      );
-
-      setCoverSlots(nextSlots);
-      persistSlots(nextSlots);
-      setCoverImageError(false);
-
-      setForm((current) => ({
-        ...current,
-        coverUrl: value,
-        coverFile: null,
-      }));
-    } else {
-      setForm((current) => ({
-        ...current,
-        [key]: value,
-      }));
-    }
-
-    setErrors((previous) => ({
-      ...previous,
-      [key]: '',
-    }));
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      showAppAlert('กรุณาเลือกไฟล์รูปภาพ');
-      e.target.value = '';
-      return;
-    }
-
-    const index = selectedIndex;
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      const dataUrl = reader.result;
-
-      if (typeof dataUrl !== 'string') {
-        showAppAlert('ไม่สามารถอ่านไฟล์รูปภาพได้');
-        return;
-      }
-
-      setCoverSlots((previous) => {
-        const nextSlots = previous.map((slot, slotIndex) =>
-          slotIndex === index
-            ? { url: dataUrl, file }
-            : slot
-        );
-
-        persistSlots(nextSlots);
-        return nextSlots;
-      });
-
-      setForm((current) => ({
-        ...current,
-        coverIndex: index,
-        coverUrl: dataUrl,
-        coverFile: file,
-      }));
-
-      setCoverImageError(false);
-
-      setErrors((previous) => ({
-        ...previous,
-        coverUrl: '',
-      }));
-    };
-
-    reader.onerror = () => {
-      showAppAlert('ไม่สามารถอ่านไฟล์รูปภาพได้');
-    };
-
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const clearSelectedCover = () => {
-    const nextSlots = coverSlots.map((slot, index) =>
-      index === selectedIndex
-        ? { url: '', file: null }
-        : slot
-    );
-
-    setCoverSlots(nextSlots);
-    persistSlots(nextSlots);
-
-    setForm((current) => ({
-      ...current,
-      coverUrl: '',
-      coverFile: null,
+    setForm((f) => ({
+      ...f,
+      [key]: value,
+      ...(key === 'coverUrl' ? { coverFile: null } : {}),
     }));
 
-    setCoverImageError(false);
+    setErrors((prev) => ({ ...prev, [key]: '' }));
   };
 
   const handleSubmit = () => {
     const nextErrors = {};
+    const isOnline = form.locationType === 'ONLINE';
 
-    if (!form.name.trim()) {
-      nextErrors.name = 'กรุณากรอกชื่ออีเวนต์';
+    if (!form.name.trim()) nextErrors.name = 'กรุณากรอกชื่ออีเวนต์';
+    if (!isOnline && !form.place.trim()) nextErrors.place = 'กรุณากรอกสถานที่';
+    if (!form.date) nextErrors.date = 'กรุณาเลือกวันและเวลา';
+
+    if (isOnline) {
+      if (!form.onlineUrl.trim()) nextErrors.onlineUrl = 'กรุณากรอกลิงก์ห้องออนไลน์';
+      else if (!isHttpUrl(form.onlineUrl.trim())) {
+        nextErrors.onlineUrl = 'ลิงก์ต้องขึ้นต้นด้วย http:// หรือ https://';
+      }
     }
 
-    if (!form.place.trim()) {
-      nextErrors.place = 'กรุณากรอกสถานที่';
-    }
+    // ตรวจลำดับเวลา: เริ่ม < สิ้นสุด และปิดรับสมัครต้องไม่เกินเวลาสิ้นสุด
+    const start = form.date ? new Date(form.date).getTime() : NaN;
+    const end = form.endsAt ? new Date(form.endsAt).getTime() : NaN;
+    const close = form.registrationClosesAt
+      ? new Date(form.registrationClosesAt).getTime()
+      : NaN;
 
-    if (!form.date) {
-      nextErrors.date = 'กรุณาเลือกวันและเวลา';
+    if (form.endsAt && Number.isFinite(start) && end <= start) {
+      nextErrors.endsAt = 'เวลาสิ้นสุดต้องหลังเวลาเริ่ม';
+    }
+    if (form.registrationClosesAt) {
+      const limit = Number.isFinite(end) ? end : start;
+      if (Number.isFinite(limit) && close > limit) {
+        nextErrors.registrationClosesAt = Number.isFinite(end)
+          ? 'เวลาปิดรับสมัครต้องไม่เกินเวลาสิ้นสุด'
+          : 'เวลาปิดรับสมัครต้องไม่เกินเวลาเริ่มงาน';
+      }
     }
 
     const max = Number(form.max);
-
     if (!Number.isInteger(max) || max <= 0) {
       nextErrors.max = 'ต้องเป็นจำนวนเต็มบวก';
+    } else if (isEdit && max < Number(initialEvent?.seats ?? 0)) {
+      nextErrors.max = `ต้องไม่น้อยกว่าจำนวนผู้ลงทะเบียนปัจจุบัน (${initialEvent.seats})`;
+    }
+
+    const ticketErrors = {};
+    (form.ticketTypes ?? []).forEach((ticket, index) => {
+      const e = {};
+      if (!String(ticket.name ?? '').trim()) e.name = 'กรุณากรอกชื่อประเภทบัตร';
+      const price = Number(ticket.price);
+      if (!Number.isFinite(price) || price < 0) e.price = 'ราคาต้องตั้งแต่ 0 ขึ้นไป';
+      const cap = Number(ticket.capacity);
+      if (!Number.isInteger(cap) || cap < 1) e.capacity = 'ต้องเป็นจำนวนเต็มอย่างน้อย 1';
+      else if (cap < Number(ticket.sold ?? 0)) {
+        e.capacity = `ขายแล้ว ${ticket.sold} ใบ ลดต่ำกว่านี้ไม่ได้`;
+      }
+      if (Object.keys(e).length) ticketErrors[index] = e;
+    });
+    if (Object.keys(ticketErrors).length) nextErrors.tickets = ticketErrors;
+
+    if (!nextErrors.max && !nextErrors.tickets) {
+      const total = (form.ticketTypes ?? []).reduce((sum, t) => sum + Number(t.capacity), 0);
+      if (total !== max) {
+        nextErrors.max = `ผลรวมจำนวนบัตรทุกประเภท (${total}) ต้องเท่ากับจำนวนผู้เข้าร่วมสูงสุด (${max})`;
+      }
     }
 
     setErrors(nextErrors);
-
     if (Object.keys(nextErrors).length > 0) return;
 
-    const currentSlot = coverSlots[selectedIndex] || {
-      url: '',
-      file: null,
-    };
-
-    onSubmit(
-      {
-        ...form,
-        coverIndex: selectedIndex,
-        coverUrl: currentSlot.url || '',
-        coverFile: currentSlot.file || null,
-        coverImages: coverSlots.map((slot) => slot.url || ''),
-      },
-      isEdit
-    );
+    onSubmit(form, isEdit);
   };
+
 
   const addTicketType = () => {
     setForm((current) => ({
@@ -401,6 +198,7 @@ export default function EventDrawer({
           price: 0,
           capacity: 1,
           sold: 0,
+          saleOpen: true,
         },
       ],
     }));
@@ -417,19 +215,20 @@ export default function EventDrawer({
     }));
   };
 
-  const removeTicketType = (index) => {
-    const tickets = form.ticketTypes ?? [];
-    const ticket = tickets[index];
-
-    if (tickets.length <= 1) {
-      showAppAlert('ต้องมีประเภทบัตรอย่างน้อย 1 รายการ');
-      return;
+  // เหตุผลที่ลบประเภทบัตรไม่ได้ (null = ลบได้)
+  const ticketDeleteBlock = (ticket) => {
+    if ((form.ticketTypes ?? []).length <= 1) {
+      return 'ต้องมีประเภทบัตรอย่างน้อย 1 รายการ';
     }
-
     if (Number(ticket?.sold ?? 0) > 0) {
-      showAppAlert('ไม่สามารถลบประเภทบัตรที่มีการขายแล้ว');
-      return;
+      return `ลบไม่ได้: ขายบัตรประเภทนี้ไปแล้ว ${ticket.sold} ใบ ให้ปิดขายแทน`;
     }
+    return null;
+  };
+
+  const removeTicketType = (index) => {
+    const ticket = (form.ticketTypes ?? [])[index];
+    if (ticketDeleteBlock(ticket)) return;
 
     setForm((current) => ({
       ...current,
@@ -439,28 +238,32 @@ export default function EventDrawer({
     }));
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const previewUrl = URL.createObjectURL(file);
+
+    setForm((f) => ({
+      ...f,
+      coverUrl: previewUrl,
+      coverFile: file,
+    }));
+
+    setErrors((prev) => ({ ...prev, coverUrl: '' }));
+  };
+
   return (
     <div className="drawer-overlay-wrap">
       <div className="bg-dimmed" onClick={onClose} />
-
       <aside className="drawer" role="dialog" aria-modal="true">
         <div className="drawer-head">
           <div>
-            <div className="eyebrow">
-              {isEdit ? 'แก้ไขอีเวนต์' : 'อีเวนต์ใหม่'}
-            </div>
-            <h2 className="drawer-title">
-              {isEdit ? 'แก้ไขรายละเอียด' : 'สร้างอีเวนต์'}
-            </h2>
+            <div className="eyebrow">{isEdit ? 'แก้ไขอีเวนต์' : 'อีเวนต์ใหม่'}</div>
+            <h2 className="drawer-title">{isEdit ? 'แก้ไขรายละเอียด' : 'สร้างอีเวนต์'}</h2>
           </div>
-
-          <button
-            type="button"
-            className="close-btn"
-            onClick={onClose}
-            title="ปิด"
-          >
-            ✕
+          <button type="button" className="close-btn" onClick={onClose} title="ปิด">
+            <Icon name="close" size="1.2em" strokeWidth={2} />
           </button>
         </div>
 
@@ -468,18 +271,14 @@ export default function EventDrawer({
           <div className="field">
             <label htmlFor="ev-name">ชื่ออีเวนต์</label>
             <input
-              id="ev-name"
               type="text"
+              id="ev-name"
               placeholder="เช่น เวิร์กช็อปสำหรับน้องหมา"
               value={form.name}
               onChange={set('name')}
               aria-invalid={Boolean(errors.name)}
             />
-            {errors.name && (
-              <small className="helper-text err">
-                {errors.name}
-              </small>
-            )}
+            {errors.name && <small className="helper-text err">{errors.name}</small>}
           </div>
 
           <div className="field">
@@ -495,140 +294,104 @@ export default function EventDrawer({
 
           <div className="field">
             <label>รูปปกอีเวนต์</label>
-            <span className="hint">
-              เลือกช่องก่อนอัปโหลด รูปจะเปลี่ยนเฉพาะช่องที่เลือก
-            </span>
-
-            <div className="cover-grid">
-              {coverSlots.map((slot, index) => {
-                const imageUrl = resolveImageUrl(slot.url);
-
-                return (
-                  <button
-                    key={index}
-                    type="button"
-                    className={`cover-thumb${
-                      selectedIndex === index ? ' selected' : ''
-                    }`}
-                    onClick={() => selectCoverSlot(index)}
-                    aria-label={`เลือกช่องรูปปกที่ ${index + 1}`}
-                    aria-pressed={selectedIndex === index}
-                  >
-                    {imageUrl ? (
-                      <img
-                        src={imageUrl}
-                        alt={`รูปปกช่องที่ ${index + 1}`}
-                        className="cover-thumb-image"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <span
-                        className="cover-thumb-placeholder"
-                        aria-hidden="true"
-                      >
-                        ＋
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                gap: 8,
-                flexWrap: 'wrap',
-                marginTop: 8,
-              }}
-            >
-              <label
-                htmlFor="ev-cover-file"
-                className="btn-secondary"
-                style={{
-                  display: 'inline-flex',
-                  cursor: 'pointer',
-                }}
-              >
-                อัปโหลดรูปช่องที่ {selectedIndex + 1}
-              </label>
-
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={clearSelectedCover}
-                disabled={!selectedSlot.url}
-              >
-                ล้างรูปช่องนี้
-              </button>
-            </div>
-
+            <span className="hint">อัปโหลดรูป หรือวาง URL ของรูปภาพ</span>
+            {form.coverUrl && (
+              <div className="cover-grid single">
+                <div
+                  className="cover-thumb selected has-image"
+                  style={{ backgroundImage: `url("${form.coverUrl}")` }}
+                  aria-label="รูปปกที่เลือก"
+                />
+              </div>
+            )}
             <input
               id="ev-cover-file"
               type="file"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.gif,.bmp"
               onChange={handleFileChange}
               style={{ display: 'none' }}
             />
+            <label htmlFor="ev-cover-file" className="btn-secondary" style={{ marginTop: 8, display: 'inline-flex', cursor: 'pointer' }}>
+              อัปโหลดรูปปก
+            </label>
 
             <div className="field" style={{ marginTop: 10 }}>
-              <label htmlFor="ev-cover-url">
-                URL รูปปกช่องที่ {selectedIndex + 1}
-              </label>
+              <label htmlFor="ev-cover-url">URL รูปปก</label>
               <input
                 id="ev-cover-url"
-                type="text"
-                placeholder="https://example.com/cover.jpg หรือ /uploads/cover.jpg"
-                value={selectedSlot.url}
+                type="url"
+                placeholder="https://example.com/cover.jpg"
+                value={form.coverUrl}
                 onChange={set('coverUrl')}
               />
             </div>
 
-            {coverImageError && selectedSlot.url && (
-              <small className="helper-text err">
-                โหลดรูปไม่สำเร็จ กรุณาตรวจสอบ URL รูปภาพ
-              </small>
-            )}
+          </div>
 
-            {resolvedCoverUrl && !coverImageError && (
-              <img
-                key={resolvedCoverUrl}
-                src={resolvedCoverUrl}
-                alt={`ตัวอย่างรูปปกช่องที่ ${selectedIndex + 1}`}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  maxHeight: 180,
-                  objectFit: 'cover',
-                  borderRadius: 12,
-                  marginTop: 10,
-                }}
-                onError={() => setCoverImageError(true)}
-              />
+          <div className="field">
+            <label>รูปแบบการจัดงาน</label>
+            <div className="segmented" role="group" aria-label="รูปแบบการจัดงาน">
+              {[
+                { value: 'ONSITE', label: 'ออนไซต์' },
+                { value: 'ONLINE', label: 'ออนไลน์' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={form.locationType === option.value ? 'is-active' : ''}
+                  aria-pressed={form.locationType === option.value}
+                  disabled={hasHistory && form.locationType !== option.value}
+                  onClick={() => {
+                    if (hasHistory) return;
+                    setForm((f) => ({ ...f, locationType: option.value }));
+                    setErrors((prev) => ({ ...prev, place: '', onlineUrl: '' }));
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            {hasHistory && (
+              <p className="lock-note">
+                สลับรูปแบบไม่ได้ เพราะอีเวนต์นี้มีผู้ลงทะเบียนหรือขายบัตรแล้ว
+                แต่ยังแก้รายละเอียดและลิงก์ห้องได้
+              </p>
             )}
           </div>
 
+          {form.locationType === 'ONLINE' && (
+            <div className="field">
+              <label htmlFor="ev-online-url">ลิงก์ห้องออนไลน์</label>
+              <input
+                type="url"
+                id="ev-online-url"
+                placeholder="https://meet.example.com/room"
+                value={form.onlineUrl}
+                onChange={set('onlineUrl')}
+                aria-invalid={Boolean(errors.onlineUrl)}
+              />
+              {errors.onlineUrl && <small className="helper-text err">{errors.onlineUrl}</small>}
+            </div>
+          )}
+
           <div className="field-row">
             <div className="field">
-              <label htmlFor="ev-place">สถานที่</label>
+              <label htmlFor="ev-place">
+                {form.locationType === 'ONLINE' ? 'สถานที่ (ถ้ามี)' : 'สถานที่'}
+              </label>
               <input
-                id="ev-place"
                 type="text"
+                id="ev-place"
                 placeholder="อาคาร / ชั้น / ห้อง"
                 value={form.place}
                 onChange={set('place')}
+                aria-invalid={Boolean(errors.place)}
               />
+              {errors.place && <small className="helper-text err">{errors.place}</small>}
             </div>
-
             <div className="field">
               <label htmlFor="ev-cat">หมวดหมู่</label>
-              <select
-                id="ev-cat"
-                value={form.category}
-                onChange={set('category')}
-              >
+              <select id="ev-cat" value={form.category} onChange={set('category')}>
                 {CATEGORY_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -641,38 +404,49 @@ export default function EventDrawer({
           <div className="field-row">
             <div className="field">
               <label htmlFor="ev-date">วันและเวลา</label>
-              <input
-                id="ev-date"
-                type="datetime-local"
-                value={form.date}
-                onChange={set('date')}
-                aria-invalid={Boolean(errors.date)}
-              />
-              {errors.date && (
-                <small className="helper-text err">
-                  {errors.date}
-                </small>
-              )}
+              <input type="datetime-local" id="ev-date" value={form.date} onChange={set('date')} aria-invalid={Boolean(errors.date)} />
+              {errors.date && <small className="helper-text err">{errors.date}</small>}
             </div>
-
             <div className="field">
-              <label htmlFor="ev-max">
-                จำนวนผู้เข้าร่วมสูงสุด
-              </label>
-              <input
-                id="ev-max"
-                type="number"
-                min="1"
-                step="1"
-                value={form.max}
-                onChange={set('max')}
-                aria-invalid={Boolean(errors.max)}
-              />
-              {errors.max && (
-                <small className="helper-text err">
-                  {errors.max}
-                </small>
-              )}
+              <label htmlFor="ev-max">จำนวนผู้เข้าร่วมสูงสุด</label>
+              <input type="number" id="ev-max" min="1" step="1" value={form.max} onChange={set('max')} aria-invalid={Boolean(errors.max)} />
+              {errors.max && <small className="helper-text err">{errors.max}</small>}
+            </div>
+          </div>
+          <div className="field-row">
+            <div className="field">
+              <label htmlFor="ev-ends">วันและเวลาสิ้นสุด</label>
+              <input type="datetime-local" id="ev-ends" value={form.endsAt} min={form.date || undefined} onChange={set('endsAt')} aria-invalid={Boolean(errors.endsAt)} />
+              {errors.endsAt && <small className="helper-text err">{errors.endsAt}</small>}
+            </div>
+            <div className="field">
+              <label htmlFor="ev-close">ปิดรับสมัครเมื่อ</label>
+              <input type="datetime-local" id="ev-close" value={form.registrationClosesAt} onChange={set('registrationClosesAt')} aria-invalid={Boolean(errors.registrationClosesAt)} />
+              {errors.registrationClosesAt && <small className="helper-text err">{errors.registrationClosesAt}</small>}
+            </div>
+          </div>
+
+          <label className="toggle-row" htmlFor="ev-checkin">
+            <span className="toggle-text">
+              <strong>เปิดเช็กอิน</strong>
+              <span className="hint">ปิดไว้ สตาฟจะเช็กอินผู้เข้าร่วมของอีเวนต์นี้ไม่ได้</span>
+            </span>
+            <input
+              id="ev-checkin"
+              type="checkbox"
+              checked={form.checkinEnabled}
+              onChange={(e) => setForm((f) => ({ ...f, checkinEnabled: e.target.checked }))}
+            />
+          </label>
+
+          <div className="field-row">
+            <div className="field">
+              <label htmlFor="ev-organizer">ผู้จัดงาน</label>
+              <input type="text" id="ev-organizer" maxLength={120} placeholder="ชื่อผู้จัด/องค์กร" value={form.organizerName} onChange={set('organizerName')} />
+            </div>
+            <div className="field">
+              <label htmlFor="ev-contact">ช่องทางติดต่อ</label>
+              <input type="text" id="ev-contact" maxLength={200} placeholder="อีเมลหรือเบอร์โทร" value={form.contactInfo} onChange={set('contactInfo')} />
             </div>
           </div>
 
@@ -680,11 +454,8 @@ export default function EventDrawer({
             <div className="ticket-types-heading">
               <div>
                 <h3>ประเภทบัตร</h3>
-                <p className="hint">
-                  กำหนดชื่อ ราคา และจำนวนบัตรแต่ละประเภท
-                </p>
+                <p className="hint">กำหนดชื่อ ราคา และจำนวนบัตรแต่ละประเภท</p>
               </div>
-
               <button
                 type="button"
                 className="btn-secondary"
@@ -694,124 +465,109 @@ export default function EventDrawer({
               </button>
             </div>
 
-            {(form.ticketTypes ?? []).map((ticket, index) => (
-              <div
-                className="ticket-type-card"
-                key={ticket.id ?? `new-ticket-${index}`}
-              >
-                <div className="ticket-type-heading">
-                  <strong>ประเภทบัตรที่ {index + 1}</strong>
-                  <button
-                    type="button"
-                    className="btn-ghost ticket-remove"
-                    onClick={() => removeTicketType(index)}
-                    disabled={Number(ticket.sold ?? 0) > 0}
-                    title={
-                      Number(ticket.sold ?? 0) > 0
-                        ? 'มีการขายบัตรแล้ว ไม่สามารถลบได้'
-                        : 'ลบประเภทบัตร'
-                    }
-                  >
-                    ลบ
-                  </button>
-                </div>
+            {(form.ticketTypes ?? []).map((ticket, index) => {
+              const block = ticketDeleteBlock(ticket);
+              const te = errors.tickets?.[index] || {};
 
-                <div className="field">
-                  <label htmlFor={`ticket-name-${index}`}>
-                    ชื่อประเภทบัตร
-                  </label>
-                  <input
-                    id={`ticket-name-${index}`}
-                    type="text"
-                    maxLength={80}
-                    value={ticket.name ?? ''}
-                    onChange={(e) =>
-                      updateTicketType(index, 'name', e.target.value)
-                    }
-                    placeholder="เช่น General Admission, VIP"
-                  />
-                </div>
+              return (
+                <div
+                  className={`ticket-type-card${ticket.saleOpen === false ? ' ticket-sale-off' : ''}`}
+                  key={ticket.id ?? `new-ticket-${index}`}
+                >
+                  <div className="ticket-type-heading">
+                    <strong>ประเภทบัตรที่ {index + 1}</strong>
+                    <button
+                      type="button"
+                      className="btn-ghost ticket-remove"
+                      onClick={() => removeTicketType(index)}
+                      disabled={Boolean(block)}
+                      title={block || 'ลบประเภทบัตร'}
+                    >
+                      ลบ
+                    </button>
+                  </div>
+                  {block && <p className="ticket-lock">{block}</p>}
 
-                <div className="field">
-                  <label htmlFor={`ticket-description-${index}`}>
-                    รายละเอียดบัตร
-                  </label>
-                  <textarea
-                    id={`ticket-description-${index}`}
-                    rows={2}
-                    maxLength={500}
-                    value={ticket.description ?? ''}
-                    onChange={(e) =>
-                      updateTicketType(
-                        index,
-                        'description',
-                        e.target.value
-                      )
-                    }
-                    placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)"
-                  />
-                </div>
-
-                <div className="field-row">
                   <div className="field">
-                    <label htmlFor={`ticket-price-${index}`}>
-                      ราคา (บาท)
-                    </label>
+                    <label htmlFor={`ticket-name-${index}`}>ชื่อประเภทบัตร</label>
                     <input
-                      id={`ticket-price-${index}`}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={ticket.price ?? 0}
-                      onChange={(e) =>
-                        updateTicketType(index, 'price', e.target.value)
-                      }
+                      id={`ticket-name-${index}`}
+                      type="text"
+                      maxLength={80}
+                      value={ticket.name ?? ''}
+                      onChange={(e) => updateTicketType(index, 'name', e.target.value)}
+                      placeholder="เช่น General Admission, VIP"
+                      aria-invalid={Boolean(te.name)}
                     />
+                    {te.name && <small className="helper-text err">{te.name}</small>}
                   </div>
 
                   <div className="field">
-                    <label htmlFor={`ticket-capacity-${index}`}>
-                      จำนวนบัตร
-                    </label>
-                    <input
-                      id={`ticket-capacity-${index}`}
-                      type="number"
-                      min={Math.max(1, Number(ticket.sold ?? 0))}
-                      step="1"
-                      value={ticket.capacity ?? 1}
-                      onChange={(e) =>
-                        updateTicketType(
-                          index,
-                          'capacity',
-                          e.target.value
-                        )
-                      }
+                    <label htmlFor={`ticket-description-${index}`}>รายละเอียดบัตร</label>
+                    <textarea
+                      id={`ticket-description-${index}`}
+                      rows={2}
+                      maxLength={500}
+                      value={ticket.description ?? ''}
+                      onChange={(e) => updateTicketType(index, 'description', e.target.value)}
+                      placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)"
                     />
                   </div>
-                </div>
 
-                <p className="hint">
-                  ขายแล้ว: {Number(ticket.sold ?? 0)} ใบ
-                </p>
-              </div>
-            ))}
+                  <div className="field-row">
+                    <div className="field">
+                      <label htmlFor={`ticket-price-${index}`}>ราคา (บาท)</label>
+                      <input
+                        id={`ticket-price-${index}`}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={ticket.price ?? 0}
+                        onChange={(e) => updateTicketType(index, 'price', e.target.value)}
+                        aria-invalid={Boolean(te.price)}
+                      />
+                      {te.price && <small className="helper-text err">{te.price}</small>}
+                    </div>
+                    <div className="field">
+                      <label htmlFor={`ticket-capacity-${index}`}>จำนวนบัตร</label>
+                      <input
+                        id={`ticket-capacity-${index}`}
+                        type="number"
+                        min={Math.max(1, Number(ticket.sold ?? 0))}
+                        step="1"
+                        value={ticket.capacity ?? 1}
+                        onChange={(e) => updateTicketType(index, 'capacity', e.target.value)}
+                        aria-invalid={Boolean(te.capacity)}
+                      />
+                      {te.capacity && <small className="helper-text err">{te.capacity}</small>}
+                    </div>
+                  </div>
+
+                  <label className="toggle-row" htmlFor={`ticket-sale-${index}`}>
+                    <span className="toggle-text">
+                      <strong>เปิดขายบัตรประเภทนี้</strong>
+                      <span className="hint">ปิดขายแล้วผู้ใช้จะซื้อประเภทนี้ไม่ได้ แต่บัตรที่ขายไปแล้วยังใช้ได้</span>
+                    </span>
+                    <input
+                      id={`ticket-sale-${index}`}
+                      type="checkbox"
+                      checked={ticket.saleOpen !== false}
+                      onChange={(e) => updateTicketType(index, 'saleOpen', e.target.checked)}
+                    />
+                  </label>
+
+                  <p className="hint">ขายแล้ว: {Number(ticket.sold ?? 0)} ใบ</p>
+                </div>
+              );
+            })}
           </section>
         </div>
 
         <div className="drawer-footer">
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={onClose}
-          >
+          <button type="button" className="btn-ghost" onClick={onClose}>
             ยกเลิก
           </button>
-
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={handleSubmit}
-          >
+          <button type="button" className="btn-primary" onClick={handleSubmit}>
             {isEdit ? 'บันทึกข้อมูล' : 'สร้างอีเวนต์'}
           </button>
         </div>

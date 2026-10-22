@@ -152,6 +152,15 @@ export function applyEventFilters(
       return false;
     }
 
+    // กรองตามวันที่จัดงานแบบระบุวัน (YYYY-MM-DD ตามเวลาท้องถิ่น)
+    if (omit !== 'day' && filters.day) {
+      if (info.startsAt === null) return false;
+      const d = new Date(info.startsAt);
+      const pad = (n) => String(n).padStart(2, '0');
+      const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      if (local !== filters.day) return false;
+    }
+
     return true;
   });
 }

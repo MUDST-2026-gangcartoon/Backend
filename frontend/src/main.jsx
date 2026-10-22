@@ -13,16 +13,14 @@ import {
   useAuth,
 } from './context/AuthContext.jsx';
 
+import { normalizeRole, homeForRole } from './utils/roleAccess.js';
 import AnalyticsTracker from './api/AnalyticsTracker.jsx';
-import AppDialogHost from './components/AppDialog.jsx';
 
-// CSS หลักของเว็บไซต์
 import './global.css';
 import './navbar.css';
 import './manage-events.css';
 import './drawer.css';
 
-// Pages
 import ManageEventsPage from './pages/ManageEventsPage.jsx';
 import AdminDashboardPage from './pages/AdminDashboardPage.jsx';
 import EventCheckinSelectPage from './pages/EventCheckinSelectPage.jsx';
@@ -31,18 +29,18 @@ import CheckinAttendeesPage from './pages/CheckinAttendeesPage.jsx';
 import EventDetailPage from './pages/user/EventDetailPage.jsx';
 import MyRegistrationsPage from './pages/user/MyRegistrationsPage';
 import MyTicketsPage from './pages/user/MyTicketsPage';
-import UpcomingEventsPage from './pages/user/UpcomingEventsPage.jsx';
+import UpcomingEventsPage from './pages/user/UpcomingEventsPage';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 
-// นำเข้าเป็นไฟล์สุดท้าย เพื่อให้สไตล์มือถือทำงานตามเดิม
+// ต้องนำเข้าเป็นไฟล์สุดท้าย เพื่อให้สไตล์มือถือทับสไตล์ของแต่ละหน้า
 import './mobile-shell.css';
+import './popup-theme.css';
 
 // แสดงข้อผิดพลาดเมื่อตรวจสอบ session ไม่สำเร็จ
 function AuthVerificationError({ message, onRetry }) {
   return (
     <div role="alert">
       <p>{message}</p>
-
       <button type="button" onClick={onRetry}>
         ลองตรวจสอบอีกครั้ง
       </button>
@@ -50,8 +48,10 @@ function AuthVerificationError({ message, onRetry }) {
   );
 }
 
-// Route สำหรับ Admin
-function AdminRoute({ children }) {
+// ตัวป้องกัน Route ตามบทบาท
+// allow: บทบาทที่เข้าได้ ('guest' = ยังไม่ล็อกอิน)
+// บทบาทอื่นจะถูกส่งกลับหน้าแรกของบทบาทตัวเอง จึงข้ามพื้นที่กันไม่ได้
+function RoleRoute({ allow, children }) {
   const {
     isLoggedIn,
     user,
@@ -59,8 +59,6 @@ function AdminRoute({ children }) {
     authError,
     retrySessionCheck,
   } = useAuth();
-
-  const role = user?.role?.toLowerCase();
 
   if (isAuthLoading) {
     return <div role="status">กำลังตรวจสอบ session...</div>;
@@ -75,151 +73,60 @@ function AdminRoute({ children }) {
     );
   }
 
-  if (!isLoggedIn || role !== 'admin') {
-    return <Navigate to="/" replace />;
+  const role = isLoggedIn ? normalizeRole(user) : 'guest';
+  const effectiveRole = role === '' ? 'guest' : role;
+
+  if (!allow.includes(effectiveRole)) {
+    return <Navigate to={homeForRole(effectiveRole)} replace />;
   }
 
   return children;
 }
 
-// Route สำหรับ Staff และ Admin
-function StaffRoute({ children }) {
-  const {
-    isLoggedIn,
-    user,
-    isAuthLoading,
-    authError,
-    retrySessionCheck,
-  } = useAuth();
+const AdminRoute = ({ children }) => (
+  <RoleRoute allow={['admin']}>{children}</RoleRoute>
+);
+const StaffRoute = ({ children }) => (
+  <RoleRoute allow={['staff']}>{children}</RoleRoute>
+);
+// พื้นที่ผู้ใช้ทั่วไป: เฉพาะผู้เยี่ยมชมและ user
+const UserRoute = ({ children }) => (
+  <RoleRoute allow={['guest', 'user']}>{children}</RoleRoute>
+);
 
-  const role = user?.role?.toLowerCase();
-
-  if (isAuthLoading) {
-    return <div role="status">กำลังตรวจสอบ session...</div>;
-  }
-
-  if (authError) {
-    return (
-      <AuthVerificationError
-        message={authError}
-        onRetry={retrySessionCheck}
-      />
-    );
-  }
-
-  if (!isLoggedIn || !['staff', 'admin'].includes(role)) {
-    return <Navigate to="/" replace />;
-  }
-
-  return children;
-}
-
-// Routes ทั้งหมดของเว็บไซต์
 function AppRoutes() {
   return (
     <Routes>
-      {/* หน้าแรกของผู้ใช้ทั่วไป */}
-      <Route
-        path="/"
-        element={<UpcomingEventsPage />}
-      />
+      {/* ผู้ใช้ทั่วไป */}
+      <Route path="/" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />
+      <Route path="/event-detail" element={<UserRoute><EventDetailPage /></UserRoute>} />
+      <Route path="/event-detail/:eventId" element={<UserRoute><EventDetailPage /></UserRoute>} />
+      <Route path="/MyRegistrationsPage" element={<UserRoute><MyRegistrationsPage /></UserRoute>} />
+      <Route path="/MyTicketsPage" element={<UserRoute><MyTicketsPage /></UserRoute>} />
+      <Route path="/UpcomingEventsPage" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />
+      <Route path="/events" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />
+      <Route path="/upcoming-events" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />
 
-      {/* Admin */}
-      <Route
-        path="/admin/dashboard"
-        element={
-          <AdminRoute>
-            <AdminDashboardPage />
-          </AdminRoute>
-        }
-      />
+      {/* Admin เท่านั้น */}
+      <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+      <Route path="/manage-events" element={<AdminRoute><ManageEventsPage /></AdminRoute>} />
 
-      <Route
-        path="/manage-events"
-        element={
-          <AdminRoute>
-            <ManageEventsPage />
-          </AdminRoute>
-        }
-      />
-
-      {/* Staff และ Admin: Check-in */}
-      <Route
-        path="/staff/checkin"
-        element={
-          <StaffRoute>
-            <EventCheckinSelectPage />
-          </StaffRoute>
-        }
-      />
-
-      <Route
-        path="/staff/checkin/:eventId"
-        element={
-          <StaffRoute>
-            <CheckinAttendeesPage />
-          </StaffRoute>
-        }
-      />
-
-      {/* หน้าสำหรับผู้ใช้ทั่วไป */}
-      <Route
-        path="/event-detail"
-        element={<EventDetailPage />}
-      />
-
-      <Route
-        path="/event-detail/:eventId"
-        element={<EventDetailPage />}
-      />
-
-      <Route
-        path="/MyRegistrationsPage"
-        element={<MyRegistrationsPage />}
-      />
-
-      <Route
-        path="/MyTicketsPage"
-        element={<MyTicketsPage />}
-      />
-
-      <Route
-        path="/UpcomingEventsPage"
-        element={<UpcomingEventsPage />}
-      />
-
-      <Route
-        path="/events"
-        element={<UpcomingEventsPage />}
-      />
-
-      <Route
-        path="/upcoming-events"
-        element={<UpcomingEventsPage />}
-      />
+      {/* Staff เท่านั้น */}
+      <Route path="/staff/checkin" element={<StaffRoute><EventCheckinSelectPage /></StaffRoute>} />
+      <Route path="/staff/checkin/:eventId" element={<StaffRoute><CheckinAttendeesPage /></StaffRoute>} />
 
       {/* ไม่พบ Route */}
-      <Route
-        path="*"
-        element={<NotFoundPage />}
-      />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
 
-// เริ่มต้นแสดงผลเว็บไซต์
-ReactDOM.createRoot(
-  document.getElementById('root')
-).render(
+ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>
       <BrowserRouter>
         <AnalyticsTracker />
-
         <AppRoutes />
-
-        {/* Popup กลางของเว็บไซต์ ต้องมีเพียงตัวเดียว */}
-        <AppDialogHost />
       </BrowserRouter>
     </AuthProvider>
   </React.StrictMode>

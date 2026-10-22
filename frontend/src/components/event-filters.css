@@ -68,7 +68,8 @@
 .ef-chip:focus-visible,
 .ef-pill:focus-visible,
 .ef-clear:focus-visible,
-.ef-selects select:focus-visible {
+.ef-selects select:focus-visible,
+.ef-selects input[type="date"]:focus-visible {
   outline: 2px solid #70C5FF;
   outline-offset: 2px;
 }
@@ -121,7 +122,8 @@
   color: #64748B;
 }
 
-.ef-selects select {
+.ef-selects select,
+.ef-selects input[type="date"] {
   min-height: 40px;
   padding: 0 12px;
   border: 1px solid #BAE6FD;
