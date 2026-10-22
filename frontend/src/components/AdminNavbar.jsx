@@ -1,31 +1,99 @@
 
-import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import Icon from './Icon.jsx';
+import ProfileMenu from './ProfileMenu.jsx';
+import {
+  NavLink,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthModal from './AuthModal.jsx';
 import LanguageToggle from './LanguageToggle.jsx';
-import MobileNav from './MobileNav.jsx';
+import BottomTabBar from './BottomTabBar.jsx';
 import logo from '../../assets/public/logo.png';
 
 export default function AdminNavbar() {
   const { isLoggedIn, user, openModal, logout } = useAuth();
   const navigate = useNavigate();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchRef = useRef(null);
+  const [looseQuery, setLooseQuery] = useState('');
 
-  const handleLogout = () => {
-    setIsDropdownOpen(false);
-    logout();
-    navigate('/');
+  // หน้าที่ค้นหาในหน้าได้: ใช้ ?q= ร่วมกับตัวกรองในหน้า / หน้าอื่น: กด Enter เพื่อไปค้นในหน้าจัดการอีเวนต์
+  const isDashboard = location.pathname === '/admin/dashboard';
+  const isManage = location.pathname === '/manage-events';
+  const searchesInPage = isDashboard || isManage;
+  const searchValue = searchesInPage
+    ? searchParams.get('q') || ''
+    : looseQuery;
+
+  const searchPlaceholder = isDashboard
+    ? 'ค้นหาอีเวนต์หรือชื่อผู้ลงทะเบียน  ( / )'
+    : isManage
+      ? 'ค้นหาชื่อ สถานที่ หรือหมวดหมู่  ( / )'
+      : 'ค้นหาอีเวนต์  ( / )';
+
+  const handleSearchChange = (value) => {
+    if (!searchesInPage) {
+      setLooseQuery(value);
+      return;
+    }
+
+    const next = new URLSearchParams(searchParams);
+    if (value) {
+      next.set('q', value);
+    } else {
+      next.delete('q');
+    }
+    setSearchParams(next, { replace: true });
   };
+
+  const handleSearchKeyDown = (event) => {
+    if (event.key === 'Enter' && !searchesInPage && looseQuery.trim()) {
+      navigate(`/manage-events?q=${encodeURIComponent(looseQuery.trim())}`);
+      setLooseQuery('');
+    }
+
+    if (event.key === 'Escape') {
+      handleSearchChange('');
+      event.currentTarget.blur();
+    }
+  };
+
+  // กด "/" เพื่อโฟกัสช่องค้นหาได้จากทุกที่ในหน้า (ยกเว้นตอนกำลังพิมพ์อยู่)
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key !== '/' || event.metaKey || event.ctrlKey) return;
+
+      const tag = event.target?.tagName;
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        event.target?.isContentEditable
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      searchRef.current?.focus();
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
     <>
       <nav className="navbar">
         <div className="nav-left">
           <NavLink
-            to="/"
+            to="/admin/dashboard"
             className="logo"
-            aria-label="หน้าหลักค้นหาอีเวนต์"
+            aria-label="แดชบอร์ดแอดมิน"
           >
             <img src={logo} alt="EventFest." />
           </NavLink>
@@ -49,8 +117,13 @@ export default function AdminNavbar() {
             </svg>
 
             <input
+              ref={searchRef}
               type="text"
-              placeholder="ค้นหาชื่อ สถานที่ หรือหัวข้อ"
+              value={searchValue}
+              placeholder={searchPlaceholder}
+              aria-label="ค้นหา"
+              onChange={(event) => handleSearchChange(event.target.value)}
+              onKeyDown={handleSearchKeyDown}
             />
           </div>
         </div>
@@ -105,65 +178,21 @@ export default function AdminNavbar() {
           )}
 
           {isLoggedIn && (
-            <div className="user-profile-container">
-              <div
-                className="user-profile"
-                onClick={() =>
-                  setIsDropdownOpen((previous) => !previous)
-                }
-                style={{ cursor: 'pointer' }}
-              >
-                <div
-                  className="avatar"
-                  style={{
-                    backgroundColor: '#bae6fd',
-                    color: '#0369a1',
-                  }}
-                >
-                  {user?.avatarLetter || 'A'}
-                </div>
-
-                <div className="user-info">
-                  <div className="username">
-                    {user?.username || 'Admin'}
-                  </div>
-
-                  <div className="role">
-                    {user?.roleLabel || 'ผู้ดูแลระบบ'}
-                  </div>
-                </div>
-
-                <span
-                  className="dropdown-icon"
-                  style={{
-                    transform: isDropdownOpen
-                      ? 'rotate(180deg)'
-                      : 'rotate(0deg)',
-                    transition: '0.2s',
-                  }}
-                >
-                  ▼
-                </span>
-              </div>
-
-              {isDropdownOpen && (
-                <div className="profile-dropdown-menu">
-                  <button
-                    type="button"
-                    className="dropdown-item logout-btn"
-                    onClick={handleLogout}
-                  >
-                    🚪 ออกจากระบบ
-                  </button>
-                </div>
-              )}
-            </div>
+            <ProfileMenu
+              user={user}
+              items={[
+            { to: '/admin/dashboard', label: 'แดชบอร์ด', icon: 'dashboard' },
+            { to: '/manage-events', label: 'จัดการอีเวนต์', icon: 'calendar' },
+          ]}
+              onLogout={logout}
+            />
           )}
         </div>
 
-        {/* Mobile Navigation - Admin */}
-        <MobileNav />
       </nav>
+
+      {/* มือถือ: แถบแท็บด้านล่างแทน hamburger */}
+      <BottomTabBar />
 
       <AuthModal />
     </>

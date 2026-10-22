@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Icon from './Icon.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -128,7 +129,7 @@ export default function AuthModal() {
             onClick={closeModal}
             aria-label="ปิดหน้าต่าง"
           >
-            ✕
+            <Icon name="close" size="1.2em" strokeWidth={2} />
           </button>
 
           <div className="login-icon">
@@ -221,7 +222,7 @@ export default function AuthModal() {
             onClick={closeModal}
             aria-label="ปิดหน้าต่าง"
           >
-            ✕
+            <Icon name="close" size="1.2em" strokeWidth={2} />
           </button>
 
           <div className="login-icon">

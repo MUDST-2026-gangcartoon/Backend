@@ -1,616 +1,469 @@
-package com.eventhub.service;
+        package com.eventhub.service;
 
-import java.math.BigDecimal;
-import java.security.Principal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
+        import java.math.BigDecimal;
+        import java.security.Principal;
+        import java.time.LocalDateTime;
+        import java.util.ArrayList;
+        import java.util.HashMap;
+        import java.util.List;
+        import java.util.Locale;
+        import java.util.Map;
+        import java.util.Objects;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+        import org.springframework.data.domain.Page;
+        import org.springframework.data.domain.PageRequest;
+        import org.springframework.data.domain.Pageable;
+        import org.springframework.http.HttpStatus;
+        import org.springframework.stereotype.Service;
+        import org.springframework.transaction.annotation.Transactional;
+        import org.springframework.web.server.ResponseStatusException;
 
-import com.eventhub.dto.ApiDtos;
-import com.eventhub.dto.EventListRow;
-import com.eventhub.dto.TicketTypeRow;
-import com.eventhub.model.DetailImage;
-import com.eventhub.model.Event;
-import com.eventhub.model.Registration;
-import com.eventhub.model.TicketType;
-import com.eventhub.model.UserAccount;
-import com.eventhub.repository.EventRepository;
-import com.eventhub.repository.RegistrationRepository;
-import com.eventhub.repository.TicketTypeRepository;
-import com.eventhub.repository.UserRepository;
-@Service
-public class EventService {
+        import com.eventhub.dto.ApiDtos;
+        import com.eventhub.dto.EventListRow;
+        import com.eventhub.dto.TicketTypeRow;
+        import com.eventhub.model.DetailImage;
+        import com.eventhub.model.Event;
+        import com.eventhub.model.Registration;
+        import com.eventhub.model.TicketType;
+        import com.eventhub.model.UserAccount;
+        import com.eventhub.repository.EventRepository;
+        import com.eventhub.repository.RegistrationRepository;
+        import com.eventhub.repository.TicketTypeRepository;
+        import com.eventhub.repository.UserRepository;
+        @Service
+        public class EventService {
 
-    private final EventRepository eventRepository;
-    private final RegistrationRepository registrationRepository;
-    private final TicketTypeRepository ticketTypeRepository;
-    private final UserRepository userRepository;
+        private final EventRepository eventRepository;
+        private final RegistrationRepository registrationRepository;
+        private final TicketTypeRepository ticketTypeRepository;
+        private final UserRepository userRepository;
 
-    public EventService(
-            EventRepository eventRepository,
-            RegistrationRepository registrationRepository,
-            TicketTypeRepository ticketTypeRepository,
-            UserRepository userRepository
-    ) {
-        this.eventRepository = eventRepository;
-        this.registrationRepository = registrationRepository;
-        this.ticketTypeRepository = ticketTypeRepository;
-        this.userRepository = userRepository;
-    }
+        public EventService(
+                EventRepository eventRepository,
+                RegistrationRepository registrationRepository,
+                TicketTypeRepository ticketTypeRepository,
+                UserRepository userRepository
+        ) {
+                this.eventRepository = eventRepository;
+                this.registrationRepository = registrationRepository;
+                this.ticketTypeRepository = ticketTypeRepository;
+                this.userRepository = userRepository;
+        }
 
-    @Transactional(readOnly = true)
-    public ApiDtos.EventPageDto list(
-            Principal principal,
-            int page,
-            int size,
-            String search,
-            String category,
-            String status
-    ) {
-        String normalizedCategory =
-                normalizeListCategory(category);
+        @Transactional(readOnly = true)
+        public ApiDtos.EventPageDto list(
+                Principal principal,
+                int page,
+                int size,
+                String search,
+                String category,
+                String status
+        ) {
+                String normalizedCategory =
+                        normalizeListCategory(category);
 
-        String normalizedStatus =
-                normalizeListStatus(status);
+                String normalizedStatus =
+                        normalizeListStatus(status);
 
-        Long userId =
-                resolveListUserId(principal);
+                Long userId =
+                        resolveListUserId(principal);
 
-        LocalDateTime now =
-                LocalDateTime.now();
+                LocalDateTime now =
+                        LocalDateTime.now();
 
-        Pageable pageable =
-                PageRequest.of(
-                        page,
-                        size
-                );
+                Pageable pageable =
+                        PageRequest.of(
+                                page,
+                                size
+                        );
 
-        Page<EventListRow> eventPage =
-                eventRepository.search(
-                        userId,
-                        search,
-                        normalizedCategory,
-                        normalizedStatus,
-                        now,
-                        pageable
-                );
+                Page<EventListRow> eventPage =
+                        eventRepository.search(
+                                userId,
+                                search,
+                                normalizedCategory,
+                                normalizedStatus,
+                                now,
+                                pageable
+                        );
 
-        List<EventListRow> rows =
-                eventPage.getContent();
+                List<EventListRow> rows =
+                        eventPage.getContent();
 
-        Map<Long, List<ApiDtos.TicketTypeDto>>
-                ticketTypesByEvent =
-                loadTicketTypeSummaries(rows);
+                Map<Long, List<ApiDtos.TicketTypeDto>>
+                        ticketTypesByEvent =
+                        loadTicketTypeSummaries(rows);
 
-        List<ApiDtos.EventDto> items =
-                rows.stream()
-                        .map(row ->
-                                eventListDto(
-                                        row,
-                                        ticketTypesByEvent
-                                                .getOrDefault(
-                                                        row.id(),
-                                                        List.of()
-                                                ),
-                                        now
+                List<ApiDtos.EventDto> items =
+                        rows.stream()
+                                .map(row ->
+                                        eventListDto(
+                                                row,
+                                                ticketTypesByEvent
+                                                        .getOrDefault(
+                                                                row.id(),
+                                                                List.of()
+                                                        ),
+                                                now
+                                        )
                                 )
+                                .toList();
+
+                long totalOpenEvents =
+                        eventRepository.countOpen(now);
+
+                long totalRegistrations =
+                        registrationRepository.count();
+
+                return new ApiDtos.EventPageDto(
+                        items,
+                        eventPage.getNumber(),
+                        eventPage.getSize(),
+                        eventPage.getTotalElements(),
+                        eventPage.getTotalPages(),
+                        eventPage.hasNext(),
+                        eventPage.hasPrevious(),
+                        totalOpenEvents,
+                        totalRegistrations
+                );
+
+        }
+
+        private String normalizeListCategory(
+                String category
+        ) {
+                if (category == null
+                        || category.isBlank()) {
+
+                return "ALL";
+                }
+
+                String normalized =
+                        category
+                                .trim()
+                                .toUpperCase(Locale.ROOT);
+
+                if (!List.of(
+                        "ALL",
+                        "TECH",
+                        "DESIGN",
+                        "CAREER",
+                        "COMMUNITY"
+                ).contains(normalized)) {
+
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Unsupported event category"
+                );
+                }
+
+                return normalized;
+        }
+        private String normalizeListStatus(
+                String status
+        ) {
+                if (status == null
+                        || status.isBlank()) {
+
+                return "ALL";
+                }
+
+                String normalized =
+                        status
+                                .trim()
+                                .toUpperCase(Locale.ROOT);
+
+                if (!List.of(
+                        "ALL",
+                        "OPEN",
+                        "FULL",
+                        "ENDED",
+                        "REGISTERED"
+                ).contains(normalized)) {
+
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Unsupported event status"
+                );
+                }
+
+                return normalized;
+        }
+        private Long resolveListUserId(
+                Principal principal
+        ) {
+                if (principal == null
+                        || principal.getName() == null
+                        || principal.getName().isBlank()) {
+
+                return null;
+                }
+
+                String email =
+                        principal
+                                .getName()
+                                .trim()
+                                .toLowerCase(Locale.ROOT);
+
+                return userRepository
+                        .findByEmail(email)
+                        .map(UserAccount::getId)
+                        .orElse(null);
+        }
+        private Map<Long, List<ApiDtos.TicketTypeDto>>
+        loadTicketTypeSummaries(
+                List<EventListRow> rows
+        ) {
+                if (rows.isEmpty()) {
+                return Map.of();
+                }
+
+                List<Long> eventIds =
+                        rows.stream()
+                                .map(EventListRow::id)
+                                .toList();
+
+                List<TicketTypeRow> ticketRows =
+                        ticketTypeRepository
+                                .summariesForEventIds(
+                                        eventIds
+                                );
+
+                Map<Long, List<ApiDtos.TicketTypeDto>>
+                        result =
+                        new HashMap<>();
+
+                for (TicketTypeRow row
+                        : ticketRows) {
+
+                result
+                        .computeIfAbsent(
+                                row.eventId(),
+                                ignored ->
+                                        new ArrayList<>()
                         )
-                        .toList();
+                        .add(
+                                ticketTypeDto(row)
+                        );
+                }
 
-        long totalOpenEvents =
-                eventRepository.countOpen(now);
-
-        long totalRegistrations =
-                registrationRepository.count();
-
-        return new ApiDtos.EventPageDto(
-                items,
-                eventPage.getNumber(),
-                eventPage.getSize(),
-                eventPage.getTotalElements(),
-                eventPage.getTotalPages(),
-                eventPage.hasNext(),
-                eventPage.hasPrevious(),
-                totalOpenEvents,
-                totalRegistrations
-        );
-
-    }
-
-    private String normalizeListCategory(
-            String category
-    ) {
-        if (category == null
-                || category.isBlank()) {
-
-            return "ALL";
+                return result;
         }
-
-        String normalized =
-                category
-                        .trim()
-                        .toUpperCase(Locale.ROOT);
-
-        if (!List.of(
-                "ALL",
-                "TECH",
-                "DESIGN",
-                "CAREER",
-                "COMMUNITY"
-        ).contains(normalized)) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Unsupported event category"
-            );
-        }
-
-        return normalized;
-    }
-    private String normalizeListStatus(
-            String status
-    ) {
-        if (status == null
-                || status.isBlank()) {
-
-            return "ALL";
-        }
-
-        String normalized =
-                status
-                        .trim()
-                        .toUpperCase(Locale.ROOT);
-
-        if (!List.of(
-                "ALL",
-                "OPEN",
-                "FULL",
-                "ENDED",
-                "REGISTERED"
-        ).contains(normalized)) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Unsupported event status"
-            );
-        }
-
-        return normalized;
-    }
-    private Long resolveListUserId(
-            Principal principal
-    ) {
-        if (principal == null
-                || principal.getName() == null
-                || principal.getName().isBlank()) {
-
-            return null;
-        }
-
-        String email =
-                principal
-                        .getName()
-                        .trim()
-                        .toLowerCase(Locale.ROOT);
-
-        return userRepository
-                .findByEmail(email)
-                .map(UserAccount::getId)
-                .orElse(null);
-    }
-    private Map<Long, List<ApiDtos.TicketTypeDto>>
-    loadTicketTypeSummaries(
-            List<EventListRow> rows
-    ) {
-        if (rows.isEmpty()) {
-            return Map.of();
-        }
-
-        List<Long> eventIds =
-                rows.stream()
-                        .map(EventListRow::id)
-                        .toList();
-
-        List<TicketTypeRow> ticketRows =
-                ticketTypeRepository
-                        .summariesForEventIds(
-                                eventIds
+        private ApiDtos.TicketTypeDto ticketTypeDto(
+                TicketTypeRow row
+        ) {
+                long remaining =
+                        Math.max(
+                                0L,
+                                (long) row.capacity()
+                                        - row.sold()
                         );
 
-        Map<Long, List<ApiDtos.TicketTypeDto>>
-                result =
-                new HashMap<>();
-
-        for (TicketTypeRow row
-                : ticketRows) {
-
-            result
-                    .computeIfAbsent(
-                            row.eventId(),
-                            ignored ->
-                                    new ArrayList<>()
-                    )
-                    .add(
-                            ticketTypeDto(row)
-                    );
-        }
-
-        return result;
-    }
-    private ApiDtos.TicketTypeDto ticketTypeDto(
-            TicketTypeRow row
-    ) {
-        long remaining =
-                Math.max(
-                        0L,
-                        (long) row.capacity()
-                                - row.sold()
+                return new ApiDtos.TicketTypeDto(
+                        row.id(),
+                        row.name(),
+                        row.description(),
+                        row.price(),
+                        row.capacity(),
+                        row.sold(),
+                        remaining
                 );
-
-        return new ApiDtos.TicketTypeDto(
-                row.id(),
-                row.name(),
-                row.description(),
-                row.price(),
-                row.capacity(),
-                row.sold(),
-                remaining
-        );
-    }
-    private ApiDtos.EventDto eventListDto(
-            EventListRow row,
-            List<ApiDtos.TicketTypeDto> ticketTypes,
-            LocalDateTime now
-    ) {
-        long spotsLeft =
-                Math.max(
-                        0L,
-                        (long) row.capacity()
-                                - row.registeredCount()
-                );
-
-        String eventStatus =
-                eventListStatus(
-                        row,
-                        now
-                );
-
-        return new ApiDtos.EventDto(
-                row.id(),
-                row.title(),
-                row.description(),
-                row.location(),
-                row.startsAt(),
-                row.capacity(),
-                row.category(),
-                row.imageUrl(),
-                List.of(),
-                row.registeredCount(),
-                spotsLeft,
-                eventStatus,
-                row.registered(),
-                ticketTypes
-        );
-    }
-    private String eventListStatus(
-            EventListRow row,
-            LocalDateTime now
-    ) {
-        if (!row.startsAt()
-                .isAfter(now)) {
-
-            return "ENDED";
         }
-
-        if (row.registeredCount()
-                >= row.capacity()) {
-
-            return "FULL";
-        }
-
-        return "OPEN";
-    }
-
-    @Transactional(readOnly = true)
-    public ApiDtos.EventDto get(
-            Long eventId,
-            Principal principal
-    ) {
-        Event event =
-                eventRepository
-                        .findById(eventId)
-                        .orElseThrow(() ->
-                                new ResponseStatusException(
-                                        HttpStatus.NOT_FOUND,
-                                        "Event not found"
-                                )
+        private ApiDtos.EventDto eventListDto(
+                EventListRow row,
+                List<ApiDtos.TicketTypeDto> ticketTypes,
+                LocalDateTime now
+        ) {
+                long spotsLeft =
+                        Math.max(
+                                0L,
+                                (long) row.capacity()
+                                        - row.registeredCount()
                         );
 
-        boolean registered = false;
+                String eventStatus =
+                        eventListStatus(
+                                row,
+                                now
+                        );
 
-        if (principal != null
-                && principal.getName() != null
-                && !principal.getName().isBlank()) {
+                return new ApiDtos.EventDto(
+                        row.id(),
+                        row.title(),
+                        row.description(),
+                        row.location(),
+                        row.startsAt(),
+                        row.capacity(),
+                        row.category(),
+                        row.imageUrl(),
+                        List.of(),
+                        row.registeredCount(),
+                        spotsLeft,
+                        eventStatus,
+                        row.registered(),
+                        ticketTypes
+                );
+        }
+        private String eventListStatus(
+                EventListRow row,
+                LocalDateTime now
+        ) {
+                if (!row.startsAt()
+                        .isAfter(now)) {
 
-            String email =
-                    principal.getName()
-                            .trim()
-                            .toLowerCase(Locale.ROOT);
+                return "ENDED";
+                }
 
-            UserAccount user =
-                    userRepository
-                            .findByEmail(email)
-                            .orElse(null);
+                if (row.registeredCount()
+                        >= row.capacity()) {
 
-            if (user != null) {
-                registered =
+                return "FULL";
+                }
+
+                return "OPEN";
+        }
+        private ApiDtos.EventDto eventDto(
+                Event event,
+                boolean registered
+        ) {
+                LocalDateTime now =
+                        LocalDateTime.now();
+
+                long registeredCount =
                         registrationRepository
-                                .existsByUserIdAndEventId(
-                                        user.getId(),
+                                .seatsReservedByEventId(
                                         event.getId()
                                 );
-            }
-        }
 
-        return eventDto(
-                event,
-                registered
-        );
-    }
+                long spotsLeft =
+                        Math.max(
+                                0L,
+                                (long) event.getCapacity()
+                                        - registeredCount
+                        );
 
-    @Transactional
-    public ApiDtos.EventDto create(
-            ApiDtos.EventRequest request
-    ) {
-        validateTicketCapacityPlan(
-                request.capacity(),
-                request.ticketTypes()
-        );
+                String status;
+                if (!event.getStartsAt().isAfter(now)) {
+                        status = "ENDED";
+                } else if (registeredCount
+                        >= event.getCapacity()) {
+                        status = "FULL";
+                } else {
+                        status = "OPEN";
+                }
 
-        Event event = new Event();
+                List<ApiDtos.DetailImageDto> detailImages =
+                        event.getDetailImages() == null
+                                ? List.of()
+                                : event.getDetailImages()
+                                        .stream()
+                                        .map(img ->
+                                                new ApiDtos.DetailImageDto(
+                                                        img.getUrl(),
+                                                        img.getPlacement()
+                                                )
+                                        )
+                                        .toList();
 
-        applyEventFields(
-                event,
-                request
-        );
-
-        replaceDetailImages(
-                event,
-                request.detailImages()
-        );
-
-        for (ApiDtos.TicketTypeRequest ticketRequest
-                : request.ticketTypes()) {
-
-            TicketType ticket =
-                    new TicketType(
-                            event,
-                            ticketRequest.name(),
-                            ticketRequest.description(),
-                            ticketRequest.price(),
-                            ticketRequest.capacity()
-                    );
-
-            event.addTicketType(ticket);
-        }
-
-        Event saved =
-                eventRepository.save(event);
-
-        return eventDto(
-                saved,
-                false
-        );
-    }
-    private void validateTicketCapacityPlan(
-            int eventCapacity,
-            List<ApiDtos.TicketTypeRequest> ticketTypes
-    ) {
-        long total = 0L;
-
-        for (ApiDtos.TicketTypeRequest ticket
-                : ticketTypes) {
-
-            total += ticket.capacity();
-        }
-
-        if (total != eventCapacity) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Ticket capacities must equal event capacity"
-            );
-        }
-    }
-    private void applyEventFields(
-            Event event,
-            ApiDtos.EventRequest request
-    ) {
-        event.setTitle(request.title());
-        event.setDescription(request.description());
-        event.setLocation(request.location());
-        event.setStartsAt(request.startsAt());
-        event.setCapacity(request.capacity());
-        event.setCategory(request.category());
-        event.setImageUrl(request.imageUrl());
-    }
-    private void replaceDetailImages(
-            Event event,
-            List<ApiDtos.DetailImageRequest> requests
-    ) {
-        event.getDetailImages().clear();
-
-        if (requests == null) {
-            return;
-        }
-
-        for (ApiDtos.DetailImageRequest request
-                : requests) {
-
-            event.getDetailImages().add(
-                    new DetailImage(
-                            request.url(),
-                            request.placement()
-                    )
-            );
-        }
-    }
-
-    @Transactional
-    public ApiDtos.EventDto update(
-            Long eventId,
-            ApiDtos.EventRequest request
-    ) {
-        validateTicketCapacityPlan(
-                request.capacity(),
-                request.ticketTypes()
-        );
-
-        Event event =
-                eventRepository
-                        .findByIdForUpdate(eventId)
-                        .orElseThrow(() ->
-                                new ResponseStatusException(
-                                        HttpStatus.NOT_FOUND,
-                                        "Event not found"
+                List<ApiDtos.TicketTypeDto> ticketTypes =
+                        ticketTypeRepository
+                                .summariesForEventIds(
+                                        List.of(event.getId())
                                 )
-                        );
+                                .stream()
+                                .map(this::ticketTypeDto)
+                                .toList();
 
-        long eventSeatsSold =
-                registrationRepository
-                        .seatsReservedByEventId(
-                                event.getId()
-                        );
-
-        if (request.capacity() < eventSeatsSold) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Event capacity cannot be lower than seats already sold"
-            );
+                return new ApiDtos.EventDto(
+                        event.getId(),
+                        event.getTitle(),
+                        event.getDescription(),
+                        event.getLocation(),
+                        event.getStartsAt(),
+                        event.getCapacity(),
+                        event.getCategory(),
+                        event.getImageUrl(),
+                        detailImages,
+                        registeredCount,
+                        spotsLeft,
+                        status,
+                        registered,
+                        ticketTypes
+                );
         }
 
-        java.util.Map<Long, TicketType> existingById =
-                new java.util.HashMap<>();
+        @Transactional(readOnly = true)
+        public ApiDtos.EventDto get(
+                Long eventId,
+                Principal principal
+        ) {
+                Event event =
+                        eventRepository
+                                .findById(eventId)
+                                .orElseThrow(() ->
+                                        new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Event not found"
+                                        )
+                                );
 
-        for (TicketType ticket
-                : event.getTicketTypes()) {
+                boolean registered = false;
 
-            if (ticket.getId() != null) {
-                existingById.put(
-                        ticket.getId(),
-                        ticket
+                if (principal != null
+                        && principal.getName() != null
+                        && !principal.getName().isBlank()) {
+
+                String email =
+                        principal.getName()
+                                .trim()
+                                .toLowerCase(Locale.ROOT);
+
+                UserAccount user =
+                        userRepository
+                                .findByEmail(email)
+                                .orElse(null);
+
+                if (user != null) {
+                        registered =
+                                registrationRepository
+                                        .existsByUserIdAndEventId(
+                                                user.getId(),
+                                                event.getId()
+                                        );
+                }
+                }
+
+                return eventDto(
+                        event,
+                        registered
                 );
-            }
         }
 
-        java.util.Set<Long> requestIds =
-                new java.util.HashSet<>();
-
-        for (ApiDtos.TicketTypeRequest ticketRequest
-                : request.ticketTypes()) {
-
-            Long ticketId =
-                    ticketRequest.id();
-
-            if (ticketId == null) {
-                continue;
-            }
-
-            if (!requestIds.add(ticketId)) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "Duplicate ticket type ID"
-                );
-            }
-
-            TicketType existingTicket =
-                    existingById.get(ticketId);
-
-            if (existingTicket == null) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "Ticket type does not belong to this event"
-                );
-            }
-
-            long sold =
-                    registrationRepository
-                            .seatsReservedByTicketTypeId(
-                                    existingTicket.getId()
-                            );
-
-            if (ticketRequest.capacity() < sold) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "Ticket capacity cannot be lower than seats already sold"
-                );
-            }
-        }
-
-        // ตรวจ TicketType ที่กำลังจะถูกลบ
-        for (TicketType existingTicket
-                : event.getTicketTypes()) {
-
-            Long ticketId =
-                    existingTicket.getId();
-
-            if (ticketId == null
-                    || requestIds.contains(ticketId)) {
-
-                continue;
-            }
-
-            long sold =
-                    registrationRepository
-                            .seatsReservedByTicketTypeId(
-                                    ticketId
-                            );
-
-            if (sold > 0L) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "Cannot remove a ticket type that already has sales"
-                );
-            }
-        }
-
-        // ผ่าน validation ทั้งหมดก่อน
-        // จึงค่อย mutate entity
-        applyEventFields(
-                event,
-                request
-        );
-
-        replaceDetailImages(
-                event,
-                request.detailImages()
-        );
-
-        event.getTicketTypes()
-                .removeIf(ticket ->
-                        ticket.getId() != null
-                                && !requestIds.contains(
-                                ticket.getId()
-                        )
+        @Transactional
+        public ApiDtos.EventDto create(
+                ApiDtos.EventRequest request
+        ) {
+                validateTicketCapacityPlan(
+                        request.capacity(),
+                        request.ticketTypes()
                 );
 
-        for (ApiDtos.TicketTypeRequest ticketRequest
-                : request.ticketTypes()) {
+                Event event = new Event();
 
-            if (ticketRequest.id() == null) {
+                applyEventFields(
+                        event,
+                        request
+                );
 
-                TicketType newTicket =
+                replaceDetailImages(
+                        event,
+                        request.detailImages()
+                );
+
+                for (ApiDtos.TicketTypeRequest ticketRequest
+                        : request.ticketTypes()) {
+
+                TicketType ticket =
                         new TicketType(
                                 event,
                                 ticketRequest.name(),
@@ -619,44 +472,491 @@ public class EventService {
                                 ticketRequest.capacity()
                         );
 
-                event.addTicketType(newTicket);
+                event.addTicketType(ticket);
+                }
 
-                continue;
-            }
+                Event saved =
+                        eventRepository.save(event);
 
-            TicketType ticket =
-                    existingById.get(
-                            ticketRequest.id()
-                    );
+                return eventDto(
+                        saved,
+                        false
+                );
+        }
+        private void validateTicketCapacityPlan(
+                int eventCapacity,
+                List<ApiDtos.TicketTypeRequest> ticketTypes
+        ) {
+                long total = 0L;
 
-            ticket.setName(
-                    ticketRequest.name()
-            );
+                for (ApiDtos.TicketTypeRequest ticket
+                        : ticketTypes) {
 
-            ticket.setDescription(
-                    ticketRequest.description()
-            );
+                total += ticket.capacity();
+                }
 
-            ticket.setPrice(
-                    ticketRequest.price()
-            );
+                if (total != eventCapacity) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Ticket capacities must equal event capacity"
+                );
+                }
+        }
+        private void applyEventFields(
+                Event event,
+                ApiDtos.EventRequest request
+        ) {
+                event.setTitle(request.title());
+                event.setDescription(request.description());
+                event.setLocation(request.location());
+                event.setStartsAt(request.startsAt());
+                event.setCapacity(request.capacity());
+                event.setCategory(request.category());
+                event.setImageUrl(request.imageUrl());
+        }
+        private void replaceDetailImages(
+                Event event,
+                List<ApiDtos.DetailImageRequest> requests
+        ) {
+                event.getDetailImages().clear();
 
-            ticket.setCapacity(
-                    ticketRequest.capacity()
-            );
+                if (requests == null) {
+                return;
+                }
+
+                for (ApiDtos.DetailImageRequest request
+                        : requests) {
+
+                event.getDetailImages().add(
+                        new DetailImage(
+                                request.url(),
+                                request.placement()
+                        )
+                );
+                }
         }
 
-        return eventDto(
-                event,
-                false
-        );
-    }
+        @Transactional
+        public ApiDtos.EventDto update(
+                Long eventId,
+                ApiDtos.EventRequest request
+        ) {
+                validateTicketCapacityPlan(
+                        request.capacity(),
+                        request.ticketTypes()
+                );
 
-    @Transactional
-    public void delete(
-            Long eventId
-    ) {
-        Event event =
+                Event event =
+                        eventRepository
+                                .findByIdForUpdate(eventId)
+                                .orElseThrow(() ->
+                                        new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Event not found"
+                                        )
+                                );
+
+                long eventSeatsSold =
+                        registrationRepository
+                                .seatsReservedByEventId(
+                                        event.getId()
+                                );
+
+                if (request.capacity() < eventSeatsSold) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Event capacity cannot be lower than seats already sold"
+                );
+                }
+
+                java.util.Map<Long, TicketType> existingById =
+                        new java.util.HashMap<>();
+
+                for (TicketType ticket
+                        : event.getTicketTypes()) {
+
+                if (ticket.getId() != null) {
+                        existingById.put(
+                                ticket.getId(),
+                                ticket
+                        );
+                }
+                }
+
+                java.util.Set<Long> requestIds =
+                        new java.util.HashSet<>();
+
+                for (ApiDtos.TicketTypeRequest ticketRequest
+                        : request.ticketTypes()) {
+
+                Long ticketId =
+                        ticketRequest.id();
+
+                if (ticketId == null) {
+                        continue;
+                }
+
+                if (!requestIds.add(ticketId)) {
+                        throw new ResponseStatusException(
+                                HttpStatus.CONFLICT,
+                                "Duplicate ticket type ID"
+                        );
+                }
+
+                TicketType existingTicket =
+                        existingById.get(ticketId);
+
+                if (existingTicket == null) {
+                        throw new ResponseStatusException(
+                                HttpStatus.CONFLICT,
+                                "Ticket type does not belong to this event"
+                        );
+                }
+
+                long sold =
+                        registrationRepository
+                                .seatsReservedByTicketTypeId(
+                                        existingTicket.getId()
+                                );
+
+                if (ticketRequest.capacity() < sold) {
+                        throw new ResponseStatusException(
+                                HttpStatus.CONFLICT,
+                                "Ticket capacity cannot be lower than seats already sold"
+                        );
+                }
+                }
+
+                // ตรวจ TicketType ที่กำลังจะถูกลบ
+                for (TicketType existingTicket
+                        : event.getTicketTypes()) {
+
+                Long ticketId =
+                        existingTicket.getId();
+
+                if (ticketId == null
+                        || requestIds.contains(ticketId)) {
+
+                        continue;
+                }
+
+                long sold =
+                        registrationRepository
+                                .seatsReservedByTicketTypeId(
+                                        ticketId
+                                );
+
+                if (sold > 0L) {
+                        throw new ResponseStatusException(
+                                HttpStatus.CONFLICT,
+                                "Cannot remove a ticket type that already has sales"
+                        );
+                }
+                }
+
+                // ผ่าน validation ทั้งหมดก่อน
+                // จึงค่อย mutate entity
+                applyEventFields(
+                        event,
+                        request
+                );
+
+                replaceDetailImages(
+                        event,
+                        request.detailImages()
+                );
+
+                event.getTicketTypes()
+                        .removeIf(ticket ->
+                                ticket.getId() != null
+                                        && !requestIds.contains(
+                                        ticket.getId()
+                                )
+                        );
+
+                for (ApiDtos.TicketTypeRequest ticketRequest
+                        : request.ticketTypes()) {
+
+                if (ticketRequest.id() == null) {
+
+                        TicketType newTicket =
+                                new TicketType(
+                                        event,
+                                        ticketRequest.name(),
+                                        ticketRequest.description(),
+                                        ticketRequest.price(),
+                                        ticketRequest.capacity()
+                                );
+
+                        event.addTicketType(newTicket);
+
+                        continue;
+                }
+
+                TicketType ticket =
+                        existingById.get(
+                                ticketRequest.id()
+                        );
+
+                ticket.setName(
+                        ticketRequest.name()
+                );
+
+                ticket.setDescription(
+                        ticketRequest.description()
+                );
+
+                ticket.setPrice(
+                        ticketRequest.price()
+                );
+
+                ticket.setCapacity(
+                        ticketRequest.capacity()
+                );
+                }
+
+                return eventDto(
+                        event,
+                        false
+                );
+        }
+
+        @Transactional
+        public void delete(
+                Long eventId
+        ) {
+                Event event =
+                        eventRepository
+                                .findById(eventId)
+                                .orElseThrow(() ->
+                                        new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Event not found"
+                                        )
+                                );
+
+                registrationRepository
+                        .deleteByEventId(eventId);
+
+                eventRepository.delete(event);
+        }
+
+        @Transactional
+        public ApiDtos.RegistrationDto register(
+                Long eventId,
+                ApiDtos.PurchaseRequest request,
+                Principal principal
+        ) {
+                UserAccount user = currentUser(principal);
+
+                Event event = eventRepository
+                        .findByIdForUpdate(eventId)
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "Event not found"
+                                )
+                        );
+
+                if (!event.getStartsAt().isAfter(LocalDateTime.now())) {
+                        throw new ResponseStatusException(
+                                HttpStatus.CONFLICT,
+                                "Registration has closed"
+                        );
+                }
+
+                if (registrationRepository.existsByUserIdAndEventId(
+                        user.getId(),
+                        event.getId()
+                )) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "You are already registered"
+                );
+                }
+
+                TicketType ticket = ticketTypeRepository
+                        .findById(request.ticketTypeId())
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "Ticket type not found"
+                                )
+                        );
+
+                if (ticket.getEvent() == null
+                        || !Objects.equals(
+                        ticket.getEvent().getId(),
+                        event.getId()
+                )) {
+
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Ticket type does not belong to this event"
+                );
+
+                }
+        // Paid tickets must go through Mock Payment checkout.
+        // The direct Registration API is reserved for free tickets.
+                if (ticket.getPrice() != null
+                        && ticket.getPrice().signum() > 0) {
+
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Paid tickets require mock payment checkout"
+                );
+                }
+                int quantity = request.quantity();
+
+                long eventSeats =
+                        registrationRepository
+                                .seatsReservedByEventId(event.getId());
+
+                if (eventSeats + quantity > event.getCapacity()) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Event capacity exceeded"
+                );
+                }
+
+                long ticketSeats =
+                        registrationRepository
+                                .seatsReservedByTicketTypeId(ticket.getId());
+
+                if (ticketSeats + quantity > ticket.getCapacity()) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Ticket capacity exceeded"
+                );
+                }
+
+                Registration registration =
+                        new Registration(
+                                user,
+                                event,
+                                ticket,
+                                quantity
+                        );
+
+                Registration saved =
+                        registrationRepository.save(registration);
+
+                return registrationDto(saved);
+        }
+        private UserAccount currentUser(Principal principal) {
+
+                if (principal == null
+                        || principal.getName() == null
+                        || principal.getName().isBlank()) {
+
+                throw new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Authentication required"
+                );
+                }
+
+                String email =
+                        principal.getName()
+                                .trim()
+                                .toLowerCase(Locale.ROOT);
+
+                return userRepository
+                        .findByEmail(email)
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "User not found"
+                                )
+                        );
+        }
+
+
+
+                private ApiDtos.RegistrationDto registrationDto(
+                        Registration registration
+                ) {
+                TicketType ticket = registration.getTicketType();
+
+                BigDecimal totalPrice =
+                        ticket == null
+                                ? BigDecimal.ZERO
+                                : ticket.getPrice().multiply(
+                                        BigDecimal.valueOf(
+                                                registration.getQuantity()
+                                        )
+                                );
+
+                return new ApiDtos.RegistrationDto(
+                        registration.getId(),
+                        registration.getRegisteredAt(),
+                        registration.getQuantity(),
+                        registration.getTicketCode(),
+                        ticket == null ? null : ticket.getName(),
+                        totalPrice,
+                        eventDto(
+                                registration.getEvent(),
+                                true
+                        ),
+                        registration.getCheckedInAt()
+                );
+                }
+
+                @Transactional
+                public void cancel(
+                        Long eventId,
+                        Principal principal
+                ) {
+                UserAccount user = currentUser(principal);
+
+                Registration registration =
+                        registrationRepository
+                                .findByUserIdAndEventId(
+                                        user.getId(),
+                                        eventId
+                                )
+                                .orElseThrow(() ->
+                                        new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Registration not found"
+                                        )
+                                );
+
+                if (registration.getCheckedInAt() != null) {
+                        throw new ResponseStatusException(
+                                HttpStatus.CONFLICT,
+                                "Cannot cancel a registration after check-in"
+                        );
+                }
+
+                registrationRepository.deleteByUserIdAndEventId(
+                        user.getId(),
+                        eventId
+                );
+                }
+
+        @Transactional(readOnly = true)
+        public List<ApiDtos.RegistrationDto> mine(
+                Principal principal
+        ) {
+                UserAccount user =
+                        currentUser(principal);
+
+                return registrationRepository
+                        .findByUserIdOrderByEventStartsAtAsc(
+                                user.getId()
+                        )
+                        .stream()
+                        .map(this::registrationDto)
+                        .toList();
+        }
+        // ============================================================
+        // Branch 7 — Staff Service Contract
+        // ============================================================
+
+        @Transactional(readOnly = true)
+        public List<ApiDtos.AttendeeDto> attendees(
+                Long eventId
+        ) {
                 eventRepository
                         .findById(eventId)
                         .orElseThrow(() ->
@@ -666,435 +966,113 @@ public class EventService {
                                 )
                         );
 
-        registrationRepository
-                .deleteByEventId(eventId);
+                return registrationRepository
+                        .findByEventIdOrderByRegisteredAtAsc(eventId)
+                        .stream()
+                        .map(this::attendeeDto)
+                        .toList();
+        }
+        private ApiDtos.AttendeeDto attendeeDto(
+                Registration registration
+        ) {
+                UserAccount user =
+                        registration.getUser();
 
-        eventRepository.delete(event);
-    }
+                TicketType ticket =
+                        registration.getTicketType();
 
-    @Transactional
-    public ApiDtos.RegistrationDto register(
-            Long eventId,
-            ApiDtos.PurchaseRequest request,
-            Principal principal
-    ) {
-        UserAccount user = currentUser(principal);
-
-        Event event = eventRepository
-                .findByIdForUpdate(eventId)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Event not found"
-                        )
+                return new ApiDtos.AttendeeDto(
+                        user.getId(),
+                        user.getName(),
+                        user.getEmail(),
+                        registration.getRegisteredAt(),
+                        ticket == null ? null : ticket.getName(),
+                        registration.getQuantity(),
+                        registration.getTicketCode(),
+                        registration.getCheckedInAt()
                 );
+        }
 
-        if (!event.getStartsAt().isAfter(LocalDateTime.now())) {
+        @Transactional
+        public ApiDtos.CheckInDto checkIn(
+                Long eventId,
+                String ticketCode
+        ) {
+                String normalizedTicketCode =
+                        ticketCode
+                                .trim()
+                                .toUpperCase(Locale.ROOT);
+
+                Registration registration =
+                        registrationRepository
+                                .findByTicketCode(normalizedTicketCode)
+                                .orElseThrow(() ->
+                                        new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Ticket code not found"
+                                        )
+                                );
+
+                Event event =
+                        registration.getEvent();
+
+                if (event == null
+                        || !Objects.equals(
+                        event.getId(),
+                        eventId
+                )) {
+
                 throw new ResponseStatusException(
                         HttpStatus.CONFLICT,
-                        "Registration has closed"
+                        "Ticket code does not belong to this event"
+                );
+                }
+
+                registration.checkIn();
+
+                return checkInDto(registration);
+        }
+        private ApiDtos.CheckInDto checkInDto(
+                Registration registration
+        ) {
+                UserAccount user =
+                        registration.getUser();
+
+                Event event =
+                        registration.getEvent();
+
+                TicketType ticket =
+                        registration.getTicketType();
+
+                return new ApiDtos.CheckInDto(
+                        registration.getTicketCode(),
+                        user.getName(),
+                        event.getTitle(),
+                        ticket == null
+                                ? null
+                                : ticket.getName(),
+                        registration.getQuantity(),
+                        registration.getCheckedInAt() != null,
+                        registration.getCheckedInAt()
                 );
         }
 
-        if (registrationRepository.existsByUserIdAndEventId(
-                user.getId(),
-                event.getId()
-        )) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "You are already registered"
-            );
-        }
-
-        TicketType ticket = ticketTypeRepository
-                .findById(request.ticketTypeId())
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Ticket type not found"
-                        )
-                );
-
-        if (ticket.getEvent() == null
-                || !Objects.equals(
-                ticket.getEvent().getId(),
-                event.getId()
-        )) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Ticket type does not belong to this event"
-            );
-
-        }
-// Paid tickets must go through Mock Payment checkout.
-// The direct Registration API is reserved for free tickets.
-        if (ticket.getPrice() != null
-                && ticket.getPrice().signum() > 0) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Paid tickets require mock payment checkout"
-            );
-        }
-        int quantity = request.quantity();
-
-        long eventSeats =
-                registrationRepository
-                        .seatsReservedByEventId(event.getId());
-
-        if (eventSeats + quantity > event.getCapacity()) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Event capacity exceeded"
-            );
-        }
-
-        long ticketSeats =
-                registrationRepository
-                        .seatsReservedByTicketTypeId(ticket.getId());
-
-        if (ticketSeats + quantity > ticket.getCapacity()) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Ticket capacity exceeded"
-            );
-        }
-
-        Registration registration =
-                new Registration(
-                        user,
-                        event,
-                        ticket,
-                        quantity
-                );
-
-        Registration saved =
-                registrationRepository.save(registration);
-
-        return registrationDto(saved);
-    }
-    private UserAccount currentUser(Principal principal) {
-
-        if (principal == null
-                || principal.getName() == null
-                || principal.getName().isBlank()) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED,
-                    "Authentication required"
-            );
-        }
-
-        String email =
-                principal.getName()
-                        .trim()
-                        .toLowerCase(Locale.ROOT);
-
-        return userRepository
-                .findByEmail(email)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "User not found"
-                        )
-                );
-    }
-
-    private ApiDtos.RegistrationDto registrationDto(
-            Registration registration
-    ) {
-        TicketType ticket =
-                registration.getTicketType();
-
-        BigDecimal totalPrice =
-                ticket == null
-                        ? BigDecimal.ZERO
-                        : ticket.getPrice()
-                        .multiply(
-                                BigDecimal.valueOf(
-                                        registration.getQuantity()
-                                )
-                        );
-
-        return new ApiDtos.RegistrationDto(
-                registration.getId(),
-                registration.getRegisteredAt(),
-                registration.getQuantity(),
-                registration.getTicketCode(),
-                ticket == null
-                        ? null
-                        : ticket.getName(),
-                totalPrice,
-                eventDto(
-                        registration.getEvent(),
-                        true
-                )
-        );
-    }
-
-
-    private ApiDtos.EventDto eventDto(
-            Event event,
-            boolean registered
-    ) {
-        long sold =
-                event.getId() == null
-                        ? 0L
-                        : registrationRepository
-                        .seatsReservedByEventId(
-                                event.getId()
-                        );
-
-        long spotsLeft =
-                Math.max(
-                        0L,
-                        (long) event.getCapacity() - sold
-                );
-
-        String status;
-
-        if (!event.getStartsAt()
-                .isAfter(LocalDateTime.now())) {
-
-            status = "ENDED";
-
-        } else if (sold >= event.getCapacity()) {
-
-            status = "FULL";
-
-        } else {
-
-            status = "OPEN";
-        }
-
-        List<ApiDtos.DetailImageDto> detailImages =
-                event.getDetailImages()
-                        .stream()
-                        .map(image ->
-                                new ApiDtos.DetailImageDto(
-                                        image.getUrl(),
-                                        image.getPlacement()
-                                )
-                        )
-                        .toList();
-
-        List<ApiDtos.TicketTypeDto> ticketTypes =
-                event.getTicketTypes()
-                        .stream()
-                        .map(this::ticketTypeDto)
-                        .toList();
-
-        return new ApiDtos.EventDto(
-                event.getId(),
-                event.getTitle(),
-                event.getDescription(),
-                event.getLocation(),
-                event.getStartsAt(),
-                event.getCapacity(),
-                event.getCategory(),
-                event.getImageUrl(),
-                detailImages,
-                sold,
-                spotsLeft,
-                status,
-                registered,
-                ticketTypes
-        );
-    }
-
-    private ApiDtos.TicketTypeDto ticketTypeDto(
-            TicketType ticket
-    ) {
-        long sold =
-                ticket.getId() == null
-                        ? 0L
-                        : registrationRepository
-                        .seatsReservedByTicketTypeId(
-                                ticket.getId()
-                        );
-
-        long remaining =
-                Math.max(
-                        0L,
-                        (long) ticket.getCapacity() - sold
-                );
-
-        return new ApiDtos.TicketTypeDto(
-                ticket.getId(),
-                ticket.getName(),
-                ticket.getDescription(),
-                ticket.getPrice(),
-                ticket.getCapacity(),
-                sold,
-                remaining
-        );
-    }
-
-    @Transactional
-    public void cancel(
-            Long eventId,
-            Principal principal
-    ) {
-        UserAccount user =
-                currentUser(principal);
-
-        long deleted =
-                registrationRepository
-                        .deleteByUserIdAndEventId(
-                                user.getId(),
+        @Transactional(readOnly = true)
+        public List<ApiDtos.AttendeeDto> recentCheckIns(
+                Long eventId
+        ) {
+                return registrationRepository
+                        .findTop8ByEventIdAndCheckedInAtIsNotNullOrderByCheckedInAtDesc(
                                 eventId
-                        );
-
-        if (deleted == 0L) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Registration not found"
-            );
-        }
-    }
-
-    @Transactional(readOnly = true)
-    public List<ApiDtos.RegistrationDto> mine(
-            Principal principal
-    ) {
-        UserAccount user =
-                currentUser(principal);
-
-        return registrationRepository
-                .findByUserIdOrderByEventStartsAtAsc(
-                        user.getId()
-                )
-                .stream()
-                .map(this::registrationDto)
-                .toList();
-    }
-// ============================================================
-// Branch 7 — Staff Service Contract
-// ============================================================
-
-    @Transactional(readOnly = true)
-    public List<ApiDtos.AttendeeDto> attendees(
-            Long eventId
-    ) {
-        eventRepository
-                .findById(eventId)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Event not found"
                         )
-                );
-
-        return registrationRepository
-                .findByEventIdOrderByRegisteredAtAsc(eventId)
-                .stream()
-                .map(this::attendeeDto)
-                .toList();
-    }
-    private ApiDtos.AttendeeDto attendeeDto(
-            Registration registration
-    ) {
-        UserAccount user =
-                registration.getUser();
-
-        TicketType ticket =
-                registration.getTicketType();
-
-        return new ApiDtos.AttendeeDto(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                registration.getRegisteredAt(),
-                ticket == null
-                        ? null
-                        : ticket.getName(),
-                registration.getQuantity(),
-                registration.getTicketCode(),
-                registration.getCheckedInAt()
-        );
-    }
-
-    @Transactional
-    public ApiDtos.CheckInDto checkIn(
-            Long eventId,
-            String ticketCode
-    ) {
-        String normalizedTicketCode =
-                ticketCode
-                        .trim()
-                        .toUpperCase(Locale.ROOT);
-
-        Registration registration =
-                registrationRepository
-                        .findByTicketCode(normalizedTicketCode)
-                        .orElseThrow(() ->
-                                new ResponseStatusException(
-                                        HttpStatus.NOT_FOUND,
-                                        "Ticket code not found"
-                                )
-                        );
-
-        Event event =
-                registration.getEvent();
-
-        if (event == null
-                || !Objects.equals(
-                event.getId(),
-                eventId
-        )) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Ticket code does not belong to this event"
-            );
+                        .stream()
+                        .map(this::attendeeDto)
+                        .toList();
         }
 
-        registration.checkIn();
-
-        return checkInDto(registration);
-    }
-    private ApiDtos.CheckInDto checkInDto(
-            Registration registration
-    ) {
-        UserAccount user =
-                registration.getUser();
-
-        Event event =
-                registration.getEvent();
-
-        TicketType ticket =
-                registration.getTicketType();
-
-        return new ApiDtos.CheckInDto(
-                registration.getTicketCode(),
-                user.getName(),
-                event.getTitle(),
-                ticket == null
-                        ? null
-                        : ticket.getName(),
-                registration.getQuantity(),
-                registration.getCheckedInAt() != null,
-                registration.getCheckedInAt()
-        );
-    }
-
-    @Transactional(readOnly = true)
-    public List<ApiDtos.AttendeeDto> recentCheckIns(
-            Long eventId
-    ) {
-        return registrationRepository
-                .findTop8ByEventIdAndCheckedInAtIsNotNullOrderByCheckedInAtDesc(
-                        eventId
-                )
-                .stream()
-                .map(this::attendeeDto)
-                .toList();
-    }
-
-    private UnsupportedOperationException notImplemented() {
-        return new UnsupportedOperationException(
-                "EventService business logic is not implemented"
-        );
-    }
-}
+        private UnsupportedOperationException notImplemented() {
+                return new UnsupportedOperationException(
+                        "EventService business logic is not implemented"
+                );
+        }
+        }

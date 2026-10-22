@@ -3,12 +3,22 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
+import Icon from '../components/Icon.jsx';
+import { useNavigate } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import EventDrawer from '../components/EventDrawer.jsx';
 import AttendeesDrawer from '../components/AttendeesDrawer.jsx';
+import { MOCK_BOOKINGS, isMockMode } from '../data/mockBookings.js';
+import EventFilterBar, { Highlight } from '../components/EventFilterBar.jsx';
+import { useEventFilters } from '../hooks/useEventFilters.js';
+import {
+  applyEventFilters,
+  getFacetCounts,
+  sortEvents,
+} from '../utils/eventFilters.js';
 import { eventService } from '../api/eventService.js';
 import { resolveImageUrl } from '../api/apiClient.js';
 
@@ -109,7 +119,63 @@ const mapApiEvent = (event) => {
       ? event.ticketTypes
       : [],
     status: event.status || '',
+    endsAt: toLocalDateTime(event.endsAt),
+    registrationClosesAt: toLocalDateTime(event.registrationClosesAt),
+    checkinEnabled: event.checkinEnabled !== false,
+    organizerName: event.organizerName || event.organizer || '',
+    contactInfo: event.contactInfo || event.contact || '',
+    locationType: event.locationType === 'ONLINE' ? 'ONLINE' : 'ONSITE',
+    onlineUrl: event.onlineUrl || '',
   };
+};
+
+// เหตุผลที่ลบอีเวนต์ไม่ได้ (null = ลบได้) ให้หลังบ้านเป็นผู้ตัดสินสุดท้าย
+const getDeleteBlockReason = (event) => {
+  if (event.deleteBlockedReason) return String(event.deleteBlockedReason);
+
+  const registered = Number(event.seats || 0);
+  const sold = (event.ticketTypes || []).reduce(
+    (sum, ticket) => sum + Number(ticket.sold || 0),
+    0
+  );
+
+  if (registered > 0 || sold > 0) {
+    return `ลบไม่ได้: มีผู้ลงทะเบียน/ซื้อบัตรแล้ว ${Math.max(registered, sold)} รายการ ให้ปิดรับสมัครแทน`;
+  }
+  if (Number(event.checkedInCount || 0) > 0) {
+    return 'ลบไม่ได้: มีประวัติการเช็กอินแล้ว';
+  }
+  return null;
+};
+
+// แปลง error จากหลังบ้านเป็นข้อความใต้ช่องฟอร์ม
+const FIELD_ERROR_MAP = {
+  title: 'name',
+  description: 'desc',
+  location: 'place',
+  startsAt: 'date',
+  capacity: 'max',
+  imageUrl: 'coverUrl',
+  endsAt: 'endsAt',
+  registrationClosesAt: 'registrationClosesAt',
+  onlineUrl: 'onlineUrl',
+  locationType: 'locationType',
+};
+
+const extractFieldErrors = (error) => {
+  const raw = error?.fieldErrors || error?.errors || error?.data?.errors;
+  if (!raw || typeof raw !== 'object') return null;
+
+  const entries = Array.isArray(raw)
+    ? raw.map((item) => [item.field, item.message])
+    : Object.entries(raw);
+
+  const result = {};
+  entries.forEach(([field, message]) => {
+    const key = FIELD_ERROR_MAP[field];
+    if (key && message) result[key] = String(message);
+  });
+  return Object.keys(result).length ? result : null;
 };
 
 const getResponseItems = (response) => {
@@ -187,10 +253,37 @@ const prepareTicketTypes = (formTicketTypes, originalEvent) => {
 };
 
 export default function ManageEventsPage() {
+  const navigate = useNavigate();
+
+  // กล่องยืนยัน/แจ้งผล แทน window.confirm และ window.alert เพื่อให้สีตรงกับ popup อื่น
+  const [dialog, setDialog] = useState(null);
+
+  const showNotice = (message) => {
+    const text = String(message ?? '');
+    const isError = /ไม่สำเร็จ|ผิดพลาด/.test(text);
+
+    setDialog({
+      type: 'notice',
+      tone: isError ? 'danger' : 'primary',
+      title: isError ? 'เกิดข้อผิดพลาด' : 'แจ้งเตือน',
+      message: text,
+    });
+  };
+  const { filters, setFilter, clear, activeCount } = useEventFilters();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [serverErrors, setServerErrors] = useState(null);
+
+  const mockMode = isMockMode();
+  const [attendeesView, setAttendeesView] = useState({
+    open: false,
+    event: null,
+    bookings: [],
+    loading: false,
+    error: '',
+  });
 
   const [drawer, setDrawer] = useState({
     open: false,
@@ -198,15 +291,6 @@ export default function ManageEventsPage() {
     event: null,
   });
 
-  const [attendeesDrawer, setAttendeesDrawer] = useState({
-    open: false,
-    event: null,
-    attendees: [],
-    loading: false,
-    error: '',
-  });
-
-  const attendeesRequestId = useRef(0);
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -231,32 +315,15 @@ export default function ManageEventsPage() {
     loadEvents();
   }, [loadEvents]);
 
-  const stats = useMemo(() => {
-    const total = events.length;
-
-    const open = events.filter(
-      (event) =>
-        event.status === 'OPEN' ||
-        (!event.status && event.seats < event.max)
-    ).length;
-
-    const totalSeats = events.reduce(
-      (sum, event) => sum + Number(event.max || 0),
-      0
-    );
-
-    const totalRegistered = events.reduce(
-      (sum, event) => sum + Number(event.seats || 0),
-      0
-    );
-
-    return {
-      total,
-      open,
-      totalSeats,
-      totalRegistered,
-    };
-  }, [events]);
+  // ค้นหา/กรอง/เรียง ทำฝั่งหน้าจอจากรายการที่โหลดมาแล้ว
+  const visibleEvents = useMemo(
+    () => sortEvents(applyEventFilters(events, filters), filters.sort),
+    [events, filters],
+  );
+  const facetCounts = useMemo(
+    () => getFacetCounts(events, filters),
+    [events, filters],
+  );
 
   const openCreateDrawer = () => {
     if (saving) return;
@@ -306,7 +373,7 @@ export default function ManageEventsPage() {
     } catch (error) {
       console.error('Failed to load event details:', error);
 
-      window.alert(
+      showNotice(
         `ไม่สามารถโหลดรายละเอียดกิจกรรมได้: ${
           error?.message || 'กรุณาลองใหม่อีกครั้ง'
         }`
@@ -314,7 +381,31 @@ export default function ManageEventsPage() {
     }
   };
 
+  const loadAttendees = async (event) => {
+    setAttendeesView({ open: true, event, bookings: [], loading: true, error: '' });
+
+    if (mockMode) {
+      setAttendeesView({ open: true, event, bookings: MOCK_BOOKINGS, loading: false, error: '' });
+      return;
+    }
+
+    try {
+      const response = await eventService.getEventAttendees(event.id);
+      const items = getResponseItems(response?.data ?? response);
+      setAttendeesView({ open: true, event, bookings: items, loading: false, error: '' });
+    } catch (error) {
+      setAttendeesView({
+        open: true,
+        event,
+        bookings: [],
+        loading: false,
+        error: error?.message || 'เกิดข้อผิดพลาด',
+      });
+    }
+  };
+
   const closeDrawer = () => {
+    setServerErrors(null);
     if (!saving) {
       setDrawer((current) => ({
         ...current,
@@ -323,76 +414,52 @@ export default function ManageEventsPage() {
     }
   };
 
-  const closeAttendees = () => {
-    attendeesRequestId.current += 1;
-
-    setAttendeesDrawer((current) => ({
-      ...current,
-      open: false,
-      loading: false,
-    }));
-  };
-
-  const openAttendees = async (event) => {
-    const requestId = ++attendeesRequestId.current;
-
-    setAttendeesDrawer({
-      open: true,
-      event,
-      attendees: [],
-      loading: true,
-      error: '',
-    });
-
-    try {
-      const response = await eventService.getEventAttendees(event.id);
-      const attendees = getResponseItems(response);
-
-      if (requestId !== attendeesRequestId.current) return;
-
-      setAttendeesDrawer((current) => ({
-        ...current,
-        attendees,
-        loading: false,
-        error: '',
-      }));
-    } catch (error) {
-      if (requestId !== attendeesRequestId.current) return;
-
-      setAttendeesDrawer((current) => ({
-        ...current,
-        loading: false,
-        error:
-          error?.message || 'ไม่สามารถโหลดรายชื่อผู้เข้าร่วมได้',
-      }));
-    }
-  };
-
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     if (saving) return;
 
-    const confirmed = window.confirm(
-      'ยืนยันการลบกิจกรรมนี้หรือไม่?'
-    );
+    const target = events.find((event) => String(event.id) === String(id));
+    const blockReason = target ? getDeleteBlockReason(target) : null;
 
-    if (!confirmed) return;
+    if (blockReason) {
+      setDialog({
+        type: 'notice',
+        tone: 'danger',
+        title: 'ลบอีเวนต์ไม่ได้',
+        message: blockReason,
+      });
+      return;
+    }
+
+    setDialog({
+      type: 'confirm-delete',
+      id,
+      name: target?.name || '',
+    });
+  };
+
+  const confirmDelete = async () => {
+    const { id } = dialog;
+    setDialog((current) => ({ ...current, busy: true }));
 
     try {
       await eventService.deleteEvent(id);
 
       setEvents((previous) =>
-        previous.filter(
-          (event) => String(event.id) !== String(id)
-        )
+        previous.filter((event) => String(event.id) !== String(id))
       );
 
-      window.alert('ลบกิจกรรมเรียบร้อยแล้ว');
+      setDialog({
+        type: 'notice',
+        title: 'ลบกิจกรรมเรียบร้อยแล้ว',
+        message: '',
+      });
     } catch (error) {
-      window.alert(
-        `ลบกิจกรรมไม่สำเร็จ: ${
-          error?.message || 'เกิดข้อผิดพลาด'
-        }`
-      );
+      setDialog({
+        type: 'notice',
+        tone: 'danger',
+        title: 'ลบกิจกรรมไม่สำเร็จ',
+        message: error?.message || 'เกิดข้อผิดพลาด',
+      });
     }
   };
 
@@ -409,24 +476,24 @@ export default function ManageEventsPage() {
     const startsAt = String(form.date || '').trim();
 
     if (!name || !place || !startsAt) {
-      window.alert('กรุณากรอกชื่อกิจกรรม สถานที่ และวันเวลา');
+      showNotice('กรุณากรอกชื่อกิจกรรม สถานที่ และวันเวลา');
       return;
     }
 
     if (!Number.isInteger(capacity) || capacity <= 0) {
-      window.alert('ความจุของกิจกรรมต้องเป็นจำนวนเต็มที่มากกว่า 0');
+      showNotice('ความจุของกิจกรรมต้องเป็นจำนวนเต็มที่มากกว่า 0');
       return;
     }
 
     if (Number.isNaN(new Date(startsAt).getTime())) {
-      window.alert('วันเวลาไม่ถูกต้อง');
+      showNotice('วันเวลาไม่ถูกต้อง');
       return;
     }
 
     const originalEvent = isEdit ? drawer.event : null;
 
     if (isEdit && !originalEvent) {
-      window.alert(
+      showNotice(
         'ไม่พบกิจกรรมที่ต้องการแก้ไข กรุณาปิดแล้วลองใหม่'
       );
       return;
@@ -435,7 +502,7 @@ export default function ManageEventsPage() {
     const registeredCount = Number(originalEvent?.seats || 0);
 
     if (isEdit && capacity < registeredCount) {
-      window.alert(
+      showNotice(
         'ความจุใหม่ต้องไม่น้อยกว่าจำนวนผู้ลงทะเบียนปัจจุบัน'
       );
       return;
@@ -447,7 +514,7 @@ export default function ManageEventsPage() {
     );
 
     if (result.error) {
-      window.alert(result.error);
+      showNotice(result.error);
       return;
     }
 
@@ -459,13 +526,14 @@ export default function ManageEventsPage() {
     );
 
     if (ticketCapacityTotal !== capacity) {
-      window.alert(
+      showNotice(
         `ผลรวมความจุของประเภทตั๋ว (${ticketCapacityTotal}) ต้องเท่ากับความจุรวมของกิจกรรม (${capacity}) กรุณาปรับจำนวนตั๋วแต่ละประเภทก่อนบันทึก`
       );
       return;
     }
 
     setSaving(true);
+    setServerErrors(null);
 
     // ไม่ส่ง sold ไป เพราะ Backend คำนวณจำนวนขายจากข้อมูลการลงทะเบียน
     const ticketTypesForRequest = ticketTypes.map(
@@ -512,7 +580,20 @@ export default function ManageEventsPage() {
         category: toApiCategory(form.category),
         imageUrl,
         detailImages: originalEvent?.detailImages || [],
-        ticketTypes: ticketTypesForRequest,
+        ticketTypes: ticketTypesForRequest.map((ticket, index) => ({
+          ...ticket,
+          saleOpen: form.ticketTypes[index]?.saleOpen !== false,
+        })),
+        endsAt: form.endsAt || null,
+        registrationClosesAt: form.registrationClosesAt || null,
+        checkinEnabled: form.checkinEnabled !== false,
+        organizerName: String(form.organizerName || '').trim(),
+        contactInfo: String(form.contactInfo || '').trim(),
+        locationType: form.locationType === 'ONLINE' ? 'ONLINE' : 'ONSITE',
+        onlineUrl:
+          form.locationType === 'ONLINE'
+            ? String(form.onlineUrl || '').trim()
+            : null,
       };
 
       if (isEdit) {
@@ -526,7 +607,7 @@ export default function ManageEventsPage() {
         open: false,
       }));
 
-      window.alert(
+      showNotice(
         isEdit
           ? 'บันทึกการแก้ไขกิจกรรมเรียบร้อยแล้ว'
           : 'สร้างกิจกรรมเรียบร้อยแล้ว'
@@ -534,7 +615,15 @@ export default function ManageEventsPage() {
 
       await loadEvents();
     } catch (error) {
-      window.alert(
+      const fieldErrors = extractFieldErrors(error);
+
+      if (fieldErrors) {
+        // แสดงใต้ช่องเดิมใน Drawer แทน popup
+        setServerErrors({ ...fieldErrors });
+        return;
+      }
+
+      showNotice(
         `${isEdit ? 'บันทึกการแก้ไข' : 'สร้างกิจกรรม'}ไม่สำเร็จ: ${
           error?.message || 'เกิดข้อผิดพลาด'
         }`
@@ -568,7 +657,7 @@ export default function ManageEventsPage() {
           <div>
             <h1>จัดการอีเวนต์</h1>
             <p className="subtitle">
-              สร้างกิจกรรม ตรวจสอบจำนวนที่นั่ง และดูรายชื่อผู้เข้าร่วม
+              สร้างกิจกรรม ตรวจสอบจำนวนที่นั่ง และแก้ไขรายละเอียดอีเวนต์
             </p>
           </div>
 
@@ -598,26 +687,6 @@ export default function ManageEventsPage() {
 
         <hr className="rule" />
 
-        <section className="stats-row">
-          <div className="stat-card">
-            <div className="stat-label">อีเวนต์ทั้งหมด</div>
-            <div className="stat-num">{stats.total}</div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-label">กำลังเปิดรับสมัคร</div>
-            <div className="stat-num">{stats.open}</div>
-          </div>
-
-          <div className="stat-card accent">
-            <div className="stat-label">การลงทะเบียนทั้งหมด</div>
-            <div className="stat-num">
-              {stats.totalRegistered}
-              <span>/ {stats.totalSeats} ที่นั่ง</span>
-            </div>
-          </div>
-        </section>
-
         {loading && (
           <p role="status">กำลังโหลดรายการกิจกรรม...</p>
         )}
@@ -640,6 +709,37 @@ export default function ManageEventsPage() {
         )}
 
         {!loading && !pageError && events.length > 0 && (
+          <EventFilterBar
+            filters={filters}
+            setFilter={setFilter}
+            clear={clear}
+            activeCount={activeCount}
+            counts={facetCounts}
+            total={events.length}
+            shown={visibleEvents.length}
+            searchPlaceholder="ค้นหาชื่อ สถานที่ หรือหมวดหมู่"
+            showDayFilter
+          />
+        )}
+
+        {!loading &&
+          !pageError &&
+          events.length > 0 &&
+          visibleEvents.length === 0 && (
+            <div className="ef-empty">
+              <strong>ไม่พบอีเวนต์ที่ตรงกับเงื่อนไข</strong>
+              ลองลดคำค้นหา หรือเอาตัวกรองบางอย่างออก
+              <div>
+                <button type="button" className="ef-clear" onClick={clear}>
+                  ล้างตัวกรองทั้งหมด
+                </button>
+              </div>
+            </div>
+          )}
+
+        {!loading &&
+          !pageError &&
+          visibleEvents.length > 0 && (
           <section className="table-card">
             <div className="table-scroll">
               <table>
@@ -654,7 +754,7 @@ export default function ManageEventsPage() {
                 </thead>
 
                 <tbody>
-                  {events.map((event) => {
+                  {visibleEvents.map((event) => {
                     const capacity = Number(event.max || 0);
                     const registered = Number(event.seats || 0);
 
@@ -690,13 +790,13 @@ export default function ManageEventsPage() {
                                   }}
                                 />
                               ) : (
-                                '🎟️'
+                                <Icon name="ticket" size="1.4em" />
                               )}
                             </div>
 
                             <div>
                               <div className="ev-title">
-                                {event.name}
+                                <Highlight text={event.name} query={filters.q} />
                               </div>
                               <div className="ev-cat">
                                 {CATEGORY_LABEL[event.category] ||
@@ -711,7 +811,7 @@ export default function ManageEventsPage() {
                             {event.dateLabel}
                           </div>
                           <div className="dt-sub">
-                            {event.place}
+                            <Highlight text={event.place} query={filters.q} />
                           </div>
                         </td>
 
@@ -747,10 +847,11 @@ export default function ManageEventsPage() {
                             <button
                               type="button"
                               className="icon-btn"
-                              title="ดูรายชื่อผู้เข้าร่วม"
-                              onClick={() => openAttendees(event)}
+                              title="ดูรายชื่อผู้เข้าร่วมและรายงาน"
+                              aria-label="ดูรายชื่อผู้เข้าร่วมและรายงาน"
+                              onClick={() => loadAttendees(event)}
                             >
-                              👥
+                              <Icon name="users" />
                             </button>
 
                             <button
@@ -760,17 +861,20 @@ export default function ManageEventsPage() {
                               onClick={() => openEditDrawer(event)}
                               disabled={saving}
                             >
-                              ✏️
+                              <Icon name="edit" />
                             </button>
 
                             <button
                               type="button"
                               className="icon-btn danger"
-                              title="ลบ"
+                              title={getDeleteBlockReason(event) || 'ลบ'}
+                              aria-label={getDeleteBlockReason(event) || 'ลบอีเวนต์'}
+                              aria-disabled={Boolean(getDeleteBlockReason(event))}
+                              style={getDeleteBlockReason(event) ? { opacity: 0.45 } : undefined}
                               onClick={() => handleDelete(event.id)}
                               disabled={saving}
                             >
-                              🗑️
+                              <Icon name="trash" />
                             </button>
                           </div>
                         </td>
@@ -799,6 +903,14 @@ export default function ManageEventsPage() {
                 max: drawer.event.max,
                 coverIndex: drawer.event.coverIndex,
                 coverUrl: drawer.event.coverUrl,
+                seats: drawer.event.seats,
+                endsAt: drawer.event.endsAt,
+                registrationClosesAt: drawer.event.registrationClosesAt,
+                checkinEnabled: drawer.event.checkinEnabled,
+                organizerName: drawer.event.organizerName,
+                contactInfo: drawer.event.contactInfo,
+                locationType: drawer.event.locationType,
+                onlineUrl: drawer.event.onlineUrl,
                 ticketTypes: drawer.event.ticketTypes || [],
                 detailImages: drawer.event.detailImages || [],
               }
@@ -806,21 +918,45 @@ export default function ManageEventsPage() {
         }
         onClose={closeDrawer}
         onSubmit={handleSubmit}
+        serverErrors={serverErrors}
       />
 
       <AttendeesDrawer
-        open={attendeesDrawer.open}
-        eventName={attendeesDrawer.event?.name || ''}
-        seatsInfo={
-          attendeesDrawer.event
-            ? `${attendeesDrawer.event.seats} / ${attendeesDrawer.event.max}`
-            : ''
+        open={attendeesView.open}
+        event={attendeesView.event}
+        bookings={attendeesView.bookings}
+        loading={attendeesView.loading}
+        error={attendeesView.error}
+        mock={mockMode}
+        onRetry={() => loadAttendees(attendeesView.event)}
+        onClose={() =>
+          setAttendeesView((current) => ({ ...current, open: false }))
         }
-        attendees={attendeesDrawer.attendees}
-        loading={attendeesDrawer.loading}
-        error={attendeesDrawer.error}
-        onClose={closeAttendees}
       />
+
+      <ConfirmDialog
+        open={dialog?.type === 'confirm-delete'}
+        title="ยืนยันการลบอีเวนต์"
+        message={`ต้องการลบ${
+          dialog?.name ? ` “${dialog.name}”` : 'อีเวนต์นี้'
+        } หรือไม่ การลบไม่สามารถย้อนกลับได้`}
+        confirmLabel="ลบอีเวนต์"
+        tone="danger"
+        loading={Boolean(dialog?.busy)}
+        onConfirm={confirmDelete}
+        onCancel={() => setDialog(null)}
+      />
+
+      <ConfirmDialog
+        open={dialog?.type === 'notice'}
+        title={dialog?.title}
+        message={dialog?.message}
+        cancelLabel={null}
+        tone={dialog?.tone === 'danger' ? 'danger' : 'primary'}
+        onConfirm={() => setDialog(null)}
+        onCancel={() => setDialog(null)}
+      />
+
     </>
   );
 }

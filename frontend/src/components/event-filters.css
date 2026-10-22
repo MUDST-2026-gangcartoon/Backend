@@ -1,0 +1,206 @@
+/* แถบค้นหา/กรองอีเวนต์ (ใช้ในหน้า Dashboard และจัดการอีเวนต์) */
+.ef-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.ef-search {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 14px;
+  background: #FFFFFF;
+  border: 1px solid #BAE6FD;
+  border-radius: 12px;
+  color: #64748B;
+}
+
+.ef-search:focus-within {
+  border-color: #70C5FF;
+}
+
+.ef-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Kanit', sans-serif;
+  font-size: 16px;
+  color: #0F172A;
+}
+
+.ef-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.ef-row::-webkit-scrollbar {
+  display: none;
+}
+
+.ef-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #BAE6FD;
+  border-radius: 999px;
+  background: #FFFFFF;
+  color: #0F172A;
+  font-family: 'Kanit', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ef-chip:hover:not(:disabled):not(.is-active) {
+  background: #EEF7FD;
+}
+
+.ef-chip:focus-visible,
+.ef-pill:focus-visible,
+.ef-clear:focus-visible,
+.ef-selects select:focus-visible,
+.ef-selects input[type="date"]:focus-visible {
+  outline: 2px solid #70C5FF;
+  outline-offset: 2px;
+}
+
+.ef-chip.is-active {
+  background: #0369A1;
+  border-color: #0369A1;
+  color: #FFFFFF;
+}
+
+.ef-chip:disabled {
+  color: #94A3B8;
+  background: #F8FAFC;
+  cursor: default;
+}
+
+.ef-chip-count {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #EAF4FB;
+  color: #0369A1;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.ef-chip.is-active .ef-chip-count {
+  background: rgba(255, 255, 255, 0.22);
+  color: #FFFFFF;
+}
+
+.ef-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.ef-selects {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ef-selects label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748B;
+}
+
+.ef-selects select,
+.ef-selects input[type="date"] {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #BAE6FD;
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: #0F172A;
+  font-family: 'Kanit', sans-serif;
+  font-size: 14px;
+}
+
+.ef-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+  color: #64748B;
+}
+
+.ef-summary strong {
+  color: #0F172A;
+}
+
+.ef-pill {
+  min-height: 32px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 999px;
+  background: #E3F3FF;
+  color: #0B5E94;
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ef-clear {
+  min-height: 32px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: #0369A1;
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ef-mark {
+  padding: 0 2px;
+  border-radius: 3px;
+  background: #F4FFB8;
+  color: inherit;
+}
+
+.ef-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: #64748B;
+  font-size: 14px;
+}
+
+.ef-empty strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #0F172A;
+  font-size: 16px;
+}
+
+@media (max-width: 860px) {
+  .ef-search {
+    display: flex;
+  }
+
+  .ef-selects label {
+    flex: 1 1 140px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+}

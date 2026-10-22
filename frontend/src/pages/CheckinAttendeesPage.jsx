@@ -5,6 +5,9 @@ import StaffNavbar from '../components/StaffNavbar.jsx';
 import { eventService } from '../api/eventService.js';
 import { staffService } from '../api/staffService.js';
 import '../staff-shell.css';
+import BookingTools from '../components/BookingTools.jsx';
+import { MOCK_BOOKINGS, MOCK_CAPACITY, isMockMode } from '../data/mockBookings.js';
+import { formatDateTime, normalizeBookings } from '../utils/bookingModel.js';
 import '../checkin-attendees.css';
 
 function unwrapResponse(response) {
@@ -86,6 +89,63 @@ function isCheckedIn(item) {
   );
 }
 
+// จัดประเภทผลสแกนเพื่อแสดงผล: ให้หลังบ้านเป็นผู้ตัดสินว่าใช้ได้หรือไม่
+function classifyScanError(err, ticketCode, attendees) {
+  const text = String(err?.message || '').toLowerCase();
+  const status = Number(err?.status ?? err?.response?.status ?? 0);
+  const data = err?.data || err?.response?.data || {};
+
+  if (
+    status === 409 ||
+    text.includes('already') ||
+    text.includes('ใช้แล้ว') ||
+    text.includes('เช็กอินแล้ว')
+  ) {
+    const known = normalizeBookings(attendees).find((row) =>
+      row.codes.some((c) => c.toUpperCase() === ticketCode)
+    );
+    const firstAt = data.checkedInAt || data.firstCheckedInAt || known?.checkedInAt;
+    return {
+      type: 'used',
+      title: 'ตั๋วนี้ถูกใช้แล้ว',
+      detail: firstAt
+        ? `เช็กอินครั้งแรกเมื่อ ${formatDateTime(firstAt)}`
+        : 'ไม่ทราบเวลาเช็กอินครั้งแรก',
+      name: known?.name,
+    };
+  }
+
+  if (
+    text.includes('ช่วงเวลา') ||
+    text.includes('นอกเวลา') ||
+    text.includes('outside') ||
+    text.includes('not open') ||
+    text.includes('closed') ||
+    text.includes('ปิดเช็กอิน') ||
+    text.includes('ยังไม่เปิด')
+  ) {
+    return {
+      type: 'outside',
+      title: 'อยู่นอกช่วงเวลาเช็กอิน',
+      detail: err.message || 'ยังไม่เปิดหรือปิดเช็กอินแล้ว',
+    };
+  }
+
+  if (status === 404 || text.includes('not found') || text.includes('ไม่พบ')) {
+    return {
+      type: 'notfound',
+      title: 'ไม่พบตั๋วนี้ในอีเวนต์',
+      detail: `รหัส ${ticketCode} ไม่ตรงกับตั๋วของอีเวนต์นี้`,
+    };
+  }
+
+  return {
+    type: 'error',
+    title: 'เช็กอินไม่สำเร็จ',
+    detail: err?.message || 'กรุณาตรวจสอบรหัสตั๋วแล้วลองใหม่',
+  };
+}
+
 export default function CheckinAttendeesPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
@@ -100,6 +160,8 @@ export default function CheckinAttendeesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [scannerActive, setScannerActive] = useState(false);
   const [scannerError, setScannerError] = useState('');
+  const [scanResult, setScanResult] = useState(null);
+  const mockMode = isMockMode();
 
   const scannerRef = useRef(null);
   const scannerStartingRef = useRef(false);
@@ -108,6 +170,14 @@ export default function CheckinAttendeesPage() {
   const loadData = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     setError('');
+
+    if (mockMode) {
+      setEvent({ id: eventId, name: 'อีเวนต์ตัวอย่าง (ข้อมูลจำลอง)', capacity: MOCK_CAPACITY });
+      setAttendees((prev) => (prev.length ? prev : MOCK_BOOKINGS));
+      setRecent([]);
+      if (showLoading) setLoading(false);
+      return;
+    }
 
     try {
       const [
@@ -154,7 +224,7 @@ export default function CheckinAttendeesPage() {
     } finally {
       if (showLoading) setLoading(false);
     }
-  }, [eventId]);
+  }, [eventId, mockMode]);
 
   useEffect(() => {
     loadData();
@@ -199,6 +269,32 @@ export default function CheckinAttendeesPage() {
     setSubmitting(true);
     setError('');
     setMessage('');
+    setScanResult(null);
+
+    if (mockMode) {
+      const target = normalizeBookings(attendees).find((row) =>
+        row.codes.some((c) => c.toUpperCase() === ticketCode)
+      );
+      if (!target) {
+        setScanResult(classifyScanError({ status: 404 }, ticketCode, attendees));
+      } else if (target.status === 'checkedin') {
+        setScanResult(classifyScanError({ status: 409 }, ticketCode, attendees));
+      } else if (target.status === 'cancelled') {
+        setScanResult({ type: 'error', title: 'ตั๋วนี้ถูกยกเลิกแล้ว', detail: target.name });
+      } else {
+        setAttendees((prev) =>
+          prev.map((raw) =>
+            String(raw.id) === String(target.key)
+              ? { ...raw, checkedInAt: new Date().toISOString(), checkInSource: 'STAFF', checkedInBy: 'สตาฟ (จำลอง)' }
+              : raw
+          )
+        );
+        setScanResult({ type: 'success', title: 'เช็กอินสำเร็จ', detail: target.name });
+        setCode('');
+      }
+      setSubmitting(false);
+      return;
+    }
 
     try {
       const response = await staffService.checkIn(
@@ -214,23 +310,26 @@ export default function CheckinAttendeesPage() {
         );
       }
 
-      setMessage(
-        `ตั๋วนี้เช็กอินแล้ว: ${
-          result.attendeeName || 'ผู้เข้าร่วม'
-        }`
-      );
+      setScanResult({
+        type: 'success',
+        title: 'เช็กอินสำเร็จ',
+        detail: result.attendeeName || 'ผู้เข้าร่วม',
+      });
 
       setCode('');
+
+      // สั่นเบา ๆ ให้รู้ว่าเช็กอินสำเร็จโดยไม่ต้องมองจอ (เฉพาะอุปกรณ์ที่รองรับ)
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(60);
+      }
+
       await loadData(false);
     } catch (err) {
-      setError(
-        err.message ||
-          'เช็กอินไม่สำเร็จ กรุณาตรวจสอบรหัสตั๋ว'
-      );
+      setScanResult(classifyScanError(err, ticketCode, attendees));
     } finally {
       setSubmitting(false);
     }
-  }, [code, eventId, loadData]);
+  }, [code, eventId, loadData, mockMode, attendees]);
 
 
   const startScanner = useCallback(async () => {
@@ -535,12 +634,13 @@ export default function CheckinAttendeesPage() {
                   setCode(e.target.value);
                   setError('');
                   setMessage('');
+                  setScanResult(null);
                 }}
                 onKeyDown={handleKeyDown}
               />
 
               <p
-                className={`helper-text${error ? ' err' : ''}`}
+                className={`helper-text${error ? ' err' : message ? ' ok' : ''}`}
                 role={error ? 'alert' : 'status'}
               >
                 {error || message || 'กรอกรหัสตั๋ว แล้วกดเช็กอิน'}
@@ -653,6 +753,20 @@ export default function CheckinAttendeesPage() {
           </div>
         </section>
 
+        {scanResult && (
+          <section
+            className={`scan-result ${scanResult.type}`}
+            role={scanResult.type === 'success' ? 'status' : 'alert'}
+          >
+            <strong>{scanResult.title}</strong>
+            {scanResult.name && <span>{scanResult.name}</span>}
+            <span>{scanResult.detail}</span>
+            <button type="button" className="bt-link" onClick={() => setScanResult(null)}>
+              ปิด
+            </button>
+          </section>
+        )}
+
         <section className="stats-row">
           <div className="stat-card">
             <div className="stat-label">
@@ -720,9 +834,53 @@ export default function CheckinAttendeesPage() {
             <div className="stat-sub" style={{ marginTop: 8 }}>
               เช็กอินแล้ว {checkedIn} ราย · เหลืออีก {remaining} ราย
             </div>
+
+            <div
+              className="ticket-progress"
+              role="progressbar"
+              aria-label="ความคืบหน้าการเช็กอิน"
+              aria-valuemin={0}
+              aria-valuemax={totalGuests}
+              aria-valuenow={checkedIn}
+            >
+              <div
+                style={{
+                  width: `${
+                    totalGuests > 0
+                      ? Math.min(100, (checkedIn / totalGuests) * 100)
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
           </div>
+        </section>
+
+        <section className="checkin-list-section">
+          <h2 className="checkin-list-title">รายชื่อผู้เข้าร่วม</h2>
+          {mockMode && (
+            <p className="bt-mock-note">โหมดข้อมูลจำลอง (?mock=1) — ไม่ใช่ข้อมูลจริง</p>
+          )}
+          <BookingTools
+            bookings={attendees}
+            capacity={toCapacity(event)}
+            eventName={event.title || event.name || 'event'}
+            onRetry={() => loadData(false)}
+            onPickCode={(picked) => {
+              setCode(picked);
+              setScanResult(null);
+              setError('');
+              document.getElementById('ticketCode')?.focus();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
         </section>
       </main>
     </>
   );
+}
+
+function toCapacity(event) {
+  const value = Number(event?.capacity ?? event?.maxAttendees ?? event?.max);
+  return Number.isFinite(value) && value > 0 ? value : null;
 }

@@ -125,3 +125,8 @@
   .ci-thumb{height:80px;}
   .ci-title{font-size:16.5px;}
 }
+
+.ci-state { padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.ci-state.open { background: #ECFCCB; color: #3F6200; }
+.ci-state.soon { background: #EFF6FF; color: #1E40AF; }
+.ci-state.closed, .ci-state.disabled { background: #F1F5F9; color: #475569; }

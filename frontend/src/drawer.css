@@ -330,3 +330,224 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+/* 8. Event detail: สรุปจำนวน + รายชื่อผู้ลงทะเบียน */
+.att-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.att-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: #FFFFFF;
+  border: 1px solid var(--light-blue);
+  border-radius: 12px;
+}
+
+.att-tile span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.att-tile strong {
+  font-size: 24px;
+  line-height: 1.1;
+  color: var(--text-main);
+}
+
+.att-tile.accent {
+  background: var(--primary-blue, #70C5FF);
+  border-color: transparent;
+}
+
+.att-tile.accent span,
+.att-tile.accent strong {
+  color: #0B2A3F;
+}
+
+.att-checkin {
+  margin-bottom: 16px;
+}
+
+.att-checkin-text {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.att-checkin-text b {
+  color: var(--text-main);
+}
+
+.att-checkin-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #EAF4FB;
+  overflow: hidden;
+}
+
+.att-checkin-bar > div {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #70C5FF, #B0F135);
+}
+
+.att-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+
+.att-filter {
+  flex: 1 1 auto;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--light-blue);
+  border-radius: 999px;
+  background: #FFFFFF;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 12.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.att-filter.is-active {
+  background: #0369A1;
+  border-color: #0369A1;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.att-search {
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--light-blue);
+  border-radius: 12px;
+  background: #FFFFFF;
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--text-main);
+}
+
+.att-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.att-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid #EEF7FF;
+}
+
+.att-item .avatar {
+  flex-shrink: 0;
+}
+
+.att-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.att-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.att-qty {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.att-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.att-time {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.att-chip {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.att-chip.in {
+  background: #E8F9C2;
+  color: #3F6200;
+}
+
+.att-chip.out {
+  background: #FFF0DB;
+  color: #9A5B00;
+}
+
+.att-empty {
+  padding: 24px 8px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.att-error {
+  color: #c0392b;
+}
+
+.att-nowrap {
+  white-space: nowrap;
+}
+
+/* .drawer-body เป็น flex column ที่เลื่อนได้ จึงต้องกันไม่ให้ส่วนต่าง ๆ ถูกบีบจนหาย */
+.att-summary,
+.att-checkin,
+.att-filters,
+.att-search,
+.att-list {
+  flex-shrink: 0;
+}
+
+/* 9. ฟอร์มอีเวนต์: สวิตช์ เหตุผลที่ลบ/สลับไม่ได้ และกลุ่มข้อมูลเพิ่มเติม */
+.form-section { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; margin-top: 6px; border-top: 1px solid #E2E8F0; }
+.form-section h3 { margin: 0; font-size: 15px; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #E2E8F0; border-radius: 12px; background: #fff; }
+.toggle-row .toggle-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.toggle-row .toggle-text strong { font-size: 14px; }
+.toggle-row input[type="checkbox"] { width: 20px; height: 20px; flex: none; accent-color: #0369A1; cursor: pointer; }
+.toggle-row input[type="checkbox"]:disabled { cursor: not-allowed; }
+.segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.segmented button { min-height: 40px; border: 1px solid #BAE6FD; border-radius: 10px; background: #fff; font: inherit; cursor: pointer; }
+.segmented button.is-active { background: #0369A1; border-color: #0369A1; color: #fff; }
+.segmented button:disabled:not(.is-active) { opacity: .5; cursor: not-allowed; }
+.lock-note { margin: 0; padding: 8px 10px; border-radius: 10px; background: #FFF7ED; color: #9A3412; font-size: 12.5px; }
+.helper-text.err { color: #c0392b; }
+.field input[aria-invalid="true"], .field select[aria-invalid="true"], .field textarea[aria-invalid="true"] { border-color: #c0392b; }
+.cover-grid.single { grid-template-columns: 1fr; }
+.cover-thumb.has-image { height: 120px; background-size: cover; background-position: center; }
+.ticket-lock { font-size: 12.5px; color: #9A3412; margin: 0; }
+.ticket-sale-off { opacity: .8; }

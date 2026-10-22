@@ -1113,7 +1113,7 @@ class EventServiceTests {
 
     // EVT-CANCEL-001 ยกเลิก Registration ของตัวเอง - ลบเฉพาะ User + Event ที่ถูกต้อง
     @Test
-    void shouldCancelCurrentUsersRegistration() {
+        void shouldCancelCurrentUsersRegistration() {
 
         UserAccount user =
                 createUser(
@@ -1126,6 +1126,8 @@ class EventServiceTests {
                         user.getEmail()
                 );
 
+        Registration registration = mock(Registration.class);
+
         when(
                 userRepository.findByEmail(
                         user.getEmail()
@@ -1133,11 +1135,19 @@ class EventServiceTests {
         ).thenReturn(Optional.of(user));
 
         when(
-                registrationRepository
-                        .deleteByUserIdAndEventId(
-                                user.getId(),
-                                100L
-                        )
+                registrationRepository.findByUserIdAndEventId(
+                        user.getId(),
+                        100L
+                )
+        ).thenReturn(Optional.of(registration));
+
+        when(registration.getCheckedInAt()).thenReturn(null);
+
+        when(
+                registrationRepository.deleteByUserIdAndEventId(
+                        user.getId(),
+                        100L
+                )
         ).thenReturn(1L);
 
         eventService.cancel(
@@ -1150,8 +1160,7 @@ class EventServiceTests {
                         user.getId(),
                         100L
                 );
-    }
-
+        }
 
     // EVT-CANCEL-002 ไม่มี Registration ให้ยกเลิก - Not Found
     @Test
@@ -1175,12 +1184,11 @@ class EventServiceTests {
         ).thenReturn(Optional.of(user));
 
         when(
-                registrationRepository
-                        .deleteByUserIdAndEventId(
-                                user.getId(),
-                                100L
-                        )
-        ).thenReturn(0L);
+                registrationRepository.findByUserIdAndEventId(
+                        user.getId(),
+                        100L
+                )
+        ).thenReturn(Optional.empty());
 
         ResponseStatusException exception =
                 assertStatus(

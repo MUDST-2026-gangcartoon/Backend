@@ -448,7 +448,6 @@ body {
   display: grid;
 
   grid-template-columns:
-    minmax(0, 1.4fr)
     minmax(0, 1fr);
 
   gap: 16px;
@@ -1100,4 +1099,339 @@ body {
 
   }
 
+}
+
+/* =========================================================
+   รายละเอียดรายอีเวนต์
+   ========================================================= */
+
+.dashboard-events {
+  width: 100%;
+  margin-top: 16px;
+  padding: 24px;
+  background: var(--dashboard-card, #FFFFFF);
+  border: 1px solid var(--dashboard-line, #BAE6FD);
+  border-radius: var(--dashboard-radius, 24px);
+  box-shadow: var(--dashboard-shadow);
+}
+
+.dashboard-events h2 {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.dashboard-events-empty {
+  margin: 24px 0 8px;
+  font-size: 13.5px;
+  color: var(--dashboard-text-soft, #64748B);
+}
+
+.dashboard-event-picker {
+  display: flex;
+  gap: 8px;
+  margin: 18px 0 16px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+}
+
+.dashboard-event-chip {
+  flex: 0 0 auto;
+  max-width: 240px;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 14px;
+  border: 1px solid var(--dashboard-line, #BAE6FD);
+  border-radius: 12px;
+  background: #FFFFFF;
+  color: var(--dashboard-text, #0F172A);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  scroll-snap-align: start;
+}
+
+.dashboard-event-chip:focus-visible {
+  outline: 2px solid var(--primary-blue, #70C5FF);
+  outline-offset: 2px;
+}
+
+.dashboard-event-chip.is-active {
+  background: #0369A1;
+  border-color: #0369A1;
+  color: #FFFFFF;
+}
+
+.dashboard-event-chip-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dashboard-event-chip-count {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.dashboard-event-info {
+  margin-bottom: 16px;
+}
+
+.dashboard-event-info h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.dashboard-event-info p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--dashboard-text-soft, #64748B);
+}
+
+@media (max-width: 600px) {
+  .dashboard-events {
+    padding: 20px;
+  }
+
+  .dashboard-event-chip {
+    max-width: 200px;
+  }
+}
+
+.dashboard-page h1 {
+  text-wrap: balance;
+}
+
+@media (max-width: 600px) {
+  .dashboard-event-btn {
+    width: 100%;
+    height: 48px;
+  }
+
+  /* สถิติ: การ์ดหลักเต็มแถว อีกสองใบเรียงคู่กัน ไม่ให้หน้ายาวเกินไป */
+  .dashboard-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .dashboard-stats .dashboard-stat-highlight {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-stats .dashboard-stat-card {
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .dashboard-stats .dashboard-stat-highlight {
+    padding: 20px;
+  }
+}
+
+
+/* ผลค้นหาในรายชื่อผู้ลงทะเบียน (ข้ามทุกอีเวนต์) */
+.dashboard-people {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px dashed #70C5FF;
+  border-radius: 12px;
+  background: #F7FBFE;
+  font-size: 13px;
+  color: #64748B;
+}
+
+.dashboard-people p {
+  margin: 0;
+}
+
+.dashboard-people-title {
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.dashboard-people ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dashboard-people li button {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dashboard-people li button:hover {
+  background: #EAF4FB;
+}
+
+.dashboard-people li button:focus-visible {
+  outline: 2px solid #70C5FF;
+}
+
+.dashboard-people-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.dashboard-people-meta {
+  font-size: 12.5px;
+  color: #64748B;
+}
+
+.dashboard-people-more {
+  margin-top: 6px !important;
+}
+
+
+/* เครื่องมือรายชื่อผู้ลงทะเบียน (ส่งออก/คัดลอก/พิมพ์/รีเฟรช) */
+.dashboard-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid #BAE6FD;
+  border-radius: 12px;
+  background: #F7FBFE;
+}
+
+.dashboard-toolbar-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.dashboard-toolbar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.dashboard-toolbar-target {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #64748B;
+}
+
+.dashboard-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dashboard-toolbar-actions button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid #BAE6FD;
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: #0F172A;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.dashboard-toolbar-actions button:hover:not(:disabled) {
+  background: #EEF7FD;
+  border-color: #70C5FF;
+}
+
+.dashboard-toolbar-actions button:focus-visible {
+  outline: 2px solid #70C5FF;
+  outline-offset: 2px;
+}
+
+.dashboard-toolbar-actions button:disabled {
+  color: #94A3B8;
+  background: #F8FAFC;
+  cursor: not-allowed;
+}
+
+.dashboard-toolbar-note {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: #0369A1;
+}
+
+/* พิมพ์รายชื่อ: แสดงเฉพาะอีเวนต์ที่เลือกและรายชื่อ */
+@media print {
+  .navbar,
+  .bottom-tabs,
+  .dashboard-header,
+  .dashboard-divider,
+  .dashboard-stats,
+  .dashboard-charts,
+  .dashboard-event-picker,
+  .dashboard-people,
+  .ef-bar,
+  .dashboard-chart-header,
+  .event-attendees .att-filters,
+  .event-attendees .att-search {
+    display: none !important;
+  }
+
+  body {
+    padding: 0 !important;
+    background: #FFFFFF;
+  }
+
+  .dashboard-events {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+}
+
+
+/* ---------------------------------------------------------
+   Dashboard: เดสก์ท็อป (801px ขึ้นไป) ใช้แถบเครื่องมือแทนตัวกรองที่ซ้ำกับหน้าจัดการอีเวนต์
+   มือถือ (800px ลงมา) เหมือนเดิม: แสดงตัวกรอง ไม่แสดงแถบเครื่องมือ
+   --------------------------------------------------------- */
+.ef-filters {
+  display: contents;
+}
+
+@media (min-width: 801px) {
+  .dashboard-events .ef-filters {
+    display: none;
+  }
+}
+
+@media (max-width: 800px) {
+  .dashboard-toolbar {
+    display: none;
+  }
 }

@@ -1,6 +1,6 @@
 
 /* =========================================
-   🎨 THEME VARIABLES
+   THEME VARIABLES
 ========================================= */
 :root {
   --primary-blue: #70C5FF;
@@ -15,7 +15,7 @@
 }
 
 /* =========================================
-   📌 NAVBAR STYLES
+   NAVBAR STYLES
 ========================================= */
 .navbar {
   display: flex;
@@ -32,7 +32,7 @@
 }
 
 /* =========================================
-   📌 LEFT / CENTER / RIGHT
+   LEFT / CENTER / RIGHT
 ========================================= */
 .nav-left,
 .nav-center,
@@ -58,7 +58,7 @@
 }
 
 /* =========================================
-   📌 LOGO
+   LOGO
 ========================================= */
 .logo {
   display: flex;
@@ -98,7 +98,7 @@
 }
 
 /* =========================================
-   📌 SEARCH BOX
+   SEARCH BOX
 ========================================= */
 .search-box {
   display: flex;
@@ -137,7 +137,7 @@
 }
 
 /* =========================================
-   📌 NAVIGATION LINKS
+   NAVIGATION LINKS
 ========================================= */
 .nav-link {
   text-decoration: none;
@@ -172,7 +172,7 @@
 }
 
 /* =========================================
-   📌 USER PROFILE VIEW
+   USER PROFILE VIEW
 ========================================= */
 .user-profile {
   display: flex;
@@ -220,8 +220,60 @@
   color: var(--text-muted);
 }
 
+/* เมนูโปรไฟล์ (dropdown) */
+.user-profile-container {
+  position: relative;
+}
+
+.profile-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 200;
+  min-width: 190px;
+  padding: 6px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px -10px rgba(15, 23, 42, 0.22);
+}
+
+.dropdown-item {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #0F172A;
+  font-family: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: #F1F5F9;
+}
+
+.dropdown-item:focus-visible {
+  outline: 2px solid #70C5FF;
+  outline-offset: -2px;
+}
+
+.dropdown-item.logout-btn {
+  color: #B91C1C;
+}
+
+.dropdown-item.logout-btn:hover {
+  background: #FEF2F2;
+}
+
 /* =========================================
-   📌 GUEST VIEW
+   GUEST VIEW
 ========================================= */
 #nav-guest-view {
   display: flex;
@@ -230,7 +282,7 @@
 }
 
 /* =========================================
-   📌 LANGUAGE BUTTON
+   LANGUAGE BUTTON
 ========================================= */
 .btn-lang-toggle {
   background: transparent;
@@ -248,7 +300,7 @@
 }
 
 /* =========================================
-   📌 REGISTER BUTTON
+   REGISTER BUTTON
 ========================================= */
 .btn-nav-register {
   display: inline-flex;
@@ -274,7 +326,7 @@
 }
 
 /* =========================================
-   📌 LOGIN BUTTON
+   LOGIN BUTTON
 ========================================= */
 .btn-nav-login {
   display: inline-flex;
@@ -301,7 +353,7 @@
 }
 
 /* =========================================
-   📌 AUTH MODAL
+   AUTH MODAL
 ========================================= */
 .auth-modal-overlay {
   position: fixed;
@@ -343,7 +395,7 @@
 }
 
 /* =========================================
-   📌 MODAL FORM
+   MODAL FORM
 ========================================= */
 .login-icon {
   display: flex;
@@ -403,7 +455,7 @@
 }
 
 /* =========================================
-   📌 MODAL BUTTONS
+   MODAL BUTTONS
 ========================================= */
 .btn-submit-login,
 .btn-submit-register {
@@ -440,7 +492,7 @@
 }
 
 /* =========================================
-   📌 MODAL FOOTER
+   MODAL FOOTER
 ========================================= */
 .login-footer {
   margin-top: 18px;
@@ -460,7 +512,7 @@
 }
 
 /* =========================================
-   📱 MOBILE NAVIGATION
+   MOBILE NAVIGATION
 ========================================= */
 
 /* Desktop: ซ่อน Hamburger */
@@ -469,7 +521,7 @@
 }
 
 /* =========================================
-   📌 RESPONSIVE TABLET
+   RESPONSIVE TABLET
 ========================================= */
 @media (max-width: 1000px) and (min-width: 801px) {
   .navbar {
@@ -494,7 +546,7 @@
 }
 
 /* =========================================
-   📌 RESPONSIVE MOBILE
+   RESPONSIVE MOBILE
 ========================================= */
 @media (max-width: 800px) {
   .navbar {
@@ -755,7 +807,7 @@
 }
 
 /* =========================================
-   📌 VERY SMALL SCREENS
+   VERY SMALL SCREENS
 ========================================= */
 @media (max-width: 380px) {
   .navbar {
@@ -789,7 +841,7 @@
 }
 
 /* =========================================
-   📌 GOOGLE TRANSLATE
+   GOOGLE TRANSLATE
 ========================================= */
 .skiptranslate iframe,
 .goog-te-banner-frame {
