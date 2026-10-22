@@ -1,269 +1,82 @@
-/* =========================================
-   🎨 THEME VARIABLES
-========================================= */
 :root {
-  --primary-blue: #70C5FF;       /* 🌟 สีหลัก */
-  --primary-blue-hover: #38BDF8; /* สีตอน Hover */
-  --dark-blue: #0284C7;          /* สีฟ้าเข้มสำหรับตัวหนังสือ/เน้นความชัด */
-  --light-blue: #BAE6FD;         /* สีฟ้าอ่อนสำหรับเส้นขอบ/พื้นหลังจางๆ */
-  --text-main: #1E1B4B;          /* สีตัวอักษรหัวข้อ */
-  --text-body: #111827;          /* สีตัวอักษรเนื้อหา */
-  --text-muted: #64748B;         /* สีตัวอักษรจาง */
-  --bg-white: #ffffff;
-  --bg-light: #F8FAFC;
-  --border-light: #E2E8F0;
-  --border-medium: #CBD5E1;
+  --primary-blue: #70c5ff;
+  --primary-blue-hover: #38bdf8;
+  --dark-blue: #0284c7;
+  --light-blue: #bae6fd;
+  --text-main: #1e1b4b;
+  --text-body: #111827;
+  --text-muted: #64748b;
+  --bg-white: #fff;
+  --bg-light: #f8fafc;
+  --border-light: #e2e8f0;
+  --border-medium: #cbd5e1;
 }
-
-/* =========================================
-   📌 MY REGISTRATIONS PAGE
-========================================= */
 
 .registrations-container {
-  max-width: 1000px;
+  width: min(100% - 40px, 1000px);
   margin: 0 auto;
-  padding: 0 20px;
   font-family: "Kanit", sans-serif;
 }
-
-.page-header {
-  margin-top: 40px;
-  margin-bottom: 24px;
-}
-
-.page-header h1 {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--text-main);
-  margin: 0;
-}
-
-.page-header p {
-  color: var(--text-muted);
-  font-size: 14px;
-  margin-top: 4px;
-}
-
-/* =========================================
-   📌 LIST & CARDS
-========================================= */
-
-.registrations-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding-bottom: 60px;
-}
-
+.page-header { margin: 40px 0 24px; }
+.page-header h1 { margin: 0; color: var(--text-main); font-size: 28px; font-weight: 800; line-height: 1.35; }
+.page-header p { margin: 6px 0 0; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+.registrations-list { display: flex; flex-direction: column; gap: 16px; padding-bottom: 60px; }
 .registration-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--bg-white);
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  padding: 20px 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  padding: 20px 24px; background: var(--bg-white); border: 1px solid var(--border-light);
+  border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 5%);
+  transition: border-color .2s ease, box-shadow .2s ease;
 }
-
-.registration-card:hover {
-  border-color: var(--primary-blue);
-  box-shadow: 0 6px 16px rgba(112, 197, 255, 0.2);
-}
-
-.reg-left-info {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-/* 🔹 โทนสีวันที่ */
-.reg-date-badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--dark-blue);
-  min-width: 45px;
-}
-
-.reg-month {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.reg-day {
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.reg-details {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.reg-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-body);
-}
-
-.reg-meta {
-  display: flex;
-  gap: 16px;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-/* =========================================
-   📌 STATUS & BUTTONS
-========================================= */
-
-.reg-right-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.status-pill {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.status-pill.success {
-  background-color: #D1FAE5;
-  color: #065F46;
-}
-
-/* 🔹 ปุ่มสีฟ้า #70C5FF + ฟอนต์สีขาว #FFFFFF */
-.btn-view-ticket {
-  display: inline-block;
-  text-decoration: none;
-  background-color: var(--primary-blue);
-  color: #FFFFFF;
-  padding: 8px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 700;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-  box-shadow: 0 2px 8px rgba(112, 197, 255, 0.4);
-}
-
-.btn-view-ticket:hover {
-  background-color: var(--primary-blue-hover);
-  color: #FFFFFF;
-}
-
-.btn-view-ticket:active {
-  transform: scale(0.97);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px;
-  color: var(--text-muted);
-  background: var(--bg-light);
-  border-radius: 12px;
-  border: 1px dashed var(--border-medium);
-}
-
-/* =========================================
-   📌 RESPONSIVE
-========================================= */
-
-@media (max-width: 650px) {
-  .registration-card {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 20px;
-    padding: 16px;
-  }
-
-  .reg-meta {
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .reg-right-actions {
-    width: 100%;
-    justify-content: space-between;
-    padding-top: 16px;
-    border-top: 1px solid var(--border-light);
-  }
-}
-
-
-.btn-cancel-registration {
-  padding: 10px 14px;
-  border: 1px solid #dc2626;
-  border-radius: 8px;
-  background: transparent;
-  color: #dc2626;
-  cursor: pointer;
-  font: inherit;
-}
-
-.btn-cancel-registration:hover:not(:disabled) {
-  background: #fef2f2;
-}
-
-.btn-cancel-registration:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-
-/* สถานะที่ 2: เช็กอินแล้ว */
-.status-pill.checked {
-  background-color: #ECFCCB;
-  color: #3F6212;
-}
-
-.cancel-block {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-
-.cancel-note {
-  font-size: 12px;
-  color: #64748B;
-}
-
-.btn-cancel-registration:disabled {
-  border-color: #CBD5E1;
-  color: #94A3B8;
-  opacity: 1;
-}
+.registration-card:hover { border-color: var(--primary-blue); box-shadow: 0 6px 16px rgb(112 197 255 / 20%); }
+.reg-left-info { display: flex; align-items: center; gap: 24px; min-width: 0; flex: 1; }
+.reg-date-badge { display: flex; flex: 0 0 45px; flex-direction: column; align-items: center; justify-content: center; color: var(--dark-blue); }
+.reg-month { font-size: 14px; font-weight: 700; }
+.reg-day { font-size: 28px; font-weight: 800; line-height: 1.1; }
+.reg-details { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.reg-title { margin: 0; color: var(--text-body); font-size: 18px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
+.reg-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.reg-total-price { color: var(--text-body); font-size: 13px; font-weight: 700; }
+.reg-right-actions { display: flex; flex: 0 0 190px; flex-direction: column; align-items: stretch; gap: 10px; }
+.status-pill { display: inline-flex; align-self: flex-end; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; line-height: 1.4; white-space: nowrap; }
+.status-pill.success { color: #065f46; background: #d1fae5; }
+.status-pill.checked { color: #3f6212; background: #ecfccb; }
+.btn-view-ticket { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 16px; border: 1px solid var(--dark-blue); border-radius: 8px; background: var(--dark-blue); color: #fff; font-size: 14px; font-weight: 700; text-align: center; text-decoration: none; transition: background-color .2s ease, transform .1s ease; }
+.btn-view-ticket:hover { background: #0369a1; color: #fff; }
+.btn-view-ticket:active { transform: scale(.98); }
+.cancel-block { display: flex; flex-direction: column; align-items: stretch; gap: 5px; width: 100%; }
+.btn-cancel-registration { width: 100%; min-height: 40px; padding: 9px 12px; border: 1px solid #dc2626; border-radius: 8px; background: #fff; color: #b91c1c; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; transition: background-color .2s ease, border-color .2s ease; }
+.btn-cancel-registration:hover:not(:disabled) { background: #fef2f2; border-color: #b91c1c; }
+.btn-cancel-registration:disabled { border-color: var(--border-medium); background: #f8fafc; color: #94a3b8; cursor: not-allowed; }
+.cancel-note { color: var(--text-muted); font-size: 11px; line-height: 1.5; text-align: right; }
+.missing-ticket { color: var(--text-muted); font-size: 13px; text-align: center; }
+.empty-state { padding: 40px 24px; border: 1px dashed var(--border-medium); border-radius: 12px; background: var(--bg-light); color: var(--text-muted); text-align: center; line-height: 1.7; }
+.empty-state p { margin: 0 0 12px; }
+.empty-state-link { display: inline-block; color: var(--dark-blue); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.btn-retry-registrations { min-height: 42px; padding: 9px 16px; border: 0; border-radius: 8px; background: var(--dark-blue); color: #fff; cursor: pointer; font: inherit; font-weight: 700; }
+.btn-retry-registrations:hover { background: #0369a1; }
+.registration-alert { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid transparent; border-radius: 10px; font-size: 14px; line-height: 1.6; }
+.registration-alert button { flex: 0 0 auto; padding: 2px 4px; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; font-weight: 700; text-decoration: underline; }
+.registration-alert-error { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+.registration-alert-success { border-color: #a7f3d0; background: #ecfdf5; color: #065f46; }
+.btn-view-ticket:focus-visible, .btn-cancel-registration:focus-visible, .btn-retry-registrations:focus-visible, .registration-alert button:focus-visible, .empty-state-link:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 3px; }
 
 @media (max-width: 768px) {
-  .reg-right-actions {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .status-pill {
-    white-space: nowrap;
-  }
-
-  /* ปุ่มยกเลิกกินเต็มแถวใหม่ กดง่ายและข้อความไม่ถูกบีบ */
-  .cancel-block {
-    width: 100%;
-    align-items: stretch;
-  }
-
-  .btn-cancel-registration {
-    width: 100%;
-    min-height: 46px;
-  }
-
-  .cancel-note {
-    text-align: center;
-  }
+  .registrations-container { width: min(100% - 32px, 620px); }
+  .page-header { margin-top: 28px; }
+  .registration-card { align-items: stretch; flex-direction: column; gap: 18px; padding: 16px; }
+  .reg-left-info { align-items: flex-start; gap: 16px; }
+  .reg-right-actions { flex: 1 1 auto; min-width: 0; padding-top: 16px; border-top: 1px solid var(--border-light); }
+  .status-pill { align-self: flex-start; }
+  .btn-view-ticket { width: 100%; min-height: 44px; }
+  .btn-cancel-registration { min-height: 46px; font-size: 14px; }
+  .cancel-note { text-align: center; }
+}
+@media (max-width: 420px) {
+  .registrations-container { width: min(100% - 24px, 620px); }
+  .page-header h1 { font-size: 24px; }
+  .reg-left-info { gap: 12px; }
+  .reg-date-badge { flex-basis: 38px; }
+  .reg-day { font-size: 25px; }
+  .reg-title { font-size: 16px; }
+  .reg-meta { flex-direction: column; gap: 4px; }
 }
