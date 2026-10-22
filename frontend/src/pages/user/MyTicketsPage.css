@@ -311,3 +311,59 @@
     padding: 24px;
   }
 }
+/* Ticket status */
+.ticket-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.ticket-status-valid {
+  color: #166534;
+  background: #DCFCE7;
+}
+
+.ticket-status-checked-in {
+  color: #1D4ED8;
+  background: #DBEAFE;
+}
+
+.ticket-qr-unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.ticket-checked-in-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #DBEAFE;
+  color: #1D4ED8;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.myticket-right:has(.ticket-qr-unavailable) {
+  cursor: default;
+}
+
+.myticket-right:has(.ticket-qr-unavailable):hover {
+  background: var(--bg-white);
+}
+
+.myticket-right:has(.ticket-qr-unavailable) .myticket-tap-hint {
+  max-width: 180px;
+  line-height: 1.6;
+}

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import QRCode from 'qrcode';
@@ -64,17 +65,22 @@ const normalizeRegistration = (registration) => {
     ? String(registration.ticketCode)
     : '';
 
+  const checkedInAt = registration.checkedInAt ?? null;
+
   return {
     ticketId: ticketCode || String(registration.id ?? ''),
     ticketCode,
     ticketIdLabel: ticketCode ? 'รหัสบัตร' : 'รหัสลงทะเบียน',
     eventName: event.title || 'ไม่พบชื่ออีเวนต์',
-    category: CATEGORY_LABELS[event.category] || event.category || 'อีเวนต์',
+    category:
+      CATEGORY_LABELS[event.category] || event.category || 'อีเวนต์',
     startsAt: event.startsAt,
     location: event.location || 'ไม่ระบุสถานที่',
     ticketType: registration.ticketTypeName || 'ไม่ระบุประเภทบัตร',
     registeredAt: registration.registeredAt,
     quantity: registration.quantity ?? 1,
+    checkedInAt,
+    isCheckedIn: Boolean(checkedInAt),
   };
 };
 
@@ -104,15 +110,18 @@ export default function MyTicketsPage() {
           : payload?.items ?? payload?.registrations ?? [];
 
         const normalizedTickets = Array.isArray(items)
-          ? items.map(normalizeRegistration).filter(
-              (ticket) => ticket.ticketId
-            )
+          ? items
+              .map(normalizeRegistration)
+              .filter((ticket) => ticket.ticketId)
           : [];
 
-        // สร้าง QR ในเครื่องจาก ticketCode ที่ Backend ส่งกลับมา
+        // สร้าง QR จาก ticketCode ที่ Backend ส่งกลับมา
+        // รายการที่เช็กอินแล้วจะไม่สร้าง QR สำหรับใช้งานซ้ำ
         const qrEntries = await Promise.all(
           normalizedTickets
-            .filter((ticket) => ticket.ticketCode)
+            .filter(
+              (ticket) => ticket.ticketCode && !ticket.isCheckedIn
+            )
             .map(async (ticket) => {
               try {
                 const qrDataUrl = await QRCode.toDataURL(
@@ -134,12 +143,14 @@ export default function MyTicketsPage() {
         if (isMounted) {
           setTickets(normalizedTickets);
           setQrCodes(Object.fromEntries(qrEntries));
+          setSelectedTicket(null);
         }
       } catch (error) {
         if (isMounted) {
           setErrorMessage(getErrorMessage(error));
           setTickets([]);
           setQrCodes({});
+          setSelectedTicket(null);
         }
       } finally {
         if (isMounted) {
@@ -155,16 +166,43 @@ export default function MyTicketsPage() {
     };
   }, []);
 
+  // ผูก QR เข้ากับตั๋วแต่ละใบ
   const ticketsWithQr = tickets.map((ticket) => ({
     ...ticket,
-    qrCode: qrCodes[ticket.ticketId] || '',
+    qrCode: ticket.isCheckedIn
+      ? ''
+      : qrCodes[ticket.ticketId] || '',
   }));
 
+  // รองรับการเปิดหน้าด้วย ?ticketId=...
   const visibleTickets = requestedTicketId
     ? ticketsWithQr.filter(
         (ticket) => ticket.ticketId === requestedTicketId
       )
     : ticketsWithQr;
+
+  const openTicketQr = (ticket) => {
+    if (!ticket.isCheckedIn && ticket.qrCode) {
+      setSelectedTicket(ticket);
+    }
+  };
+
+  // ปิดหน้าต่าง QR ด้วยปุ่ม Escape
+  useEffect(() => {
+    if (!selectedTicket) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setSelectedTicket(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedTicket]);
 
   return (
     <>
@@ -182,7 +220,7 @@ export default function MyTicketsPage() {
 
         <div className="tickets-list">
           {loading ? (
-            <div className="empty-state">
+            <div className="empty-state" role="status">
               กำลังโหลดตั๋วของคุณ...
             </div>
           ) : errorMessage ? (
@@ -202,6 +240,18 @@ export default function MyTicketsPage() {
                   <div className="myticket-badge">
                     {ticket.category} · {ticket.quantity} ใบ
                   </div>
+
+                  <span
+                    className={`ticket-status ${
+                      ticket.isCheckedIn
+                        ? 'ticket-status-checked-in'
+                        : 'ticket-status-valid'
+                    }`}
+                  >
+                    {ticket.isCheckedIn
+                      ? 'เช็กอินแล้ว'
+                      : 'ลงทะเบียนแล้ว'}
+                  </span>
 
                   <h2 className="myticket-event-title">
                     {ticket.eventName}
@@ -233,10 +283,20 @@ export default function MyTicketsPage() {
                   <div className="issue-date">
                     ลงทะเบียนเมื่อ {formatDate(ticket.registeredAt)}
                   </div>
+
+                  {ticket.isCheckedIn && ticket.checkedInAt && (
+                    <div className="issue-date">
+                      เช็กอินเมื่อ {formatDateTime(ticket.checkedInAt)}
+                    </div>
+                  )}
                 </div>
 
                 <div
-                  className="myticket-right"
+                  className={`myticket-right ${
+                    ticket.isCheckedIn || !ticket.qrCode
+                      ? 'myticket-right-disabled'
+                      : ''
+                  }`}
                   role={ticket.qrCode ? 'button' : undefined}
                   tabIndex={ticket.qrCode ? 0 : undefined}
                   aria-label={
@@ -244,31 +304,46 @@ export default function MyTicketsPage() {
                       ? `ขยาย QR Code ของ ${ticket.eventName}`
                       : undefined
                   }
-                  onClick={() => {
-                    if (ticket.qrCode) {
-                      setSelectedTicket(ticket);
-                    }
-                  }}
+                  onClick={() => openTicketQr(ticket)}
                   onKeyDown={(event) => {
                     if (
                       ticket.qrCode &&
                       (event.key === 'Enter' || event.key === ' ')
                     ) {
                       event.preventDefault();
-                      setSelectedTicket(ticket);
+                      openTicketQr(ticket);
                     }
                   }}
                 >
-                  {ticket.qrCode ? (
-                    <>
-                      <img
-                        src={ticket.qrCode}
-                        alt="QR Code ของบัตร"
-                        className="myticket-qr-img"
-                      />
+                  {ticket.isCheckedIn ? (
+                    <div className="ticket-qr-unavailable">
+                      <div
+                        className="ticket-checked-in-icon"
+                        aria-hidden="true"
+                      >
+                        ✓
+                      </div>
+
                       <div className="myticket-id">
                         {ticket.ticketId}
                       </div>
+
+                      <div className="myticket-tap-hint">
+                        เช็กอินเรียบร้อยแล้ว! ไม่สามารถใช้ QR นี้ เข้าร่วมงานซ้ำได้
+                      </div>
+                    </div>
+                  ) : ticket.qrCode ? (
+                    <>
+                      <img
+                        src={ticket.qrCode}
+                        alt={`QR Code ของ ${ticket.eventName}`}
+                        className="myticket-qr-img"
+                      />
+
+                      <div className="myticket-id">
+                        {ticket.ticketId}
+                      </div>
+
                       <div className="myticket-tap-hint">
                         แตะเพื่อขยาย QR
                       </div>
@@ -278,6 +353,7 @@ export default function MyTicketsPage() {
                       <div className="myticket-id">
                         {ticket.ticketId}
                       </div>
+
                       <div className="myticket-tap-hint">
                         ยังไม่มีรหัส QR จากระบบ
                       </div>
@@ -306,7 +382,8 @@ export default function MyTicketsPage() {
               </h3>
 
               <p className="modal-ticket-id">
-                {selectedTicket.ticketIdLabel}: {selectedTicket.ticketId}
+                {selectedTicket.ticketIdLabel}:{' '}
+                {selectedTicket.ticketId}
               </p>
 
               <div className="modal-qr-wrapper">
