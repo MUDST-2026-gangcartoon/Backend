@@ -147,25 +147,6 @@
   border: 2px solid transparent;
   cursor: pointer;
   transition: all 0.15s;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.cover-thumb-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.cover-thumb-placeholder {
-  color: var(--primary-blue);
-  font-size: 25px;
-  line-height: 1;
-  opacity: 0.85;
 }
 
 .cover-thumb.selected {
@@ -550,3 +531,23 @@
 .att-list {
   flex-shrink: 0;
 }
+
+/* 9. ฟอร์มอีเวนต์: สวิตช์ เหตุผลที่ลบ/สลับไม่ได้ และกลุ่มข้อมูลเพิ่มเติม */
+.form-section { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; margin-top: 6px; border-top: 1px solid #E2E8F0; }
+.form-section h3 { margin: 0; font-size: 15px; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #E2E8F0; border-radius: 12px; background: #fff; }
+.toggle-row .toggle-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.toggle-row .toggle-text strong { font-size: 14px; }
+.toggle-row input[type="checkbox"] { width: 20px; height: 20px; flex: none; accent-color: #0369A1; cursor: pointer; }
+.toggle-row input[type="checkbox"]:disabled { cursor: not-allowed; }
+.segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.segmented button { min-height: 40px; border: 1px solid #BAE6FD; border-radius: 10px; background: #fff; font: inherit; cursor: pointer; }
+.segmented button.is-active { background: #0369A1; border-color: #0369A1; color: #fff; }
+.segmented button:disabled:not(.is-active) { opacity: .5; cursor: not-allowed; }
+.lock-note { margin: 0; padding: 8px 10px; border-radius: 10px; background: #FFF7ED; color: #9A3412; font-size: 12.5px; }
+.helper-text.err { color: #c0392b; }
+.field input[aria-invalid="true"], .field select[aria-invalid="true"], .field textarea[aria-invalid="true"] { border-color: #c0392b; }
+.cover-grid.single { grid-template-columns: 1fr; }
+.cover-thumb.has-image { height: 120px; background-size: cover; background-position: center; }
+.ticket-lock { font-size: 12.5px; color: #9A3412; margin: 0; }
+.ticket-sale-off { opacity: .8; }

@@ -5,6 +5,7 @@ import {
   STATUS_OPTIONS,
   WHEN_OPTIONS,
 } from '../utils/eventFilters.js';
+import Icon from './Icon.jsx';
 import './event-filters.css';
 
 // เดิมไฮไลต์คำที่ค้นหา ตอนนี้แสดงข้อความปกติ (คงชื่อไว้เพื่อให้หน้าอื่นที่เรียกใช้ไม่ต้องแก้)
@@ -22,6 +23,9 @@ export default function EventFilterBar({
   shown,
   searchPlaceholder,
   unit = 'อีเวนต์',
+  showFilters = true,
+  showDayFilter = false,
+  children = null,
 }) {
   const hasQuery = filters.q.trim() !== '';
 
@@ -50,91 +54,108 @@ export default function EventFilterBar({
         />
       </label>
 
-      <div className="ef-row" role="group" aria-label="กรองตามสถานะ">
-        {STATUS_OPTIONS.map((option) => {
-          const count = counts?.status?.[option.key] ?? 0;
-          const isActive = filters.status === option.key;
+      {showFilters && (
+        <div className="ef-filters">
+          <div className="ef-row" role="group" aria-label="กรองตามสถานะ">
+            {STATUS_OPTIONS.map((option) => {
+              const count = counts?.status?.[option.key] ?? 0;
+              const isActive = filters.status === option.key;
 
-          return (
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  className={`ef-chip${isActive ? ' is-active' : ''}`}
+                  aria-pressed={isActive}
+                  disabled={!isActive && count === 0}
+                  onClick={() => setFilter('status', option.key)}
+                >
+                  {option.label}
+                  <span className="ef-chip-count">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="ef-row" role="group" aria-label="กรองตามหมวดหมู่">
             <button
-              key={option.key}
               type="button"
-              className={`ef-chip${isActive ? ' is-active' : ''}`}
-              aria-pressed={isActive}
-              disabled={!isActive && count === 0}
-              onClick={() => setFilter('status', option.key)}
+              className={`ef-chip${filters.cat === 'all' ? ' is-active' : ''}`}
+              aria-pressed={filters.cat === 'all'}
+              onClick={() => setFilter('cat', 'all')}
             >
-              {option.label}
-              <span className="ef-chip-count">{count}</span>
+              ทุกหมวด
             </button>
-          );
-        })}
-      </div>
 
-      <div className="ef-row" role="group" aria-label="กรองตามหมวดหมู่">
-        <button
-          type="button"
-          className={`ef-chip${filters.cat === 'all' ? ' is-active' : ''}`}
-          aria-pressed={filters.cat === 'all'}
-          onClick={() => setFilter('cat', 'all')}
-        >
-          ทุกหมวด
-        </button>
+            {Object.entries(CATEGORY_META).map(([key, meta]) => {
+              const count = counts?.cat?.[key] ?? 0;
+              const isActive = filters.cat === key;
 
-        {Object.entries(CATEGORY_META).map(([key, meta]) => {
-          const count = counts?.cat?.[key] ?? 0;
-          const isActive = filters.cat === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className={`ef-chip${isActive ? ' is-active' : ''}`}
+                  aria-pressed={isActive}
+                  disabled={!isActive && count === 0}
+                  onClick={() => setFilter('cat', isActive ? 'all' : key)}
+                >
+                  <span
+                    className="ef-dot"
+                    style={{ background: meta.color }}
+                    aria-hidden="true"
+                  />
+                  {meta.label}
+                  <span className="ef-chip-count">{count}</span>
+                </button>
+              );
+            })}
+          </div>
 
-          return (
-            <button
-              key={key}
-              type="button"
-              className={`ef-chip${isActive ? ' is-active' : ''}`}
-              aria-pressed={isActive}
-              disabled={!isActive && count === 0}
-              onClick={() => setFilter('cat', isActive ? 'all' : key)}
-            >
-              <span
-                className="ef-dot"
-                style={{ background: meta.color }}
-                aria-hidden="true"
-              />
-              {meta.label}
-              <span className="ef-chip-count">{count}</span>
-            </button>
-          );
-        })}
-      </div>
+          <div className="ef-selects">
+            <label>
+              <span>ช่วงเวลา</span>
+              <select
+                value={filters.when}
+                onChange={(event) => setFilter('when', event.target.value)}
+              >
+                {WHEN_OPTIONS.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-      <div className="ef-selects">
-        <label>
-          <span>ช่วงเวลา</span>
-          <select
-            value={filters.when}
-            onChange={(event) => setFilter('when', event.target.value)}
-          >
-            {WHEN_OPTIONS.map((option) => (
-              <option key={option.key} value={option.key}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            {showDayFilter && (
+              <label>
+                <span>วันที่จัดงาน</span>
+                <input
+                  type="date"
+                  value={filters.day || ''}
+                  onChange={(event) => setFilter('day', event.target.value)}
+                />
+              </label>
+            )}
 
-        <label>
-          <span>เรียงตาม</span>
-          <select
-            value={filters.sort}
-            onChange={(event) => setFilter('sort', event.target.value)}
-          >
-            {SORT_OPTIONS.map((option) => (
-              <option key={option.key} value={option.key}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+            <label>
+              <span>เรียงตาม</span>
+              <select
+                value={filters.sort}
+                onChange={(event) => setFilter('sort', event.target.value)}
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
+      )}
+
+      {children}
 
       <div className="ef-summary" role="status" aria-live="polite">
         <span>
@@ -148,7 +169,7 @@ export default function EventFilterBar({
             onClick={() => setFilter('q', '')}
             aria-label={`ล้างคำค้นหา ${filters.q}`}
           >
-            “{filters.q}” ✕
+            “{filters.q}” <Icon name="close" size="0.85em" strokeWidth={2.2} />
           </button>
         )}
 

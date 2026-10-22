@@ -1308,3 +1308,130 @@ body {
 .dashboard-people-more {
   margin-top: 6px !important;
 }
+
+
+/* เครื่องมือรายชื่อผู้ลงทะเบียน (ส่งออก/คัดลอก/พิมพ์/รีเฟรช) */
+.dashboard-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid #BAE6FD;
+  border-radius: 12px;
+  background: #F7FBFE;
+}
+
+.dashboard-toolbar-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.dashboard-toolbar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.dashboard-toolbar-target {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #64748B;
+}
+
+.dashboard-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dashboard-toolbar-actions button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid #BAE6FD;
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: #0F172A;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.dashboard-toolbar-actions button:hover:not(:disabled) {
+  background: #EEF7FD;
+  border-color: #70C5FF;
+}
+
+.dashboard-toolbar-actions button:focus-visible {
+  outline: 2px solid #70C5FF;
+  outline-offset: 2px;
+}
+
+.dashboard-toolbar-actions button:disabled {
+  color: #94A3B8;
+  background: #F8FAFC;
+  cursor: not-allowed;
+}
+
+.dashboard-toolbar-note {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: #0369A1;
+}
+
+/* พิมพ์รายชื่อ: แสดงเฉพาะอีเวนต์ที่เลือกและรายชื่อ */
+@media print {
+  .navbar,
+  .bottom-tabs,
+  .dashboard-header,
+  .dashboard-divider,
+  .dashboard-stats,
+  .dashboard-charts,
+  .dashboard-event-picker,
+  .dashboard-people,
+  .ef-bar,
+  .dashboard-chart-header,
+  .event-attendees .att-filters,
+  .event-attendees .att-search {
+    display: none !important;
+  }
+
+  body {
+    padding: 0 !important;
+    background: #FFFFFF;
+  }
+
+  .dashboard-events {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+}
+
+
+/* ---------------------------------------------------------
+   Dashboard: เดสก์ท็อป (801px ขึ้นไป) ใช้แถบเครื่องมือแทนตัวกรองที่ซ้ำกับหน้าจัดการอีเวนต์
+   มือถือ (800px ลงมา) เหมือนเดิม: แสดงตัวกรอง ไม่แสดงแถบเครื่องมือ
+   --------------------------------------------------------- */
+.ef-filters {
+  display: contents;
+}
+
+@media (min-width: 801px) {
+  .dashboard-events .ef-filters {
+    display: none;
+  }
+}
+
+@media (max-width: 800px) {
+  .dashboard-toolbar {
+    display: none;
+  }
+}

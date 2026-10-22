@@ -50,7 +50,7 @@ body{
 a{color:inherit;text-decoration:none;}
 button{font-family:inherit;}
 /* ======================================================= */
-/* 🟢 BASE RESET & GLOBALS */
+/* BASE RESET & GLOBALS */
 /* ======================================================= */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -92,7 +92,7 @@ button {
 }
 
 /* ======================================================= */
-/* 🟢 PAGE LAYOUT & COMPONENTS */
+/* PAGE LAYOUT & COMPONENTS */
 /* ======================================================= */
 .page {
   max-width: 1180px;
@@ -407,7 +407,7 @@ tbody tr:hover {
 }
 
 /* ======================================================= */
-/* 🟢 RESPONSIVE DESIGN */
+/* RESPONSIVE DESIGN */
 /* ======================================================= */
 @media (max-width: 760px) {
   .navbar {

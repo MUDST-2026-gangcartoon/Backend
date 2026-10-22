@@ -1,5 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
+import Icon from './Icon.jsx';
+import ProfileMenu from './ProfileMenu.jsx';
 import {
   NavLink,
   useLocation,
@@ -15,7 +17,6 @@ import logo from '../../assets/public/logo.png';
 export default function AdminNavbar() {
   const { isLoggedIn, user, openModal, logout } = useAuth();
   const navigate = useNavigate();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const searchRef = useRef(null);
@@ -85,20 +86,14 @@ export default function AdminNavbar() {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const handleLogout = () => {
-    setIsDropdownOpen(false);
-    logout();
-    navigate('/');
-  };
-
   return (
     <>
       <nav className="navbar">
         <div className="nav-left">
           <NavLink
-            to="/"
+            to="/admin/dashboard"
             className="logo"
-            aria-label="หน้าหลักค้นหาอีเวนต์"
+            aria-label="แดชบอร์ดแอดมิน"
           >
             <img src={logo} alt="EventFest." />
           </NavLink>
@@ -183,59 +178,14 @@ export default function AdminNavbar() {
           )}
 
           {isLoggedIn && (
-            <div className="user-profile-container">
-              <div
-                className="user-profile"
-                onClick={() =>
-                  setIsDropdownOpen((previous) => !previous)
-                }
-                style={{ cursor: 'pointer' }}
-              >
-                <div
-                  className="avatar"
-                  style={{
-                    backgroundColor: '#bae6fd',
-                    color: '#0369a1',
-                  }}
-                >
-                  {user?.avatarLetter || 'A'}
-                </div>
-
-                <div className="user-info">
-                  <div className="username">
-                    {user?.username || 'Admin'}
-                  </div>
-
-                  <div className="role">
-                    {user?.roleLabel || 'ผู้ดูแลระบบ'}
-                  </div>
-                </div>
-
-                <span
-                  className="dropdown-icon"
-                  style={{
-                    transform: isDropdownOpen
-                      ? 'rotate(180deg)'
-                      : 'rotate(0deg)',
-                    transition: '0.2s',
-                  }}
-                >
-                  ▼
-                </span>
-              </div>
-
-              {isDropdownOpen && (
-                <div className="profile-dropdown-menu">
-                  <button
-                    type="button"
-                    className="dropdown-item logout-btn"
-                    onClick={handleLogout}
-                  >
-                    🚪 ออกจากระบบ
-                  </button>
-                </div>
-              )}
-            </div>
+            <ProfileMenu
+              user={user}
+              items={[
+            { to: '/admin/dashboard', label: 'แดชบอร์ด', icon: 'dashboard' },
+            { to: '/manage-events', label: 'จัดการอีเวนต์', icon: 'calendar' },
+          ]}
+              onLogout={logout}
+            />
           )}
         </div>
 

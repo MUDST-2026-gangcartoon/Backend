@@ -90,11 +90,9 @@ export default function BottomTabBar() {
     ? [
         { to: '/admin/dashboard', label: 'แดชบอร์ด', icon: 'dashboard' },
         { to: '/manage-events', label: 'อีเวนต์', icon: 'events' },
-        { to: '/staff/checkin', label: 'เช็กอิน', icon: 'checkin' },
       ]
     : [
         { to: '/staff/checkin', label: 'เช็กอิน', icon: 'checkin' },
-        { to: '/UpcomingEventsPage', label: 'ดูอีเวนต์', icon: 'browse' },
       ];
 
   const handleLogout = async () => {
@@ -155,13 +153,6 @@ export default function BottomTabBar() {
                 <span>{user?.roleLabel || role}</span>
               </div>
             </div>
-
-            {isAdmin && (
-              <NavLink to="/UpcomingEventsPage" className="bottom-sheet-row">
-                <TabIcon name="browse" />
-                <span>ดูหน้าค้นหาอีเวนต์ของผู้ใช้</span>
-              </NavLink>
-            )}
 
             <button
               type="button"

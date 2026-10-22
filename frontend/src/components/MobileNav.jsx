@@ -1,5 +1,6 @@
 
 import React, { useEffect, useId, useRef, useState } from 'react';
+import Icon from './Icon.jsx';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -22,36 +23,15 @@ export default function MobileNav() {
   const role = String(user?.role || '').toLowerCase();
 
   // เมนูตาม Role จริงที่ได้จาก AuthContext
-  const links =
-    isLoggedIn && role === 'admin'
+  const links = [
+    { to: '/UpcomingEventsPage', label: 'ค้นหาอีเวนต์', icon: 'search' },
+    ...(isLoggedIn
       ? [
-          { to: '/admin/dashboard', label: 'แดชบอร์ด', icon: '📊' },
-          { to: '/manage-events', label: 'จัดการอีเวนต์', icon: '📅' },
-          { to: '/staff/checkin', label: 'เช็กอินหน้างาน', icon: '📷' },
-          { to: '/UpcomingEventsPage', label: 'ค้นหาอีเวนต์', icon: '🔎' },
+          { to: '/MyRegistrationsPage', label: 'การลงทะเบียนของฉัน', icon: 'list' },
+          { to: '/MyTicketsPage', label: 'ตั๋วของฉัน', icon: 'ticket' },
         ]
-      : isLoggedIn && role === 'staff'
-        ? [
-            { to: '/staff/checkin', label: 'เช็กอินหน้างาน', icon: '📷' },
-            { to: '/UpcomingEventsPage', label: 'ค้นหาอีเวนต์', icon: '🔎' },
-          ]
-        : [
-            { to: '/UpcomingEventsPage', label: 'ค้นหาอีเวนต์', icon: '🔎' },
-            ...(isLoggedIn && role === 'user'
-              ? [
-                  {
-                    to: '/MyRegistrationsPage',
-                    label: 'การลงทะเบียนของฉัน',
-                    icon: '📋',
-                  },
-                  {
-                    to: '/MyTicketsPage',
-                    label: 'ตั๋วของฉัน',
-                    icon: '🎟️',
-                  },
-                ]
-              : []),
-          ];
+      : []),
+  ];
 
   // เปลี่ยนหน้าแล้วปิดเมนู
   useEffect(() => {
@@ -107,7 +87,7 @@ export default function MobileNav() {
         aria-controls={menuId}
         onClick={() => setIsOpen((previous) => !previous)}
       >
-        <span aria-hidden="true">{isOpen ? '✕' : '☰'}</span>
+        <Icon name={isOpen ? 'close' : 'menu'} size="1.4em" strokeWidth={2} />
       </button>
 
       {isOpen && (
@@ -139,11 +119,11 @@ export default function MobileNav() {
                 onClick={() => setIsOpen(false)}
               >
                 <span className="mobile-nav-icon" aria-hidden="true">
-                  {item.icon}
+                  <Icon name={item.icon} size="1.2em" />
                 </span>
                 <span>{item.label}</span>
                 <span className="mobile-nav-arrow" aria-hidden="true">
-                  ›
+                  <Icon name="chevronRight" size="1em" />
                 </span>
               </NavLink>
             ))}

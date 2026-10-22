@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import Icon from '../components/Icon.jsx';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import StaffNavbar from '../components/StaffNavbar.jsx';
 import { eventService } from '../api/eventService.js';
@@ -7,10 +8,10 @@ import '../staff-shell.css';
 import '../event-checkin.css';
 
 const ICONS = {
-  DESIGN: '🎨',
-  TECH: '⚙️',
-  CAREER: '📊',
-  COMMUNITY: '👥',
+  DESIGN: 'design',
+  TECH: 'tech',
+  CAREER: 'career',
+  COMMUNITY: 'users',
 };
 
 // Development-only sample data. Never used in production.
@@ -21,6 +22,10 @@ const DEMO_EVENTS = [
     category: 'DESIGN',
     startsAt: '2026-10-15T09:00:00',
     location: 'ห้องประชุม A',
+    registeredCount: 24,
+    checkinEnabled: true,
+    checkinOpensAt: '2026-10-15T08:00:00',
+    checkinClosesAt: '2026-10-15T12:00:00',
   },
   {
     id: 'demo-tech',
@@ -28,6 +33,8 @@ const DEMO_EVENTS = [
     category: 'TECH',
     startsAt: '2026-10-18T13:00:00',
     location: 'อาคาร ICT',
+    registeredCount: 80,
+    checkinEnabled: false,
   },
   {
     id: 'demo-career',
@@ -35,6 +42,10 @@ const DEMO_EVENTS = [
     category: 'CAREER',
     startsAt: '2026-10-20T10:00:00',
     location: 'หอประชุมมหาวิทยาลัย',
+    registeredCount: 12,
+    checkinEnabled: true,
+    checkinOpensAt: '2026-10-20T09:00:00',
+    checkinClosesAt: '2026-10-20T11:00:00',
   },
 ];
 
@@ -50,6 +61,48 @@ const formatDate = (value) => {
     timeStyle: 'short',
   }).format(date);
 };
+
+// สถานะเช็กอินสำหรับแสดงผลเท่านั้น (หลังบ้านเป็นผู้ตัดสินจริงตอนสแกน)
+const toTime = (value) => {
+  if (!value) return null;
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? null : time;
+};
+
+const formatShort = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
+
+function getCheckinState(ev, now = Date.now()) {
+  if (ev.checkinEnabled === false) {
+    return { key: 'disabled', label: 'ปิดเช็กอิน', window: '' };
+  }
+
+  const opens = toTime(ev.checkinOpensAt) ?? toTime(ev.startsAt);
+  const closes = toTime(ev.checkinClosesAt) ?? toTime(ev.endsAt);
+
+  const windowText =
+    opens !== null || closes !== null
+      ? `ช่วงเช็กอิน ${opens !== null ? formatShort(opens) : '-'} – ${
+          closes !== null ? formatShort(closes) : '-'
+        }`
+      : 'ไม่ระบุช่วงเวลาเช็กอิน';
+
+  if (opens !== null && now < opens) {
+    return { key: 'soon', label: 'ยังไม่เปิดเช็กอิน', window: windowText };
+  }
+  if (closes !== null && now > closes) {
+    return { key: 'closed', label: 'ปิดเช็กอินแล้ว', window: windowText };
+  }
+  return { key: 'open', label: 'เปิดเช็กอินอยู่', window: windowText };
+}
 
 export default function EventCheckinSelectPage() {
   const navigate = useNavigate();
@@ -253,6 +306,7 @@ export default function EventCheckinSelectPage() {
                 {filteredEvents.map((ev) => {
                   const category = ev.category || 'COMMUNITY';
                   const isDemo = String(ev.id).startsWith('demo-');
+                  const checkin = getCheckinState(ev);
 
                   return (
                     <a
@@ -286,7 +340,7 @@ export default function EventCheckinSelectPage() {
                         </span>
 
                         <span className="ci-icon">
-                          {ICONS[category] || '🎟️'}
+                          <Icon name={ICONS[category] || 'ticket'} size="1em" strokeWidth={1.6} />
                         </span>
                       </div>
 
@@ -305,6 +359,18 @@ export default function EventCheckinSelectPage() {
                           ผู้ลงทะเบียน {ev.registeredCount ?? 0} คน
                           <span className="mdot">·</span>
                           {ev.status || 'ไม่ระบุสถานะ'}
+                        </p>
+
+                        <p className="ci-meta">
+                          <span className={`ci-state ${checkin.key}`}>
+                            {checkin.label}
+                          </span>
+                          {checkin.window && (
+                            <>
+                              <span className="mdot">·</span>
+                              {checkin.window}
+                            </>
+                          )}
                         </p>
                       </div>
 

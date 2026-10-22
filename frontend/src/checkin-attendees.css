@@ -279,3 +279,14 @@ label.field-label{
   .checkin-card.scanning{grid-template-columns:minmax(300px,0.8fr) 1.4fr;}
   .checkin-card.scanning .cc-scan{min-height:520px;}
 }
+
+/* ผลสแกนทุกแบบ */
+.scan-result { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; margin: 16px 0; border-radius: 14px; border: 1px solid; }
+.scan-result strong { font-size: 16px; }
+.scan-result.success { background: #ECFCCB; border-color: #A3E635; color: #365314; }
+.scan-result.used { background: #FFF7ED; border-color: #FDBA74; color: #9A3412; }
+.scan-result.notfound, .scan-result.error { background: #FEF2F2; border-color: #FCA5A5; color: #991B1B; }
+.scan-result.outside { background: #EFF6FF; border-color: #93C5FD; color: #1E40AF; }
+.scan-result .bt-link { align-self: flex-start; color: inherit; }
+.checkin-list-section { margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
+.checkin-list-title { margin: 0; font-size: 18px; }
