@@ -112,6 +112,7 @@ export default function StaffNavbar() {
               user={user}
               items={[
             { to: '/staff/checkin', label: 'เช็กอินหน้างาน', icon: 'scan' },
+            { to: '/profile', label: 'จัดการโปรไฟล์', icon: 'user' },
           ]}
               onLogout={logout}
             />

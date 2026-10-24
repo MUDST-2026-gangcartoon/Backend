@@ -139,6 +139,7 @@ export default function Navbar({ onSearchChange }) {
               items={[
                 { to: '/MyRegistrationsPage', label: 'การลงทะเบียนของฉัน', icon: 'list' },
                 { to: '/MyTicketsPage', label: 'ตั๋วของฉัน', icon: 'ticket' },
+                { to: '/profile', label: 'จัดการโปรไฟล์', icon: 'user' },
               ]}
               onLogout={logout}
             />

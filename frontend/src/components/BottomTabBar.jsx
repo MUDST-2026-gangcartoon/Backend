@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import UserAvatar from './UserAvatar.jsx';
 
 // ไอคอนแบบเส้น ใช้สีตาม currentColor เพื่อให้เปลี่ยนตามสถานะแท็บ
 const icons = {
@@ -146,13 +147,29 @@ export default function BottomTabBar() {
 
             <div className="bottom-sheet-user">
               <div className="bottom-sheet-avatar">
-                {user?.avatarLetter || 'U'}
+                <UserAvatar user={user} />
               </div>
               <div>
                 <strong>{user?.username || 'ผู้ใช้งาน'}</strong>
                 <span>{user?.roleLabel || role}</span>
               </div>
             </div>
+
+            <NavLink to="/profile" className="bottom-sheet-row">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="8" r="3.6" />
+                <path d="M4.5 20c.8-3.6 3.7-5.5 7.5-5.5s6.7 1.9 7.5 5.5" strokeLinecap="round" />
+              </svg>
+              <span>จัดการโปรไฟล์</span>
+            </NavLink>
 
             <button
               type="button"

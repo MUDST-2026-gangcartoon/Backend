@@ -101,6 +101,14 @@ function normalizeUser(rawUser) {
     role,
     roleLabel: roleLabels[role],
     avatarLetter: String(username).charAt(0).toUpperCase(),
+    avatarUrl:
+      String(
+        rawUser.avatarUrl ??
+          rawUser.profileImageUrl ??
+          rawUser.imageUrl ??
+          rawUser.picture ??
+          ''
+      ) || '',
   };
 }
 
@@ -115,7 +123,12 @@ function getStoredUser() {
 }
 
 function persistUser(user) {
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  // ไม่เก็บรูปแบบ data: URL (ใหญ่เกินและเป็นรูปจำลอง) เก็บเฉพาะ URL จริงจากหลังบ้าน
+  const toStore =
+    user?.avatarUrl && String(user.avatarUrl).startsWith('data:')
+      ? { ...user, avatarUrl: '' }
+      : user;
+  localStorage.setItem(USER_KEY, JSON.stringify(toStore));
   localStorage.setItem('isLoggedIn', 'true');
 
   // ล้างข้อมูลจากระบบ Mock/JWT รุ่นก่อน
@@ -307,6 +320,31 @@ export function AuthProvider({ children }) {
   }, []);
 
 
+  // อัปเดตข้อมูลผู้ใช้จากคำตอบจริงของหลังบ้าน (ชื่อ/อีเมลในเมนูเปลี่ยนตาม)
+  // เก็บเฉพาะข้อมูลผู้ใช้ ไม่เก็บรหัสผ่านใดๆ และคงสิทธิ์เดิมไว้ถ้าคำตอบไม่มี role
+  const updateUser = useCallback((payload) => {
+    const raw = extractUser(payload) ?? payload;
+
+    setUser((current) => {
+      const merged = { ...(raw && typeof raw === 'object' ? raw : {}) };
+      if (current && !(merged.role ?? merged.userRole ?? merged.roles ?? merged.authorities)) {
+        merged.role = current.role;
+      }
+      if (current && !merged.id && !merged.userId) merged.id = current.id;
+      if (current && !('avatarUrl' in merged) && !('profileImageUrl' in merged) && !('imageUrl' in merged) && !('picture' in merged)) {
+        merged.avatarUrl = current.avatarUrl;
+      }
+
+      const next = normalizeUser(merged);
+      if (!next || (current && next.role !== current.role)) {
+        // ไม่รับข้อมูลที่ทำให้สิทธิ์เปลี่ยน ให้ตรวจ session ใหม่แทน
+        return current;
+      }
+      persistUser(next);
+      return next;
+    });
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await authService.logout();
@@ -336,6 +374,7 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
+        updateUser,
       }}
     >
       {children}

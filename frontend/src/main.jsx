@@ -13,6 +13,7 @@ import {
   useAuth,
 } from './context/AuthContext.jsx';
 
+import ProfilePage from './pages/ProfilePage.jsx';
 import { normalizeRole, homeForRole } from './utils/roleAccess.js';
 import AnalyticsTracker from './api/AnalyticsTracker.jsx';
 
@@ -106,6 +107,16 @@ function AppRoutes() {
       <Route path="/UpcomingEventsPage" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />
       <Route path="/events" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />
       <Route path="/upcoming-events" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />
+
+      {/* โปรไฟล์ของตนเอง: ทุกบทบาทที่ล็อกอินแล้ว (แก้ได้เฉพาะบัญชีตัวเอง) */}
+      <Route
+        path="/profile"
+        element={
+          <RoleRoute allow={['user', 'admin', 'staff']}>
+            <ProfilePage />
+          </RoleRoute>
+        }
+      />
 
       {/* Admin เท่านั้น */}
       <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />

@@ -183,6 +183,7 @@ export default function AdminNavbar() {
               items={[
             { to: '/admin/dashboard', label: 'แดชบอร์ด', icon: 'dashboard' },
             { to: '/manage-events', label: 'จัดการอีเวนต์', icon: 'calendar' },
+            { to: '/profile', label: 'จัดการโปรไฟล์', icon: 'user' },
           ]}
               onLogout={logout}
             />

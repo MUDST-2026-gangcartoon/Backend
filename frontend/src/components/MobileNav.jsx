@@ -3,6 +3,7 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import UserAvatar from './UserAvatar.jsx';
 
 export default function MobileNav() {
   const {
@@ -29,6 +30,7 @@ export default function MobileNav() {
       ? [
           { to: '/MyRegistrationsPage', label: 'การลงทะเบียนของฉัน', icon: 'list' },
           { to: '/MyTicketsPage', label: 'ตั๋วของฉัน', icon: 'ticket' },
+          { to: '/profile', label: 'จัดการโปรไฟล์', icon: 'user' },
         ]
       : []),
   ];
@@ -99,7 +101,7 @@ export default function MobileNav() {
           {isLoggedIn && (
             <div className="mobile-nav-user">
               <div className="mobile-nav-avatar">
-                {user?.avatarLetter || 'U'}
+                <UserAvatar user={user} />
               </div>
               <div>
                 <strong>{user?.username || 'ผู้ใช้งาน'}</strong>
