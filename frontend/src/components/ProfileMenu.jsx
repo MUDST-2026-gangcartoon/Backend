@@ -2,6 +2,7 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import Icon from './Icon.jsx';
+import UserAvatar from './UserAvatar.jsx';
 
 // เมนูโปรไฟล์บน navbar: ข้อมูลผู้ใช้ ลิงก์ที่ใช้บ่อย และปุ่มออกจากระบบ (มีกล่องยืนยัน)
 // items: [{ to, label, icon }]
@@ -57,7 +58,7 @@ export default function ProfileMenu({ user, items = [], onLogout }) {
         aria-controls={menuId}
         onClick={() => setOpen((previous) => !previous)}
       >
-        <span className="avatar">{user?.avatarLetter || 'U'}</span>
+        <span className="avatar"><UserAvatar user={user} /></span>
 
         <span className="user-info">
           <span className="username">{name}</span>
@@ -79,7 +80,7 @@ export default function ProfileMenu({ user, items = [], onLogout }) {
         <div className="profile-dropdown-menu" id={menuId} role="menu">
           <div className="profile-menu-head">
             <span className="profile-menu-avatar">
-              {user?.avatarLetter || 'U'}
+              <UserAvatar user={user} />
             </span>
             <div className="profile-menu-who">
               <strong>{name}</strong>

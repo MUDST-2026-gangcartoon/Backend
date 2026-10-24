@@ -64,6 +64,12 @@ const PATHS = {
       <circle cx="12" cy="10" r="2.5" />
     </>
   ),
+  user: (
+    <>
+      <circle cx="12" cy="8" r="3.6" />
+      <path d="M4.5 20c.8-3.6 3.7-5.5 7.5-5.5s6.7 1.9 7.5 5.5" />
+    </>
+  ),
   close: <path d="M6 6l12 12M18 6L6 18" />,
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
   chevronDown: <path d="M6 9l6 6 6-6" />,
