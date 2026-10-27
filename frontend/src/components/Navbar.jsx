@@ -86,6 +86,10 @@ export default function Navbar({ onSearchChange }) {
               <NavLink to="/MyTicketsPage" className={getNavLinkClass}>
                 ตั๋วของฉัน
               </NavLink>
+
+              <NavLink to="/payment-history" className={getNavLinkClass}>
+                ประวัติการชำระเงิน
+              </NavLink>
             </>
           )}
         </div>
@@ -140,6 +144,7 @@ export default function Navbar({ onSearchChange }) {
                 { to: '/MyRegistrationsPage', label: 'การลงทะเบียนของฉัน', icon: 'list' },
                 { to: '/MyTicketsPage', label: 'ตั๋วของฉัน', icon: 'ticket' },
                 { to: '/profile', label: 'จัดการโปรไฟล์', icon: 'user' },
+                { to: '/payment-history', label: 'ประวัติการชำระเงิน', icon: 'history' },
               ]}
               onLogout={logout}
             />

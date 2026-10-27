@@ -437,6 +437,20 @@ public record EventAnalyticsDto(
             LocalDateTime expiresAt
     ) {
     }
+    
+        public record MockPaymentResumeDto(
+                Long paymentId,
+                String status,
+                Long eventId,
+                Long ticketTypeId,
+                int quantity,
+                BigDecimal unitPrice,
+                BigDecimal totalAmount,
+                String currency,
+                String qrPayload,
+                LocalDateTime expiresAt
+        ) {
+        }
 
     public record MockConfirmDto(
             Long paymentId,
@@ -454,4 +468,17 @@ public record EventAnalyticsDto(
             Long registrationId
     ) {
     }
+        public record MockPaymentHistoryDto(
+                Long paymentId,
+                Long eventId,
+                String eventTitle,
+                String ticketTypeName,
+                int quantity,
+                BigDecimal totalAmount,
+                String status,
+                LocalDateTime createdAt,
+                LocalDateTime expiresAt,
+                LocalDateTime confirmedAt
+        ) {
+        }
 }

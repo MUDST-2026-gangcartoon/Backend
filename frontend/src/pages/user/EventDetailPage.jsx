@@ -6,6 +6,7 @@ import { registrationService } from '../../api/registrationService';
 import '../../EventDetailPage.css';
 import QRCode from 'qrcode';
 import { mockPaymentService } from '../../api/mockPaymentService';
+import { useLocation } from 'react-router-dom';
 
 const categoryLabels = {
   TECH: 'เทคโนโลยี',
@@ -100,6 +101,7 @@ const getErrorMessage = (error) => {
 export default function EventDetailPage() {
   const navigate = useNavigate();
   const { eventId } = useParams();
+  const location = useLocation();
 
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -167,7 +169,7 @@ export default function EventDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [eventId, location.state?.resumePaymentId]);
 
   // กู้คืนรายการชำระเงินที่ค้างอยู่เมื่อรีเฟรชหน้า
   useEffect(() => {
@@ -177,14 +179,20 @@ export default function EventDetailPage() {
       const storageKey = `mock-payment:${eventId}`;
 
       try {
+        const resumePaymentId = location.state?.resumePaymentId;
         const saved = window.localStorage.getItem(storageKey);
-        if (!saved) return;
 
-        const order = JSON.parse(saved);
-        if (!order?.paymentId) {
-          window.localStorage.removeItem(storageKey);
-          return;
+        let order = saved ? JSON.parse(saved) : null;
+
+        // ถ้ามาจากหน้าประวัติ ให้ใช้ paymentId ที่เลือก
+        if (
+          resumePaymentId &&
+          (!order || String(order.paymentId) !== String(resumePaymentId))
+        ) {
+          order = { paymentId: resumePaymentId };
         }
+
+        if (!order?.paymentId) return;
 
         const statusResult = await mockPaymentService.getStatus(
           order.paymentId

@@ -31,6 +31,7 @@ export default function MobileNav() {
           { to: '/MyRegistrationsPage', label: 'การลงทะเบียนของฉัน', icon: 'list' },
           { to: '/MyTicketsPage', label: 'ตั๋วของฉัน', icon: 'ticket' },
           { to: '/profile', label: 'จัดการโปรไฟล์', icon: 'user' },
+          { to: '/payment-history', label: 'ประวัติการชำระเงิน', icon: 'history' },
         ]
       : []),
   ];
