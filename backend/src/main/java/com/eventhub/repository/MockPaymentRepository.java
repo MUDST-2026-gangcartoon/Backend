@@ -32,4 +32,8 @@ public interface MockPaymentRepository
             Long eventId,
             MockPaymentStatus status
     );
+
+    List<MockPaymentOrder> findByUser_IdOrderByCreatedAtDesc(
+        Long userId
+);
 }

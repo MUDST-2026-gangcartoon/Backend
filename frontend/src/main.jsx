@@ -32,6 +32,7 @@ import MyRegistrationsPage from './pages/user/MyRegistrationsPage';
 import MyTicketsPage from './pages/user/MyTicketsPage';
 import UpcomingEventsPage from './pages/user/UpcomingEventsPage';
 import NotFoundPage from './pages/NotFoundPage.jsx';
+import PaymentHistoryPage from './pages/user/PaymentHistoryPage.jsx';
 
 // ต้องนำเข้าเป็นไฟล์สุดท้าย เพื่อให้สไตล์มือถือทับสไตล์ของแต่ละหน้า
 import './mobile-shell.css';
@@ -104,6 +105,7 @@ function AppRoutes() {
       <Route path="/event-detail/:eventId" element={<UserRoute><EventDetailPage /></UserRoute>} />
       <Route path="/MyRegistrationsPage" element={<UserRoute><MyRegistrationsPage /></UserRoute>} />
       <Route path="/MyTicketsPage" element={<UserRoute><MyTicketsPage /></UserRoute>} />
+      <Route path="/payment-history" element={<UserRoute><PaymentHistoryPage /></UserRoute>} />
       <Route path="/UpcomingEventsPage" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />
       <Route path="/events" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />
       <Route path="/upcoming-events" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />

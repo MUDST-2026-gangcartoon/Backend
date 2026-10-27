@@ -73,9 +73,6 @@ public class MockPaymentService {
             throw error(HttpStatus.BAD_REQUEST, "Invalid checkout request");
         }
 
-        // Serialize checkout for the same event.
-        // This prevents concurrent active pending orders for
-        // the same user/event without reserving seats.
         Event event = lockedEvent(request.eventId());
 
         LocalDateTime now = LocalDateTime.now();
@@ -104,10 +101,8 @@ public class MockPaymentService {
             );
         }
 
-        // Check current availability, but do not reserve seats.
         ensureCapacity(event, ticket, request.quantity());
 
-        // At most one active pending payment per user/event.
         List<MockPaymentOrder> pendingOrders =
                 mockPaymentRepository.findByUserIdAndEventIdAndStatus(
                         user.getId(),
@@ -117,7 +112,6 @@ public class MockPaymentService {
 
         for (MockPaymentOrder pending : pendingOrders) {
             if (!pending.getExpiresAt().isAfter(now)) {
-                // Lazy expiration runs inside this write transaction.
                 pending.markExpired();
             } else {
                 throw error(
@@ -211,18 +205,13 @@ public class MockPaymentService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        // At the expiration boundary, confirmation is rejected.
         if (!order.getExpiresAt().isAfter(now)) {
-            // GET reports EXPIRED using the effective status.
-            // Do not mutate then throw inside this transaction,
-            // because the exception would roll back the mutation.
             throw error(
                     HttpStatus.CONFLICT,
                     "Payment has expired"
             );
         }
 
-        // Lock the event before checking current capacity.
         Event event = lockedEvent(order.getEventId());
         ensureEventOpen(event, now);
 
@@ -260,8 +249,6 @@ public class MockPaymentService {
                 order.getQuantity()
         );
 
-        // Persist and flush registration inside the same transaction
-        // before marking the payment CONFIRMED.
         Registration saved = registrationRepository.save(registration);
         registrationRepository.flush();
 
@@ -279,7 +266,7 @@ public class MockPaymentService {
     }
 
     // =========================================================
-    // 3. Status / Payment history
+    // 3. Status / Resume / Payment history
     // =========================================================
 
     @Transactional(readOnly = true)
@@ -290,9 +277,66 @@ public class MockPaymentService {
         UserAccount user = currentUser(principal);
         MockPaymentOrder order = ownedPayment(paymentId, user);
 
-        // Reading history must not require an active Registration,
-        // Event or TicketType.
         return toStatusDto(order);
+    }
+
+    @Transactional(readOnly = true)
+    public ApiDtos.MockPaymentResumeDto getResumeDetails(
+            Long paymentId,
+            Principal principal
+    ) {
+        UserAccount user = currentUser(principal);
+        MockPaymentOrder order = ownedPayment(paymentId, user);
+
+        LocalDateTime now = LocalDateTime.now();
+        MockPaymentStatus status = effectiveStatus(order, now);
+
+        if (status != MockPaymentStatus.PENDING_PAYMENT) {
+            throw error(
+                    HttpStatus.CONFLICT,
+                    "Payment is no longer pending or has expired"
+            );
+        }
+
+        return new ApiDtos.MockPaymentResumeDto(
+                order.getId(),
+                status.name(),
+                order.getEventId(),
+                order.getTicketTypeId(),
+                order.getQuantity(),
+                order.getUnitPrice(),
+                order.getTotalAmount(),
+                CURRENCY,
+                "EVENTHUB_DEMO_PAYMENT:" + order.getId(),
+                order.getExpiresAt()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<ApiDtos.MockPaymentHistoryDto> getHistory(
+            Principal principal
+    ) {
+        UserAccount user = currentUser(principal);
+
+        return mockPaymentRepository
+                .findByUser_IdOrderByCreatedAtDesc(user.getId())
+                .stream()
+                .map(order -> new ApiDtos.MockPaymentHistoryDto(
+                        order.getId(),
+                        order.getEventId(),
+                        order.getEventTitle(),
+                        order.getTicketTypeName(),
+                        order.getQuantity(),
+                        order.getTotalAmount(),
+                        effectiveStatus(
+                                order,
+                                LocalDateTime.now()
+                        ).name(),
+                        order.getCreatedAt(),
+                        order.getExpiresAt(),
+                        order.getConfirmedAt()
+                ))
+                .toList();
     }
 
     // =========================================================
@@ -320,7 +364,6 @@ public class MockPaymentService {
 
         order.markCancelled();
 
-        // Preserve payment history and never delete Registration.
         return toStatusDto(order);
     }
 
@@ -368,7 +411,6 @@ public class MockPaymentService {
             Long paymentId,
             UserAccount user
     ) {
-        // Pessimistic row lock prevents double confirmation.
         MockPaymentOrder order = mockPaymentRepository
                 .findByIdForUpdate(paymentId)
                 .orElseThrow(() -> error(
@@ -388,7 +430,6 @@ public class MockPaymentService {
                 order.getUser().getId(),
                 user.getId()
         )) {
-            // Do not reveal another user's payment existence.
             throw error(
                     HttpStatus.NOT_FOUND,
                     "Payment not found"
