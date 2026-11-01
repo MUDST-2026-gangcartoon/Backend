@@ -60,7 +60,7 @@ class MockPaymentConfirmServiceTests
         order.markConfirmed(
                 existing.getId(),
                 existing.getTicketCode(),
-                LocalDateTime.now().minusSeconds(30)
+                com.eventhub.service.EventClock.now().minusSeconds(30)
         );
 
         stubPayment(order);
@@ -132,7 +132,7 @@ class MockPaymentConfirmServiceTests
         stubCommonRepositories();
         stubPayment(pendingPayment());
 
-        event.setStartsAt(LocalDateTime.now().minusDays(1));
+        event.setStartsAt(com.eventhub.service.EventClock.now().minusDays(1));
 
         assertStatus(
                 HttpStatus.CONFLICT,
@@ -270,7 +270,7 @@ class MockPaymentConfirmServiceTests
         order.markConfirmed(
                 previous.getId(),
                 previous.getTicketCode(),
-                LocalDateTime.now().minusMinutes(1)
+                com.eventhub.service.EventClock.now().minusMinutes(1)
         );
 
         stubPayment(order);

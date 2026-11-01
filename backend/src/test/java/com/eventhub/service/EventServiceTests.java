@@ -174,7 +174,7 @@ class EventServiceTests {
                 title,
                 "Event description",
                 "Bangkok",
-                LocalDateTime.now().plusDays(30),
+                com.eventhub.service.EventClock.now().plusDays(30),
                 capacity,
                 "TECH",
                 "https://example.test/event.jpg",
@@ -226,7 +226,7 @@ class EventServiceTests {
                 createEvent(
                         100L,
                         100,
-                        LocalDateTime.now().plusDays(7)
+                        com.eventhub.service.EventClock.now().plusDays(7)
                 );
 
         TicketType ticket =
@@ -436,7 +436,7 @@ class EventServiceTests {
                 registrationFixture();
 
         f.event().setStartsAt(
-                LocalDateTime.now()
+                com.eventhub.service.EventClock.now()
                         .minusMinutes(1)
         );
 
@@ -601,7 +601,7 @@ class EventServiceTests {
                 createEvent(
                         101L,
                         50,
-                        LocalDateTime.now()
+                        com.eventhub.service.EventClock.now()
                                 .plusDays(7)
                 );
 
@@ -1052,7 +1052,7 @@ class EventServiceTests {
                 createEvent(
                         100L,
                         100,
-                        LocalDateTime.now()
+                        com.eventhub.service.EventClock.now()
                                 .plusDays(10)
                 );
 
@@ -1115,7 +1115,7 @@ class EventServiceTests {
     @Test
     void shouldCancelCurrentUsersRegistration() {
         var user=createUser(10L,"alice@example.test");
-        var event=createEvent(100L,100,LocalDateTime.now().plusDays(1));
+        var event=createEvent(100L,100,com.eventhub.service.EventClock.now().plusDays(1));
         var ticket=createTicket(1L,event,"Free",BigDecimal.ZERO,100);
         var registration=createRegistration(1L,user,event,ticket,2);
         when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
@@ -1355,7 +1355,7 @@ class EventServiceTests {
                 createEvent(
                         100L,
                         100,
-                        LocalDateTime.now()
+                        com.eventhub.service.EventClock.now()
                                 .plusDays(20)
                 );
 
@@ -1506,7 +1506,7 @@ class EventServiceTests {
                 createEvent(
                         100L,
                         100,
-                        LocalDateTime.now()
+                        com.eventhub.service.EventClock.now()
                                 .plusDays(10)
                 );
 
@@ -1594,7 +1594,7 @@ class EventServiceTests {
                 createEvent(
                         100L,
                         100,
-                        LocalDateTime.now()
+                        com.eventhub.service.EventClock.now()
                                 .plusDays(10)
                 );
 
@@ -1676,7 +1676,7 @@ class EventServiceTests {
                 createEvent(
                         100L,
                         100,
-                        LocalDateTime.now()
+                        com.eventhub.service.EventClock.now()
                                 .plusDays(10)
                 );
 
@@ -1684,7 +1684,7 @@ class EventServiceTests {
                 createEvent(
                         101L,
                         100,
-                        LocalDateTime.now()
+                        com.eventhub.service.EventClock.now()
                                 .plusDays(10)
                 );
 
@@ -1755,7 +1755,7 @@ class EventServiceTests {
                 createEvent(
                         100L,
                         100,
-                        LocalDateTime.now()
+                        com.eventhub.service.EventClock.now()
                                 .plusDays(10)
                 );
 
@@ -1811,7 +1811,7 @@ class EventServiceTests {
     // EVT-DELETE-001
     @Test
     void shouldDeleteRegistrationsBeforeDeletingEvent() {
-        var event=createEvent(100L,100,LocalDateTime.now().plusDays(10));
+        var event=createEvent(100L,100,com.eventhub.service.EventClock.now().plusDays(10));
         when(eventRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(event));
         when(registrationRepository.existsByEventId(100L)).thenReturn(true);
         assertStatus(HttpStatus.CONFLICT,()->eventService.delete(100L));
@@ -1871,7 +1871,7 @@ class EventServiceTests {
                 createEvent(
                         100L,
                         100,
-                        LocalDateTime.now()
+                        com.eventhub.service.EventClock.now()
                                 .plusDays(5)
                 );
 
@@ -1879,7 +1879,7 @@ class EventServiceTests {
                 createEvent(
                         101L,
                         100,
-                        LocalDateTime.now()
+                        com.eventhub.service.EventClock.now()
                                 .plusDays(10)
                 );
 

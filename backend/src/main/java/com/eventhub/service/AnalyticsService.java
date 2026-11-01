@@ -114,7 +114,7 @@ public class AnalyticsService {
     public ApiDtos.AnalyticsSummaryDto summary() {
 
         LocalDateTime now =
-                LocalDateTime.now();
+                com.eventhub.service.EventClock.now();
 
         long totalRegistrations =
                 registrationRepository.count();

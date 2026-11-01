@@ -34,7 +34,7 @@ class EventRulesTests {
 
     @Test
     void validationIdentifiesFieldsForInvalidSchedule() {
-        var start = LocalDateTime.now().plusDays(1);
+        var start = com.eventhub.service.EventClock.now().plusDays(1);
         var request = new ApiDtos.EventRequest(
             "Example",
             "description",
@@ -60,7 +60,7 @@ class EventRulesTests {
 
     @Test
     void legacySchedulesHaveConsistentDefaults() {
-        var start = LocalDateTime.now().plusDays(1);
+        var start = com.eventhub.service.EventClock.now().plusDays(1);
         var e = new Event();
         e.setStartsAt(start);
         assertEquals(start.plusHours(4), e.getEndsAt());

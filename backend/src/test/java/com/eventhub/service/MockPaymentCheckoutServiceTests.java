@@ -220,11 +220,11 @@ class MockPaymentCheckoutServiceTests
     void checkoutExpiresAfterTenMinutes() {
         stubCommonRepositories();
 
-        LocalDateTime before = LocalDateTime.now();
+        LocalDateTime before = com.eventhub.service.EventClock.now();
 
         service.checkout(checkout(1), alicePrincipal);
 
-        LocalDateTime after = LocalDateTime.now();
+        LocalDateTime after = com.eventhub.service.EventClock.now();
 
         ArgumentCaptor<MockPaymentOrder> captor =
                 ArgumentCaptor.forClass(MockPaymentOrder.class);
@@ -310,7 +310,7 @@ class MockPaymentCheckoutServiceTests
     // Checkout หลัง Event เริ่มแล้ว
     @Test
     void startedEventCannotCheckout() {
-        event.setStartsAt(LocalDateTime.now().minusDays(1));
+        event.setStartsAt(com.eventhub.service.EventClock.now().minusDays(1));
         stubCommonRepositories();
 
         assertStatus(

@@ -253,8 +253,8 @@ class BookingRulesIT extends MockPaymentDbTestSupport {
     @Test
     void registrationDeadlineAndCheckinWindowAreEnforced() throws Exception {
         var r = registerFree(1);
-        event.setCheckinOpensAt(LocalDateTime.now().plusHours(1));
-        event.setRegistrationClosesAt(LocalDateTime.now().minusMinutes(1));
+        event.setCheckinOpensAt(com.eventhub.service.EventClock.now().plusHours(1));
+        event.setRegistrationClosesAt(com.eventhub.service.EventClock.now().minusMinutes(1));
         events.saveAndFlush(event);
         assertThrows(
             org.springframework.web.server.ResponseStatusException.class,

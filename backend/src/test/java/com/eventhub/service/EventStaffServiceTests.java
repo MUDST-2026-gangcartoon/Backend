@@ -76,8 +76,8 @@ class EventStaffServiceTests {
         event.setStartsAt(
                 LocalDateTime.of(2027, 6, 1, 10, 0)
         );
-        event.setCheckinOpensAt(LocalDateTime.now().minusHours(1));
-        event.setCheckinClosesAt(LocalDateTime.now().plusHours(1));
+        event.setCheckinOpensAt(com.eventhub.service.EventClock.now().minusHours(1));
+        event.setCheckinClosesAt(com.eventhub.service.EventClock.now().plusHours(1));
         event.setCapacity(100);
         event.setCategory("TECH");
 
