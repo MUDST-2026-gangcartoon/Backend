@@ -54,6 +54,30 @@ public class Event {
     @OrderBy("id ASC")
     private List<TicketType> ticketTypes = new ArrayList<>();
 
+    @Column(length=100) private String organizerName;
+    @Column(length=254) private String organizerContact;
+    public String getOrganizerName(){return organizerName;}
+    public void setOrganizerName(String value){organizerName=value==null||value.isBlank()?null:value.trim();}
+    public String getOrganizerContact(){return organizerContact;}
+    public void setOrganizerContact(String value){organizerContact=value==null||value.isBlank()?null:value.trim();}
+    @Column(name="event_format",length=16) private String eventFormat;
+    @Column(name="online_meeting_url",length=2000) private String onlineMeetingUrl;
+    public String getEventFormat(){return eventFormat==null?"ONSITE":eventFormat;}
+    public void setEventFormat(String value){eventFormat=value==null?"ONSITE":value;}
+    public String getOnlineMeetingUrl(){return onlineMeetingUrl;}
+    public void setOnlineMeetingUrl(String value){onlineMeetingUrl=value==null||value.isBlank()?null:value.trim();}
+    private LocalDateTime endsAt;
+    private LocalDateTime registrationClosesAt;
+    private LocalDateTime checkinOpensAt;
+    private LocalDateTime checkinClosesAt;
+    public LocalDateTime getEndsAt(){return endsAt==null?startsAt.plusHours(4):endsAt;}
+    public void setEndsAt(LocalDateTime value){endsAt=value;}
+    public LocalDateTime getRegistrationClosesAt(){return registrationClosesAt==null?startsAt:registrationClosesAt;}
+    public void setRegistrationClosesAt(LocalDateTime value){registrationClosesAt=value;}
+    public LocalDateTime getCheckinOpensAt(){return "ONLINE".equals(getEventFormat())?startsAt:checkinOpensAt==null?startsAt.minusHours(1):checkinOpensAt;}
+    public void setCheckinOpensAt(LocalDateTime value){checkinOpensAt=value;}
+    public LocalDateTime getCheckinClosesAt(){return "ONLINE".equals(getEventFormat())?getEndsAt():checkinClosesAt==null?getEndsAt():checkinClosesAt;}
+    public void setCheckinClosesAt(LocalDateTime value){checkinClosesAt=value;}
     public Event() {
     }
 

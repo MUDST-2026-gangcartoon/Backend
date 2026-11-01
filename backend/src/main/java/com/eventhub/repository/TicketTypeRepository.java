@@ -32,11 +32,11 @@ public interface TicketTypeRepository
                         end
                     ),
                     0
-                )
+                ), coalesce(t.salesEnabled,true)
             )
             from TicketType t
             left join Registration r
-                on r.ticketType = t
+                on r.ticketType = t and (r.status is null or r.status='CONFIRMED')
             where t.event.id in :eventIds
             group by
                 t.event.id,
@@ -44,7 +44,7 @@ public interface TicketTypeRepository
                 t.name,
                 t.description,
                 t.price,
-                t.capacity
+                t.capacity,t.salesEnabled
             order by t.event.id asc, t.id asc
             """)
     List<TicketTypeRow> summariesForEventIds(

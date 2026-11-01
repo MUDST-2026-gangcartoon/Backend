@@ -9,6 +9,7 @@ public record TicketTypeRow(
         String description,
         BigDecimal price,
         int capacity,
-        long sold
+        long sold, boolean salesEnabled
 ) {
+ public TicketTypeRow(Long eventId,Long id,String name,String description,BigDecimal price,int capacity,long sold){this(eventId,id,name,description,price,capacity,sold,true);}
 }

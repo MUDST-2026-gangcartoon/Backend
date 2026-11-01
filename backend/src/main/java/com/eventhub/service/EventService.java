@@ -1075,4 +1075,21 @@
                         "EventService business logic is not implemented"
                 );
         }
-        }
+        
+    // Contract-only overloads introduced for QA Test First.
+    // Business behavior is deliberately implemented after QA RED.
+    @org.springframework.transaction.annotation.Transactional
+    public void cancel(
+        Long eventId, java.security.Principal principal, String reason
+    ) {
+        throw new UnsupportedOperationException("Cancellation reason pending QA tests");
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public ApiDtos.CheckInDto checkIn(
+        Long eventId, String ticketCode, java.security.Principal principal
+    ) {
+        throw new UnsupportedOperationException("Check-in source pending QA tests");
+    }
+
+}

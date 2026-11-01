@@ -32,8 +32,12 @@ public interface MockPaymentRepository
             Long eventId,
             MockPaymentStatus status
     );
+    boolean existsByEventId(Long eventId);
+    boolean existsByTicketTypeId(Long ticketTypeId);
+    boolean existsByUserIdAndEventIdAndStatusAndExpiresAtAfter(Long userId,Long eventId,MockPaymentStatus status,java.time.LocalDateTime expiresAt);
+    Optional<MockPaymentOrder> findFirstByRegistrationIdAndStatus(Long registrationId,MockPaymentStatus status);
+    List<MockPaymentOrder> findByUserIdOrderByCreatedAtDesc(Long userId);
 
-    List<MockPaymentOrder> findByUser_IdOrderByCreatedAtDesc(
-        Long userId
-);
+    // Legacy payment history contract remains available during RED.
+    List<MockPaymentOrder> findByUser_IdOrderByCreatedAtDesc(Long userId);
 }
