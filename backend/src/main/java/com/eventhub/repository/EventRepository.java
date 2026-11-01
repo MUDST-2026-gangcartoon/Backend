@@ -38,14 +38,14 @@ coalesce(
     ),
     0
 ),
-case when count(vr.id) > 0 then true else false end
+case when count(vr.id) > 0 then true else false end, e.endsAt,e.registrationClosesAt,e.checkinOpensAt,e.checkinClosesAt,e.eventFormat
                     )
                     from Event e
                     left join Registration r
-                        on r.event = e
+                        on r.event = e and (r.status is null or r.status='CONFIRMED')
                     left join Registration vr
                         on vr.event = e
-                        and vr.user.id = :userId
+                        and vr.user.id = :userId and (vr.status is null or vr.status='CONFIRMED')
                     where (
                         :search is null
                         or :search = ''
@@ -66,12 +66,12 @@ case when count(vr.id) > 0 then true else false end
                         e.capacity,
                         e.category,
                         e.imageUrl,
-                        e.detailImageUrl
+                        e.detailImageUrl,e.endsAt,e.registrationClosesAt,e.checkinOpensAt,e.checkinClosesAt,e.eventFormat
                     having (
                         :status = 'ALL'
                         or (
 :status = 'OPEN'
-and e.startsAt > :now
+and e.startsAt > :now and coalesce(e.registrationClosesAt,e.startsAt) > :now
 and coalesce(
     sum(
         case
@@ -84,7 +84,7 @@ and coalesce(
                         )
                         or (
 :status = 'FULL'
-and e.startsAt > :now
+and e.startsAt > :now and coalesce(e.registrationClosesAt,e.startsAt) > :now
 and coalesce(
     sum(
         case
@@ -97,10 +97,12 @@ and coalesce(
                         )
                         or (
                             :status = 'ENDED'
-                            and e.startsAt <= :now
+                            and coalesce(e.endsAt, timestampadd(hour,4,e.startsAt)) <= :now
                         )
                         or (
-                            :status = 'REGISTERED'
+                            :status = 'CLOSED' and e.startsAt > :now and coalesce(e.registrationClosesAt,e.startsAt) <= :now
+                        ) or ( :status = 'ONGOING' and e.startsAt <= :now and coalesce(e.endsAt,timestampadd(hour,4,e.startsAt)) > :now
+                        ) or ( :status = 'REGISTERED'
                             and count(vr.id) > 0
                         )
                     )
@@ -124,39 +126,41 @@ and coalesce(
                         :status = 'ALL'
                         or (
                             :status = 'OPEN'
-                            and e.startsAt > :now
+                            and e.startsAt > :now and coalesce(e.registrationClosesAt,e.startsAt) > :now
                             and coalesce(
                                 (
                                     select sum(coalesce(r2.quantity, 1))
                                     from Registration r2
-                                    where r2.event = e
+                                    where r2.event = e and (r2.status is null or r2.status='CONFIRMED')
                                 ),
                                 0
                             ) < e.capacity
                         )
                         or (
                             :status = 'FULL'
-                            and e.startsAt > :now
+                            and e.startsAt > :now and coalesce(e.registrationClosesAt,e.startsAt) > :now
                             and coalesce(
                                 (
                                     select sum(coalesce(r2.quantity, 1))
                                     from Registration r2
-                                    where r2.event = e
+                                    where r2.event = e and (r2.status is null or r2.status='CONFIRMED')
                                 ),
                                 0
                             ) >= e.capacity
                         )
                         or (
                             :status = 'ENDED'
-                            and e.startsAt <= :now
+                            and coalesce(e.endsAt, timestampadd(hour,4,e.startsAt)) <= :now
                         )
                         or (
-                            :status = 'REGISTERED'
+                            :status = 'CLOSED' and e.startsAt > :now and coalesce(e.registrationClosesAt,e.startsAt) <= :now
+                        ) or ( :status = 'ONGOING' and e.startsAt <= :now and coalesce(e.endsAt,timestampadd(hour,4,e.startsAt)) > :now
+                        ) or ( :status = 'REGISTERED'
                             and exists (
                                 select 1
                                 from Registration rr
                                 where rr.event = e
-                                and rr.user.id = :userId
+                                and rr.user.id = :userId and (rr.status is null or rr.status='CONFIRMED')
                             )
                         )
                     )
@@ -174,12 +178,12 @@ and coalesce(
     @Query("""
             select count(e)
             from Event e
-            where e.startsAt > :now
+            where e.startsAt > :now and coalesce(e.registrationClosesAt,e.startsAt)>:now
             and coalesce(
                 (
                     select sum(coalesce(r.quantity, 1))
                     from Registration r
-                    where r.event = e
+                    where r.event = e and (r.status is null or r.status='CONFIRMED')
                 ),
                 0
             ) < e.capacity

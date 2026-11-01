@@ -88,7 +88,7 @@ class MockPaymentStatusServiceTests
     void paymentAtExpirationBoundaryIsNotConfirmable() {
         stubCommonRepositories();
 
-        LocalDateTime expiresAt = LocalDateTime.now();
+        LocalDateTime expiresAt = com.eventhub.service.EventClock.now();
 
         MockPaymentOrder order = new MockPaymentOrder(
                 alice,
@@ -160,7 +160,7 @@ class MockPaymentStatusServiceTests
         order.markConfirmed(
                 registration.getId(),
                 registration.getTicketCode(),
-                LocalDateTime.now().minusMinutes(1)
+                com.eventhub.service.EventClock.now().minusMinutes(1)
         );
 
         stubPayment(order);
@@ -215,7 +215,7 @@ class MockPaymentStatusServiceTests
         order.markConfirmed(
                 registration.getId(),
                 registration.getTicketCode(),
-                LocalDateTime.now().minusMinutes(1)
+                com.eventhub.service.EventClock.now().minusMinutes(1)
         );
 
         stubPayment(order);

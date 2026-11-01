@@ -75,8 +75,8 @@ class E2ETestDataSeederIT {
         assertEquals(6, open.getCapacity());
         assertEquals(1, full.getCapacity());
 
-        assertTrue(open.getStartsAt().isAfter(LocalDateTime.now()));
-        assertTrue(full.getStartsAt().isAfter(LocalDateTime.now()));
+        assertTrue(open.getStartsAt().isAfter(com.eventhub.service.EventClock.now()));
+        assertTrue(full.getStartsAt().isAfter(com.eventhub.service.EventClock.now()));
 
         assertEquals(
                 2,

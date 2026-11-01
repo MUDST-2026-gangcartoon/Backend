@@ -104,7 +104,7 @@ class MockPaymentHttpSecurityTests {
                         new BigDecimal("500.00"),
                         "THB",
                         "EVENTHUB_DEMO_PAYMENT:500",
-                        LocalDateTime.now().plusMinutes(10)
+                        com.eventhub.service.EventClock.now().plusMinutes(10)
                 ));
 
         mvc.perform(

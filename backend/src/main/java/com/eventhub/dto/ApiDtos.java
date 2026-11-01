@@ -152,8 +152,9 @@ public final class ApiDtos {
                     value = 1,
                     message = "Ticket capacity must be at least 1"
             )
-            Integer capacity
+            Integer capacity, Boolean salesEnabled
     ) {
+        public TicketTypeRequest(Long id,String name,String description,BigDecimal price,Integer capacity){this(id,name,description,price,capacity,null);}
     }
 
     public record TicketTypeDto(
@@ -163,8 +164,11 @@ public final class ApiDtos {
             BigDecimal price,
             int capacity,
             long sold,
-            long remaining
+            long remaining,
+            boolean removable, String removalBlockedReason, boolean salesEnabled
     ) {
+        public TicketTypeDto(Long id,String name,String description,BigDecimal price,int capacity,long sold,long remaining,boolean removable,String reason){this(id,name,description,price,capacity,sold,remaining,removable,reason,true);}
+        public TicketTypeDto(Long id,String name,String description,BigDecimal price,int capacity,long sold,long remaining){this(id,name,description,price,capacity,sold,remaining,sold==0,sold==0?null:"ประเภทบัตรมีประวัติการจอง จึงลบไม่ได้");}
     }
 
 
@@ -228,8 +232,18 @@ public final class ApiDtos {
             List<
                     @NotNull(message = "Ticket type must not be null")
                             TicketTypeRequest
-                    > ticketTypes
+                    > ticketTypes,
+            LocalDateTime endsAt, LocalDateTime registrationClosesAt,
+            LocalDateTime checkinOpensAt, LocalDateTime checkinClosesAt,
+            @Size(max=100) String organizerName, @Size(max=254) String organizerContact,
+            @Pattern(regexp="ONSITE|ONLINE",message="รูปแบบกิจกรรมต้องเป็น ONSITE หรือ ONLINE") String eventFormat,
+            @Size(max=2000,message="ลิงก์ออนไลน์ต้องไม่เกิน 2000 ตัวอักษร") String onlineMeetingUrl
     ) {
+        public EventRequest {if("ONLINE".equals(eventFormat))location="ออนไลน์";}
+        public EventRequest(String title,String description,String location,LocalDateTime startsAt,int capacity,String category,String imageUrl,List<DetailImageRequest> detailImages,List<TicketTypeRequest> ticketTypes,LocalDateTime endsAt,LocalDateTime registrationClosesAt,LocalDateTime checkinOpensAt,LocalDateTime checkinClosesAt,String organizerName,String organizerContact){this(title,description,location,startsAt,capacity,category,imageUrl,detailImages,ticketTypes,endsAt,registrationClosesAt,checkinOpensAt,checkinClosesAt,organizerName,organizerContact,null,null);}
+        public EventRequest(String title,String description,String location,LocalDateTime startsAt,int capacity,String category,String imageUrl,List<DetailImageRequest> detailImages,List<TicketTypeRequest> ticketTypes,LocalDateTime endsAt,LocalDateTime registrationClosesAt,LocalDateTime checkinOpensAt,LocalDateTime checkinClosesAt){this(title,description,location,startsAt,capacity,category,imageUrl,detailImages,ticketTypes,endsAt,registrationClosesAt,checkinOpensAt,checkinClosesAt,null,null);}
+        public EventRequest(String title,String description,String location,LocalDateTime startsAt,int capacity,String category,String imageUrl,List<DetailImageRequest> detailImages,List<TicketTypeRequest> ticketTypes){this(title,description,location,startsAt,capacity,category,imageUrl,detailImages,ticketTypes,null,null,null,null);}
+
     }
 
     public record EventDto(
@@ -246,8 +260,16 @@ public final class ApiDtos {
             long spotsLeft,
             String status,
             boolean registered,
-            List<TicketTypeDto> ticketTypes
+            List<TicketTypeDto> ticketTypes,
+            LocalDateTime endsAt,LocalDateTime registrationClosesAt,LocalDateTime checkinOpensAt,LocalDateTime checkinClosesAt,
+            boolean deletable,String deletionBlockedReason,
+            String organizerName,String organizerContact,String eventFormat
     ) {
+        public EventDto {if(eventFormat==null)eventFormat="ONSITE";}
+        public EventDto(Long id,String title,String description,String location,LocalDateTime startsAt,int capacity,String category,String imageUrl,List<DetailImageDto> detailImages,long registeredCount,long spotsLeft,String status,boolean registered,List<TicketTypeDto> ticketTypes,LocalDateTime endsAt,LocalDateTime registrationClosesAt,LocalDateTime checkinOpensAt,LocalDateTime checkinClosesAt,boolean deletable,String deletionBlockedReason,String organizerName,String organizerContact){this(id,title,description,location,startsAt,capacity,category,imageUrl,detailImages,registeredCount,spotsLeft,status,registered,ticketTypes,endsAt,registrationClosesAt,checkinOpensAt,checkinClosesAt,deletable,deletionBlockedReason,organizerName,organizerContact,"ONSITE");}
+        public EventDto(Long id,String title,String description,String location,LocalDateTime startsAt,int capacity,String category,String imageUrl,List<DetailImageDto> detailImages,long registeredCount,long spotsLeft,String status,boolean registered,List<TicketTypeDto> ticketTypes,LocalDateTime endsAt,LocalDateTime registrationClosesAt,LocalDateTime checkinOpensAt,LocalDateTime checkinClosesAt,boolean deletable,String deletionBlockedReason){this(id,title,description,location,startsAt,capacity,category,imageUrl,detailImages,registeredCount,spotsLeft,status,registered,ticketTypes,endsAt,registrationClosesAt,checkinOpensAt,checkinClosesAt,deletable,deletionBlockedReason,null,null);}
+        public EventDto(Long id,String title,String description,String location,LocalDateTime startsAt,int capacity,String category,String imageUrl,List<DetailImageDto> detailImages,long registeredCount,long spotsLeft,String status,boolean registered,List<TicketTypeDto> ticketTypes){this(id,title,description,location,startsAt,capacity,category,imageUrl,detailImages,registeredCount,spotsLeft,status,registered,ticketTypes,null,null,null,null,true,null);}
+
     }
 
     public record EventPageDto(
@@ -286,37 +308,46 @@ public final class ApiDtos {
     ) {
     }
 
-        public record RegistrationDto(
-                Long id,
-                LocalDateTime registeredAt,
-                int quantity,
-                String ticketCode,
-                String ticketTypeName,
-                BigDecimal totalPrice,
-                EventDto event,
-                LocalDateTime checkedInAt
-        ) {
-        public RegistrationDto(
-                Long id,
-                LocalDateTime registeredAt,
-                int quantity,
-                String ticketCode,
-                String ticketTypeName,
-                BigDecimal totalPrice,
-                EventDto event
-        ) {
-                this(
-                        id,
-                        registeredAt,
-                        quantity,
-                        ticketCode,
-                        ticketTypeName,
-                        totalPrice,
-                        event,
-                        null
-                );
+    public record RegistrationDto(
+            Long id,
+            LocalDateTime registeredAt,
+            int quantity,
+            String ticketCode,
+            String ticketTypeName,
+            BigDecimal totalPrice,
+            EventDto event,
+            String status,LocalDateTime cancelledAt,String cancelReason,LocalDateTime checkedInAt,boolean cancellable,String cancellationBlockedReason,boolean paid
+    ) {
+        public RegistrationDto(Long id,LocalDateTime registeredAt,int quantity,String ticketCode,String ticketTypeName,BigDecimal totalPrice,EventDto event){this(id,registeredAt,quantity,ticketCode,ticketTypeName,totalPrice,event,"CONFIRMED",null,null,null,true,null,false);}
+        // Compatibility constructor used by existing EventService during the RED phase.
+        public RegistrationDto(Long id, LocalDateTime registeredAt, int quantity, String ticketCode,
+                String ticketTypeName, BigDecimal totalPrice, EventDto event, LocalDateTime checkedInAt) {
+            this(id, registeredAt, quantity, ticketCode, ticketTypeName, totalPrice, event,
+                    "CONFIRMED", null, null, checkedInAt, checkedInAt == null, null, false);
         }
-        }
+
+    }
+
+
+    // =========================
+    // Attendee / Check-in
+    // =========================
+
+    public record AttendeeDto(
+            Long id,
+            String name,
+            String email,
+            LocalDateTime registeredAt,
+            String ticketType,
+            int quantity,
+            String ticketCode,
+            LocalDateTime checkedInAt,
+            String status,String checkedInBy,String checkinSource
+    ) {
+        public AttendeeDto(Long id,String name,String email,LocalDateTime registeredAt,String ticketType,int quantity,String ticketCode,LocalDateTime checkedInAt,String status,String checkedInBy){this(id,name,email,registeredAt,ticketType,quantity,ticketCode,checkedInAt,status,checkedInBy,checkedInAt==null?null:"ผู้เข้าร่วมออนไลน์".equals(checkedInBy)?"ONLINE":checkedInBy==null||checkedInBy.isBlank()?"UNKNOWN":"STAFF");}
+        public AttendeeDto(Long id,String name,String email,LocalDateTime registeredAt,String ticketType,int quantity,String ticketCode,LocalDateTime checkedInAt){this(id,name,email,registeredAt,ticketType,quantity,ticketCode,checkedInAt,"CONFIRMED",null);}
+
+    }
 
     public record CheckInRequest(
 
@@ -336,20 +367,12 @@ public final class ApiDtos {
             String ticketType,
             int quantity,
             boolean checkedIn,
-            LocalDateTime checkedInAt
+            LocalDateTime checkedInAt,
+            String result,String checkedInBy
     ) {
+        public CheckInDto(String ticketCode,String attendeeName,String eventTitle,String ticketType,int quantity,boolean checkedIn,LocalDateTime checkedInAt){this(ticketCode,attendeeName,eventTitle,ticketType,quantity,checkedIn,checkedInAt,"CHECKED_IN",null);}
+
     }
-        public record AttendeeDto(
-                Long id,
-                String name,
-                String email,
-                LocalDateTime registeredAt,
-                String ticketType,
-                int quantity,
-                String ticketCode,
-                LocalDateTime checkedInAt
-        ) {
-        }
 
 
     // =========================
@@ -437,20 +460,6 @@ public record EventAnalyticsDto(
             LocalDateTime expiresAt
     ) {
     }
-    
-        public record MockPaymentResumeDto(
-                Long paymentId,
-                String status,
-                Long eventId,
-                Long ticketTypeId,
-                int quantity,
-                BigDecimal unitPrice,
-                BigDecimal totalAmount,
-                String currency,
-                String qrPayload,
-                LocalDateTime expiresAt
-        ) {
-        }
 
     public record MockConfirmDto(
             Long paymentId,
@@ -468,17 +477,17 @@ public record EventAnalyticsDto(
             Long registrationId
     ) {
     }
-        public record MockPaymentHistoryDto(
-                Long paymentId,
-                Long eventId,
-                String eventTitle,
-                String ticketTypeName,
-                int quantity,
-                BigDecimal totalAmount,
-                String status,
-                LocalDateTime createdAt,
-                LocalDateTime expiresAt,
-                LocalDateTime confirmedAt
-        ) {
-        }
+
+    // Existing DTO contracts retained until Backend GREEN updates the payment controller.
+    public record MockPaymentResumeDto(
+        Long paymentId, String status, Long eventId, Long ticketTypeId,
+        int quantity, BigDecimal unitPrice, BigDecimal totalAmount, String currency,
+        String qrPayload, LocalDateTime expiresAt
+    ) {}
+
+    public record MockPaymentHistoryDto(
+        Long paymentId, Long eventId, String eventTitle, String ticketTypeName,
+        int quantity, BigDecimal totalAmount, String status, LocalDateTime createdAt,
+        LocalDateTime expiresAt, LocalDateTime confirmedAt
+    ) {}
 }

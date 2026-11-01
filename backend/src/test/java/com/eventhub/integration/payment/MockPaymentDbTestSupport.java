@@ -75,7 +75,9 @@ abstract class MockPaymentDbTestSupport {
         event.setLocation("Bangkok");
         event.setCategory("TECH");
         event.setCapacity(5);
-        event.setStartsAt(LocalDateTime.now().plusDays(7));
+        event.setCheckinOpensAt(com.eventhub.service.EventClock.now().minusHours(1));
+        event.setCheckinClosesAt(com.eventhub.service.EventClock.now().plusDays(8));
+        event.setStartsAt(com.eventhub.service.EventClock.now().plusDays(7));
 
         ticket = new TicketType(
                 event,
@@ -100,7 +102,7 @@ abstract class MockPaymentDbTestSupport {
             UserAccount owner,
             int quantity
     ) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = com.eventhub.service.EventClock.now();
 
         MockPaymentOrder payment = new MockPaymentOrder(
                 owner,

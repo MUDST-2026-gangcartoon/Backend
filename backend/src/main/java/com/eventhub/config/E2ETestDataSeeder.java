@@ -128,7 +128,7 @@ public class E2ETestDataSeeder implements CommandLineRunner {
         // 2. Seed an OPEN event and ticket types
         // =====================================================
 
-        LocalDateTime startTime = LocalDateTime.now()
+        LocalDateTime startTime = com.eventhub.service.EventClock.now()
                 .plusDays(30)
                 .withHour(10)
                 .withMinute(0)

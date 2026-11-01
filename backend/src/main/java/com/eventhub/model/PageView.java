@@ -31,7 +31,7 @@ public class PageView {
         this.type = type;
         this.eventId = eventId;
         this.sessionId = sessionId;
-        this.viewedAt = LocalDateTime.now();
+        this.viewedAt = com.eventhub.service.EventClock.now();
     }
 
     public Long getId() {

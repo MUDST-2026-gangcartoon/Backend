@@ -29,11 +29,11 @@ public class StaffController {
     @PostMapping("/{eventId}/check-in")
     public ApiDtos.CheckInDto checkIn(
             @PathVariable Long eventId,
-            @Valid @RequestBody ApiDtos.CheckInRequest body
+            @Valid @RequestBody ApiDtos.CheckInRequest body,java.security.Principal principal
     ) {
         return eventService.checkIn(
                 eventId,
-                body.ticketCode()
+                body.ticketCode(),principal
         );
     }
 

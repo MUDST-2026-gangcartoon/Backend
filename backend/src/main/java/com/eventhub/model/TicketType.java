@@ -28,6 +28,10 @@ public class TicketType {
     @Column(nullable = false)
     private int capacity;
 
+    @Column(name="sales_enabled") private Boolean salesEnabled;
+    public boolean isSalesEnabled(){return salesEnabled==null||salesEnabled;}
+    public void setSalesEnabled(Boolean value){salesEnabled=value;}
+
     public TicketType() {
     }
 

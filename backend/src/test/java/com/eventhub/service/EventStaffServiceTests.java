@@ -76,6 +76,8 @@ class EventStaffServiceTests {
         event.setStartsAt(
                 LocalDateTime.of(2027, 6, 1, 10, 0)
         );
+        event.setCheckinOpensAt(com.eventhub.service.EventClock.now().minusHours(1));
+        event.setCheckinClosesAt(com.eventhub.service.EventClock.now().plusHours(1));
         event.setCapacity(100);
         event.setCategory("TECH");
 
@@ -431,7 +433,7 @@ class EventStaffServiceTests {
                 );
 
         when(
-                registrationRepository.findByTicketCode(
+                registrationRepository.findForCheckin(
                         ticketCode
                 )
         ).thenReturn(
@@ -492,7 +494,7 @@ class EventStaffServiceTests {
         );
 
         verify(registrationRepository)
-                .findByTicketCode(
+                .findForCheckin(
                         ticketCode
                 );
     }
@@ -520,7 +522,7 @@ class EventStaffServiceTests {
                 );
 
         when(
-                registrationRepository.findByTicketCode(
+                registrationRepository.findForCheckin(
                         unknownCode
                 )
         ).thenReturn(
@@ -546,7 +548,7 @@ class EventStaffServiceTests {
         );
 
         verify(registrationRepository)
-                .findByTicketCode(
+                .findForCheckin(
                         unknownCode
                 );
     }
@@ -605,7 +607,7 @@ class EventStaffServiceTests {
                 );
 
         when(
-                registrationRepository.findByTicketCode(
+                registrationRepository.findForCheckin(
                         ticketCode
                 )
         ).thenReturn(
@@ -645,7 +647,7 @@ class EventStaffServiceTests {
         );
 
         verify(registrationRepository)
-                .findByTicketCode(
+                .findForCheckin(
                         ticketCode
                 );
     }
@@ -703,7 +705,7 @@ class EventStaffServiceTests {
                 );
 
         when(
-                registrationRepository.findByTicketCode(
+                registrationRepository.findForCheckin(
                         ticketCode
                 )
         ).thenReturn(
@@ -790,7 +792,7 @@ class EventStaffServiceTests {
                 );
 
         when(
-                registrationRepository.findByTicketCode(
+                registrationRepository.findForCheckin(
                         storedCode
                 )
         ).thenReturn(
@@ -806,7 +808,7 @@ class EventStaffServiceTests {
 
         // Assert
         verify(registrationRepository)
-                .findByTicketCode(
+                .findForCheckin(
                         storedCode
                 );
 

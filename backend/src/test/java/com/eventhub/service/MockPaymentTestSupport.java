@@ -65,7 +65,7 @@ abstract class MockPaymentTestSupport {
         event.setLocation("Bangkok");
         event.setCategory("TECH");
         event.setCapacity(20);
-        event.setStartsAt(LocalDateTime.now().plusDays(7));
+        event.setStartsAt(com.eventhub.service.EventClock.now().plusDays(7));
 
         ticket = new TicketType(
                 event,
@@ -87,15 +87,15 @@ abstract class MockPaymentTestSupport {
 
     protected MockPaymentOrder pendingPayment() {
         return payment(
-                LocalDateTime.now().minusMinutes(1),
-                LocalDateTime.now().plusMinutes(9)
+                com.eventhub.service.EventClock.now().minusMinutes(1),
+                com.eventhub.service.EventClock.now().plusMinutes(9)
         );
     }
 
     protected MockPaymentOrder expiredPayment() {
         return payment(
-                LocalDateTime.now().minusMinutes(20),
-                LocalDateTime.now().minusMinutes(10)
+                com.eventhub.service.EventClock.now().minusMinutes(20),
+                com.eventhub.service.EventClock.now().minusMinutes(10)
         );
     }
 
