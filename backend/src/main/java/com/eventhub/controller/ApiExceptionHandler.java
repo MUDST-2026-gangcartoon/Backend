@@ -104,6 +104,18 @@ public class ApiExceptionHandler {
                 .body(new ApiDtos.ErrorDto(message));
     }
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ApiDtos.ErrorDto> handleMissingResource(
+            org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiDtos.ErrorDto("ไม่พบหน้าหรือบริการที่ต้องการ"));
+    }
+
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiDtos.ErrorDto> handleParameterType(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex){
+        return ResponseEntity.badRequest().body(new ApiDtos.ErrorDto("ค่าพารามิเตอร์ "+ex.getName()+" ไม่ถูกต้อง กรุณาตรวจสอบรูปแบบข้อมูล"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiDtos.ErrorDto> handleUnexpected(
             Exception ex
