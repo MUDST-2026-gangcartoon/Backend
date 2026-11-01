@@ -215,6 +215,9 @@ public class AuthController {
                 response
         );
 
+        userRepository.findByEmail(authentication.getName()).ifPresent(account ->
+                request.getSession(true).setAttribute("AUTH_PASSWORD_STAMP", account.getPassword()));
+
         // หลัง login/signup ให้ token เดิมหมดอายุ
         // Frontend ต้อง GET /api/auth/csrf ใหม่
         csrfTokenRepository.saveToken(

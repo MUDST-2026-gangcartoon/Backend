@@ -9,4 +9,7 @@ public interface UserRepository
         extends JpaRepository<UserAccount, Long> {
 
     Optional<UserAccount> findByEmail(String email);
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select u from UserAccount u where u.email=:email")
+    Optional<UserAccount> findForPasswordReset(@org.springframework.data.repository.query.Param("email") String email);
 }

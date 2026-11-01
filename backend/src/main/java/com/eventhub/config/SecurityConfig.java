@@ -156,7 +156,8 @@ public class SecurityConfig {
             HttpSecurity http,
             SecurityContextRepository securityContextRepository,
             CsrfTokenRepository csrfTokenRepository,
-            CorsConfigurationSource corsConfigurationSource
+            CorsConfigurationSource corsConfigurationSource,
+            UserRepository userRepository
     ) throws Exception {
 
         http
@@ -203,11 +204,14 @@ public class SecurityConfig {
                                 "/api/auth/logout",
                                 "/api/auth/csrf"
                         ).permitAll()
+                        .requestMatchers("/api/auth/recovery/**").permitAll()
 
                         .requestMatchers(
                                 "/api/auth/me"
                         ).authenticated()
 
+                        .requestMatchers(HttpMethod.POST,"/api/events/*/registrations").hasRole("USER")
+                        .requestMatchers("/api/events/*/online-access","/api/events/*/online-join").hasRole("USER")
                         // Public Event browsing
                         .requestMatchers(
                                 HttpMethod.GET,
@@ -281,6 +285,8 @@ public class SecurityConfig {
                         )
                 );
 
+        http.addFilterAfter(new PasswordSessionGuard(userRepository),
+                org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class);
         return http.build();
     }
 
