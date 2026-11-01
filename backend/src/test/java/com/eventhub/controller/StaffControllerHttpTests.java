@@ -311,8 +311,8 @@ class StaffControllerHttpTests {
 
         when(
                 eventService.checkIn(
-                        100L,
-                        "GTH-ABC1234567"
+                        eq(100L),
+                        eq("GTH-ABC1234567"), any(java.security.Principal.class)
                 )
         ).thenReturn(
                 checkInDto()
@@ -354,8 +354,8 @@ class StaffControllerHttpTests {
 
         verify(eventService)
                 .checkIn(
-                        100L,
-                        "GTH-ABC1234567"
+                        eq(100L),
+                        eq("GTH-ABC1234567"), any(java.security.Principal.class)
                 );
     }
 
@@ -365,8 +365,8 @@ class StaffControllerHttpTests {
 
         when(
                 eventService.checkIn(
-                        100L,
-                        "GTH-ABC1234567"
+                        eq(100L),
+                        eq("GTH-ABC1234567"), any(java.security.Principal.class)
                 )
         ).thenReturn(
                 checkInDto()
@@ -398,8 +398,8 @@ class StaffControllerHttpTests {
 
         verify(eventService)
                 .checkIn(
-                        100L,
-                        "GTH-ABC1234567"
+                        eq(100L),
+                        eq("GTH-ABC1234567"), any(java.security.Principal.class)
                 );
     }
 
@@ -570,8 +570,8 @@ class StaffControllerHttpTests {
 
         when(
                 eventService.checkIn(
-                        100L,
-                        "GTH-ABC1234567"
+                        eq(100L),
+                        eq("GTH-ABC1234567"), any(java.security.Principal.class)
                 )
         ).thenReturn(
                 checkInDto()
@@ -615,8 +615,8 @@ class StaffControllerHttpTests {
 
         verify(eventService)
                 .checkIn(
-                        100L,
-                        "GTH-ABC1234567"
+                        eq(100L),
+                        eq("GTH-ABC1234567"), any(java.security.Principal.class)
                 );
     }
 

@@ -166,7 +166,7 @@ class MockPaymentFlowIT extends MockPaymentDbTestSupport {
 
     // INT-PAY-003 / PAY-REG-004
     @Test
-    void paymentHistoryRemainsAfterRegistrationCancellation()
+    void confirmedPaymentHistoryRemainsAfterUnusedTicketCancellation()
             throws Exception {
 
         MvcResult result =
@@ -198,7 +198,7 @@ class MockPaymentFlowIT extends MockPaymentDbTestSupport {
                 )
                 .andExpect(status().isNoContent());
 
-        assertEquals(0L, registrations.countByEventId(event.getId()));
+        assertEquals(1L, registrations.countByEventId(event.getId()));
 
         // History ยังอยู่
         MockPaymentOrder history =
@@ -206,17 +206,17 @@ class MockPaymentFlowIT extends MockPaymentDbTestSupport {
 
         assertEquals(MockPaymentStatus.CONFIRMED, history.getStatus());
 
-        // Confirm ซ้ำหลัง Registration ถูกยกเลิก → 409
+        // Confirm again returns the same paid registration.
         mvc.perform(
                         post("/api/payments/mock/{id}/confirm", paymentId)
                                 .with(user(alice.getEmail()).roles("USER"))
                                 .with(csrf())
                 )
-                .andExpect(status().isConflict());
+                .andExpect(status().isOk());
 
-        assertEquals(0L, registrations.count());
+        assertEquals(1L, registrations.count());
 
-        // Ticket ที่ยกเลิกแล้วห้าม Check-in สำเร็จ
+        // The canceled ticket cannot be checked in.
         mvc.perform(
                         post("/api/staff/events/{id}/check-in", event.getId())
                                 .with(user("staff@example.test").roles("STAFF"))
@@ -226,6 +226,6 @@ class MockPaymentFlowIT extends MockPaymentDbTestSupport {
                                 {"ticketCode":"%s"}
                                 """.formatted(oldTicketCode))
                 )
-                .andExpect(status().isNotFound());
+                .andExpect(status().isConflict());
     }
 }
