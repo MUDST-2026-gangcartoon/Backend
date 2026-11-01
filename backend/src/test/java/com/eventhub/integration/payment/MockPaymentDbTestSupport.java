@@ -75,6 +75,8 @@ abstract class MockPaymentDbTestSupport {
         event.setLocation("Bangkok");
         event.setCategory("TECH");
         event.setCapacity(5);
+        event.setCheckinOpensAt(LocalDateTime.now().minusHours(1));
+        event.setCheckinClosesAt(LocalDateTime.now().plusDays(8));
         event.setStartsAt(LocalDateTime.now().plusDays(7));
 
         ticket = new TicketType(

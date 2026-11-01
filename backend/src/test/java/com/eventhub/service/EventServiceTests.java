@@ -469,7 +469,7 @@ class EventServiceTests {
                 );
 
         assertEquals(
-                "Registration has closed",
+                "ปิดรับสมัครแล้ว",
                 exception.getReason()
         );
 
@@ -1113,54 +1113,18 @@ class EventServiceTests {
 
     // EVT-CANCEL-001 ยกเลิก Registration ของตัวเอง - ลบเฉพาะ User + Event ที่ถูกต้อง
     @Test
-        void shouldCancelCurrentUsersRegistration() {
-
-        UserAccount user =
-                createUser(
-                        10L,
-                        "alice@example.test"
-                );
-
-        Principal principal =
-                principal(
-                        user.getEmail()
-                );
-
-        Registration registration = mock(Registration.class);
-
-        when(
-                userRepository.findByEmail(
-                        user.getEmail()
-                )
-        ).thenReturn(Optional.of(user));
-
-        when(
-                registrationRepository.findByUserIdAndEventId(
-                        user.getId(),
-                        100L
-                )
-        ).thenReturn(Optional.of(registration));
-
-        when(registration.getCheckedInAt()).thenReturn(null);
-
-        when(
-                registrationRepository.deleteByUserIdAndEventId(
-                        user.getId(),
-                        100L
-                )
-        ).thenReturn(1L);
-
-        eventService.cancel(
-                100L,
-                principal
-        );
-
-        verify(registrationRepository)
-                .deleteByUserIdAndEventId(
-                        user.getId(),
-                        100L
-                );
-        }
+    void shouldCancelCurrentUsersRegistration() {
+        var user=createUser(10L,"alice@example.test");
+        var event=createEvent(100L,100,LocalDateTime.now().plusDays(1));
+        var ticket=createTicket(1L,event,"Free",BigDecimal.ZERO,100);
+        var registration=createRegistration(1L,user,event,ticket,2);
+        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        when(registrationRepository.activeForUpdate(10L,100L)).thenReturn(Optional.of(registration));
+        eventService.cancel(100L,principal(user.getEmail()));
+        assertEquals("CANCELLED",registration.getStatus());
+        assertNotNull(registration.getCancelledAt());
+        verify(registrationRepository,never()).deleteByUserIdAndEventId(anyLong(),anyLong());
+    }
 
     // EVT-CANCEL-002 ไม่มี Registration ให้ยกเลิก - Not Found
     @Test
@@ -1183,12 +1147,7 @@ class EventServiceTests {
                 )
         ).thenReturn(Optional.of(user));
 
-        when(
-                registrationRepository.findByUserIdAndEventId(
-                        user.getId(),
-                        100L
-                )
-        ).thenReturn(Optional.empty());
+        when(registrationRepository.activeForUpdate(10L,100L)).thenReturn(Optional.empty());
 
         ResponseStatusException exception =
                 assertStatus(
@@ -1852,47 +1811,20 @@ class EventServiceTests {
     // EVT-DELETE-001
     @Test
     void shouldDeleteRegistrationsBeforeDeletingEvent() {
-
-        Event event =
-                createEvent(
-                        100L,
-                        100,
-                        LocalDateTime.now()
-                                .plusDays(10)
-                );
-
-        when(
-                eventRepository.findById(
-                        event.getId()
-                )
-        ).thenReturn(Optional.of(event));
-
-        eventService.delete(
-                event.getId()
-        );
-
-        InOrder order =
-                inOrder(
-                        registrationRepository,
-                        eventRepository
-                );
-
-        order.verify(registrationRepository)
-                .deleteByEventId(
-                        event.getId()
-                );
-
-        order.verify(eventRepository)
-                .delete(event);
+        var event=createEvent(100L,100,LocalDateTime.now().plusDays(10));
+        when(eventRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(event));
+        when(registrationRepository.existsByEventId(100L)).thenReturn(true);
+        assertStatus(HttpStatus.CONFLICT,()->eventService.delete(100L));
+        verify(eventRepository,never()).delete(any(Event.class));
+        verify(registrationRepository,never()).deleteByEventId(anyLong());
     }
-
 
     // EVT-DELETE-002
     @Test
     void shouldReturnNotFoundWhenDeletingMissingEvent() {
 
         when(
-                eventRepository.findById(
+                eventRepository.findByIdForUpdate(
                         999L
                 )
         ).thenReturn(Optional.empty());

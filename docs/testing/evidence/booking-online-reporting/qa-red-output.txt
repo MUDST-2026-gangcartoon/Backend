@@ -1,0 +1,67 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------------< com.eventhub:eventhub >------------------------
+[INFO] Building  0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.5.0:clean (default-clean) @ eventhub ---
+[INFO] Deleting /Users/chananchidachongkhum/Desktop/Devop/Backend/backend/target
+[INFO] 
+[INFO] --- jacoco:0.8.15:prepare-agent (prepare-agent) @ eventhub ---
+[INFO] argLine set to -javaagent:/Users/chananchidachongkhum/.m2/repository/org/jacoco/org.jacoco.agent/0.8.15/org.jacoco.agent-0.8.15-runtime.jar=destfile=/Users/chananchidachongkhum/Desktop/Devop/Backend/backend/target/jacoco.exec
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ eventhub ---
+[INFO] Copying 4 resources from src/main/resources to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ eventhub ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 37 source files with javac [debug parameters release 21] to target/classes
+[INFO] /Users/chananchidachongkhum/Desktop/Devop/Backend/backend/src/main/java/com/eventhub/service/UploadStorageService.java: /Users/chananchidachongkhum/Desktop/Devop/Backend/backend/src/main/java/com/eventhub/service/UploadStorageService.java uses or overrides a deprecated API.
+[INFO] /Users/chananchidachongkhum/Desktop/Devop/Backend/backend/src/main/java/com/eventhub/service/UploadStorageService.java: Recompile with -Xlint:deprecation for details.
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /Users/chananchidachongkhum/Desktop/Devop/Backend/backend/src/main/java/com/eventhub/model/Registration.java:[73,108] cannot find symbol
+  symbol:   class EventClock
+  location: package com.eventhub.service
+[ERROR] /Users/chananchidachongkhum/Desktop/Devop/Backend/backend/src/main/java/com/eventhub/model/Registration.java:[87,49] cannot find symbol
+  symbol:   class EventClock
+  location: package com.eventhub.service
+[ERROR] /Users/chananchidachongkhum/Desktop/Devop/Backend/backend/src/main/java/com/eventhub/model/Registration.java:[104,47] cannot find symbol
+  symbol:   class EventClock
+  location: package com.eventhub.service
+[ERROR] /Users/chananchidachongkhum/Desktop/Devop/Backend/backend/src/main/java/com/eventhub/model/PageView.java:[34,45] cannot find symbol
+  symbol:   class EventClock
+  location: package com.eventhub.service
+[INFO] 4 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  1.357 s
+[INFO] Finished at: 2026-11-02T01:17:50+07:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.15.0:compile (default-compile) on project eventhub: Compilation failure: Compilation failure: 
+[ERROR] /Users/chananchidachongkhum/Desktop/Devop/Backend/backend/src/main/java/com/eventhub/model/Registration.java:[73,108] cannot find symbol
+[ERROR]   symbol:   class EventClock
+[ERROR]   location: package com.eventhub.service
+[ERROR] /Users/chananchidachongkhum/Desktop/Devop/Backend/backend/src/main/java/com/eventhub/model/Registration.java:[87,49] cannot find symbol
+[ERROR]   symbol:   class EventClock
+[ERROR]   location: package com.eventhub.service
+[ERROR] /Users/chananchidachongkhum/Desktop/Devop/Backend/backend/src/main/java/com/eventhub/model/Registration.java:[104,47] cannot find symbol
+[ERROR]   symbol:   class EventClock
+[ERROR]   location: package com.eventhub.service
+[ERROR] /Users/chananchidachongkhum/Desktop/Devop/Backend/backend/src/main/java/com/eventhub/model/PageView.java:[34,45] cannot find symbol
+[ERROR]   symbol:   class EventClock
+[ERROR]   location: package com.eventhub.service
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+
+EXIT_CODE=1
