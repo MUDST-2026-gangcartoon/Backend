@@ -1,0 +1,51 @@
+-------------------------------------------------------------------------------
+Test set: com.eventhub.integration.payment.ProfileIT
+-------------------------------------------------------------------------------
+Tests run: 7, Failures: 6, Errors: 0, Skipped: 0, Time elapsed: 12.56 s <<< FAILURE! -- in com.eventhub.integration.payment.ProfileIT
+com.eventhub.integration.payment.ProfileIT.everyRoleCanEditOwnProfileWithoutChangingIdentityOrRole(Role)[1] -- Time elapsed: 0.997 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<200> but was:<500>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:62)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:129)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$0(StatusResultMatchers.java:600)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:212)
+	at com.eventhub.integration.payment.ProfileIT.everyRoleCanEditOwnProfileWithoutChangingIdentityOrRole(ProfileIT.java:68)
+
+com.eventhub.integration.payment.ProfileIT.everyRoleCanEditOwnProfileWithoutChangingIdentityOrRole(Role)[2] -- Time elapsed: 0.303 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<200> but was:<500>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:62)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:129)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$0(StatusResultMatchers.java:600)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:212)
+	at com.eventhub.integration.payment.ProfileIT.everyRoleCanEditOwnProfileWithoutChangingIdentityOrRole(ProfileIT.java:68)
+
+com.eventhub.integration.payment.ProfileIT.everyRoleCanEditOwnProfileWithoutChangingIdentityOrRole(Role)[3] -- Time elapsed: 0.327 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<200> but was:<500>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:62)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:129)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$0(StatusResultMatchers.java:600)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:212)
+	at com.eventhub.integration.payment.ProfileIT.everyRoleCanEditOwnProfileWithoutChangingIdentityOrRole(ProfileIT.java:68)
+
+com.eventhub.integration.payment.ProfileIT.rejectsWrongPasswordDuplicateEmailAndInvalidEmailWithoutChangingAccount -- Time elapsed: 0.229 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<400> but was:<500>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:62)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:129)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$0(StatusResultMatchers.java:600)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:212)
+	at com.eventhub.integration.payment.ProfileIT.rejectsWrongPasswordDuplicateEmailAndInvalidEmailWithoutChangingAccount(ProfileIT.java:113)
+
+com.eventhub.integration.payment.ProfileIT.passwordChangePreservesCurrentSessionAndExpiresOtherSessions -- Time elapsed: 0.380 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<200> but was:<500>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:62)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:129)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$0(StatusResultMatchers.java:600)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:212)
+	at com.eventhub.integration.payment.ProfileIT.passwordChangePreservesCurrentSessionAndExpiresOtherSessions(ProfileIT.java:157)
+
+com.eventhub.integration.payment.ProfileIT.passwordValidationRejectsWrongOldSameShortAndOversizedUtf8Passwords -- Time elapsed: 0.309 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<400> but was:<500>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:62)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:129)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$0(StatusResultMatchers.java:600)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:212)
+	at com.eventhub.integration.payment.ProfileIT.passwordValidationRejectsWrongOldSameShortAndOversizedUtf8Passwords(ProfileIT.java:208)
