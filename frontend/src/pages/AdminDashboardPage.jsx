@@ -9,6 +9,7 @@ import React, {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar.jsx';
 import BookingTools from '../components/BookingTools.jsx';
+import OperationsStats from '../components/OperationsStats.jsx';
 import { MOCK_BOOKINGS, MOCK_CAPACITY, isMockMode } from '../data/mockBookings.js';
 import EventFilterBar, { Highlight } from '../components/EventFilterBar.jsx';
 import { useEventFilters } from '../hooks/useEventFilters.js';
@@ -604,6 +605,8 @@ export default function AdminDashboardPage() {
             </div>
           </article>
         </section>
+
+        {!isMockMode() && <OperationsStats />}
 
         <section className="dashboard-charts">
           <article className="dashboard-chart-card dashboard-bar-card">

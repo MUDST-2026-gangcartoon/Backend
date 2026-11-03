@@ -69,7 +69,11 @@ function mapServerError(error, kind) {
   const status = Number(error?.status ?? 0);
   const message = String(error?.message || '');
 
-  const raw = error?.fieldErrors || error?.errors || error?.data?.errors;
+  const raw =
+    error?.data?.fieldErrors ||
+    error?.fieldErrors ||
+    error?.data?.errors ||
+    error?.errors;
   const fields = {};
   if (raw && typeof raw === 'object') {
     const entries = Array.isArray(raw)

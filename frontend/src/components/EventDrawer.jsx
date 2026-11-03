@@ -21,7 +21,8 @@ const emptyForm = {
   coverFile: null,
   endsAt: '',
   registrationClosesAt: '',
-  checkinEnabled: true,
+  checkinOpensAt: '',
+  checkinClosesAt: '',
   organizerName: '',
   contactInfo: '',
   locationType: 'ONSITE',
@@ -32,7 +33,8 @@ const emptyForm = {
 const isHttpUrl = (value) => {
   try {
     const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:';
+    // ลิงก์ห้องออนไลน์ต้องเป็น https และมี host
+    return url.protocol === 'https:' && Boolean(url.hostname);
   } catch {
     return false;
   }
@@ -60,10 +62,12 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
         coverFile: null,
         endsAt: initialEvent.endsAt || '',
         registrationClosesAt: initialEvent.registrationClosesAt || '',
-        checkinEnabled: initialEvent.checkinEnabled !== false,
+        checkinOpensAt: initialEvent.checkinOpensAt || '',
+        checkinClosesAt: initialEvent.checkinClosesAt || '',
         organizerName: initialEvent.organizerName || '',
         contactInfo: initialEvent.contactInfo || '',
-        locationType: initialEvent.locationType === 'ONLINE' ? 'ONLINE' : 'ONSITE',
+        locationType:
+          (initialEvent.eventFormat || initialEvent.locationType) === 'ONLINE' ? 'ONLINE' : 'ONSITE',
         onlineUrl: initialEvent.onlineUrl || '',
         ticketTypes: Array.isArray(initialEvent.ticketTypes) && initialEvent.ticketTypes.length
           ? initialEvent.ticketTypes.map((ticket) => ({
@@ -73,7 +77,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
               price: Number(ticket.price ?? 0),
               capacity: Number(ticket.capacity ?? 0),
               sold: Number(ticket.sold ?? 0),
-              saleOpen: ticket.saleOpen !== false,
+              saleOpen: ticket.salesEnabled !== false && ticket.saleOpen !== false,
             }))
           : [{
               name: 'General Admission',
@@ -102,7 +106,8 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
   // มีประวัติ = มีผู้ลงทะเบียนหรือขายบัตรแล้ว ยังแก้รายละเอียด/ลิงก์ได้ แต่สลับรูปแบบไม่ได้
   const hasHistory =
     isEdit &&
-    (Number(initialEvent?.seats ?? 0) > 0 ||
+    (initialEvent?.deletable === false ||
+      Number(initialEvent?.seats ?? 0) > 0 ||
       (initialEvent?.ticketTypes ?? []).some((t) => Number(t.sold ?? 0) > 0));
 
   const set = (key) => (e) => {
@@ -128,7 +133,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
     if (isOnline) {
       if (!form.onlineUrl.trim()) nextErrors.onlineUrl = 'กรุณากรอกลิงก์ห้องออนไลน์';
       else if (!isHttpUrl(form.onlineUrl.trim())) {
-        nextErrors.onlineUrl = 'ลิงก์ต้องขึ้นต้นด้วย http:// หรือ https://';
+        nextErrors.onlineUrl = 'ลิงก์ต้องขึ้นต้นด้วย https:// และมีชื่อโฮสต์';
       }
     }
 
@@ -142,13 +147,19 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
     if (form.endsAt && Number.isFinite(start) && end <= start) {
       nextErrors.endsAt = 'เวลาสิ้นสุดต้องหลังเวลาเริ่ม';
     }
-    if (form.registrationClosesAt) {
-      const limit = Number.isFinite(end) ? end : start;
-      if (Number.isFinite(limit) && close > limit) {
-        nextErrors.registrationClosesAt = Number.isFinite(end)
-          ? 'เวลาปิดรับสมัครต้องไม่เกินเวลาสิ้นสุด'
-          : 'เวลาปิดรับสมัครต้องไม่เกินเวลาเริ่มงาน';
-      }
+    // ปิดรับสมัครต้องไม่เกินเวลาเริ่มกิจกรรม (ตามกติกาหลังบ้าน)
+    if (form.registrationClosesAt && Number.isFinite(start) && close > start) {
+      nextErrors.registrationClosesAt = 'เวลาปิดรับสมัครต้องไม่เกินเวลาเริ่มงาน';
+    }
+
+    // ช่วงเช็กอิน: ปิดต้องหลังเปิด และไม่เกินเวลาสิ้นสุด
+    const ciOpen = form.checkinOpensAt ? new Date(form.checkinOpensAt).getTime() : NaN;
+    const ciClose = form.checkinClosesAt ? new Date(form.checkinClosesAt).getTime() : NaN;
+    if (Number.isFinite(ciOpen) && Number.isFinite(ciClose) && ciClose <= ciOpen) {
+      nextErrors.checkinClosesAt = 'เวลาปิดเช็กอินต้องหลังเวลาเปิดเช็กอิน';
+    }
+    if (Number.isFinite(ciClose) && Number.isFinite(end) && ciClose > end) {
+      nextErrors.checkinClosesAt = 'เวลาปิดเช็กอินต้องไม่เกินเวลาสิ้นสุดกิจกรรม';
     }
 
     const max = Number(form.max);
@@ -220,7 +231,12 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
     if ((form.ticketTypes ?? []).length <= 1) {
       return 'ต้องมีประเภทบัตรอย่างน้อย 1 รายการ';
     }
-    if (Number(ticket?.sold ?? 0) > 0) {
+    // ใช้ flag จาก API (removable / removalBlockedReason) เป็นหลัก
+    if (ticket?.removable === false) {
+      return ticket.removalBlockedReason ||
+        'ลบไม่ได้: ประเภทบัตรนี้มีประวัติการจอง ให้ปิดขายแทน';
+    }
+    if (ticket?.removable === undefined && Number(ticket?.sold ?? 0) > 0) {
       return `ลบไม่ได้: ขายบัตรประเภทนี้ไปแล้ว ${ticket.sold} ใบ ให้ปิดขายแทน`;
     }
     return null;
@@ -426,27 +442,42 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
             </div>
           </div>
 
-          <label className="toggle-row" htmlFor="ev-checkin">
-            <span className="toggle-text">
-              <strong>เปิดเช็กอิน</strong>
-              <span className="hint">ปิดไว้ สตาฟจะเช็กอินผู้เข้าร่วมของอีเวนต์นี้ไม่ได้</span>
-            </span>
-            <input
-              id="ev-checkin"
-              type="checkbox"
-              checked={form.checkinEnabled}
-              onChange={(e) => setForm((f) => ({ ...f, checkinEnabled: e.target.checked }))}
-            />
-          </label>
+          <div className="field-row">
+            <div className="field">
+              <label htmlFor="ev-checkin-opens">เปิดเช็กอิน</label>
+              <input
+                type="datetime-local"
+                id="ev-checkin-opens"
+                value={form.checkinOpensAt}
+                onChange={set('checkinOpensAt')}
+                aria-invalid={Boolean(errors.checkinOpensAt)}
+              />
+              {errors.checkinOpensAt && <small className="helper-text err">{errors.checkinOpensAt}</small>}
+            </div>
+            <div className="field">
+              <label htmlFor="ev-checkin-closes">ปิดเช็กอิน</label>
+              <input
+                type="datetime-local"
+                id="ev-checkin-closes"
+                value={form.checkinClosesAt}
+                onChange={set('checkinClosesAt')}
+                aria-invalid={Boolean(errors.checkinClosesAt)}
+              />
+              {errors.checkinClosesAt && <small className="helper-text err">{errors.checkinClosesAt}</small>}
+            </div>
+          </div>
+          <p className="hint">ไม่กรอก = ใช้ช่วงเวลาเริ่ม–สิ้นสุดของกิจกรรมตามกติกาหลังบ้าน</p>
 
           <div className="field-row">
             <div className="field">
               <label htmlFor="ev-organizer">ผู้จัดงาน</label>
-              <input type="text" id="ev-organizer" maxLength={120} placeholder="ชื่อผู้จัด/องค์กร" value={form.organizerName} onChange={set('organizerName')} />
+              <input type="text" id="ev-organizer" maxLength={100} placeholder="ชื่อผู้จัด/องค์กร" value={form.organizerName} onChange={set('organizerName')} aria-invalid={Boolean(errors.organizerName)} />
+              {errors.organizerName && <small className="helper-text err">{errors.organizerName}</small>}
             </div>
             <div className="field">
               <label htmlFor="ev-contact">ช่องทางติดต่อ</label>
-              <input type="text" id="ev-contact" maxLength={200} placeholder="อีเมลหรือเบอร์โทร" value={form.contactInfo} onChange={set('contactInfo')} />
+              <input type="text" id="ev-contact" maxLength={254} placeholder="อีเมลหรือเบอร์โทร" value={form.contactInfo} onChange={set('contactInfo')} aria-invalid={Boolean(errors.contactInfo)} />
+              {errors.contactInfo && <small className="helper-text err">{errors.contactInfo}</small>}
             </div>
           </div>
 

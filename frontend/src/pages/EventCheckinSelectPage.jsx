@@ -4,6 +4,9 @@ import Icon from '../components/Icon.jsx';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import StaffNavbar from '../components/StaffNavbar.jsx';
 import { eventService } from '../api/eventService.js';
+import { isMockMode } from '../data/mockBookings.js';
+import { parseEventTime, formatEventTimeShort } from '../utils/eventTime.js';
+import { useNow } from '../hooks/useLiveRefresh.js';
 import '../staff-shell.css';
 import '../event-checkin.css';
 
@@ -63,21 +66,10 @@ const formatDate = (value) => {
 };
 
 // สถานะเช็กอินสำหรับแสดงผลเท่านั้น (หลังบ้านเป็นผู้ตัดสินจริงตอนสแกน)
-const toTime = (value) => {
-  if (!value) return null;
-  const time = new Date(value).getTime();
-  return Number.isNaN(time) ? null : time;
-};
+const toTime = (value) => parseEventTime(value);
 
 const formatShort = (value) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('th-TH', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
+  return formatEventTimeShort(value);
 };
 
 function getCheckinState(ev, now = Date.now()) {
@@ -98,7 +90,7 @@ function getCheckinState(ev, now = Date.now()) {
   if (opens !== null && now < opens) {
     return { key: 'soon', label: 'ยังไม่เปิดเช็กอิน', window: windowText };
   }
-  if (closes !== null && now > closes) {
+  if (closes !== null && now >= closes) {
     return { key: 'closed', label: 'ปิดเช็กอินแล้ว', window: windowText };
   }
   return { key: 'open', label: 'เปิดเช็กอินอยู่', window: windowText };
@@ -112,6 +104,7 @@ export default function EventCheckinSelectPage() {
     .trim()
     .toLocaleLowerCase();
 
+  const now = useNow(1000);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -131,11 +124,10 @@ export default function EventCheckinSelectPage() {
 
         if (!active) return;
 
-        // Demo data is used only during development when no events exist.
-        const isDevelopment = import.meta.env.DEV;
-
+        // ข้อมูลจำลองใช้เฉพาะเมื่อเปิดด้วย ?mock=1 ในโหมด dev (opt-in)
+        // API ว่างต้องแสดงว่างจริง ไม่ใส่ DEMO_EVENTS อัตโนมัติ
         setEvents(
-          isDevelopment && items.length === 0
+          isMockMode() && items.length === 0
             ? DEMO_EVENTS
             : items
         );
@@ -306,7 +298,7 @@ export default function EventCheckinSelectPage() {
                 {filteredEvents.map((ev) => {
                   const category = ev.category || 'COMMUNITY';
                   const isDemo = String(ev.id).startsWith('demo-');
-                  const checkin = getCheckinState(ev);
+                  const checkin = getCheckinState(ev, now);
 
                   return (
                     <a

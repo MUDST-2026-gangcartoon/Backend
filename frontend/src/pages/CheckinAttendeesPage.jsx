@@ -23,7 +23,12 @@ function unwrapResponse(response) {
       continue;
     }
 
-    if (value.result !== undefined) {
+    // result เป็นสถานะธุรกิจ (CHECKED_IN / ALREADY_USED) ห้าม unwrap
+    // unwrap เฉพาะกรณี result เป็น object ที่ห่อข้อมูลจริงมา
+    if (
+      value.result &&
+      typeof value.result === 'object'
+    ) {
       value = value.result;
       continue;
     }
@@ -45,7 +50,7 @@ function extractItems(response, keys = []) {
   }
 
   for (const key of ['items', 'content', 'data', 'result']) {
-    if (value[key] !== undefined) {
+    if (value[key] !== undefined && typeof value[key] === 'object') {
       const items = extractItems(value[key], keys);
       if (items.length > 0) return items;
     }
@@ -285,7 +290,7 @@ export default function CheckinAttendeesPage() {
         setAttendees((prev) =>
           prev.map((raw) =>
             String(raw.id) === String(target.key)
-              ? { ...raw, checkedInAt: new Date().toISOString(), checkInSource: 'STAFF', checkedInBy: 'สตาฟ (จำลอง)' }
+              ? { ...raw, checkedInAt: new Date().toISOString(), checkinSource: 'STAFF', checkedInBy: 'สตาฟ (จำลอง)' }
               : raw
           )
         );
@@ -302,12 +307,27 @@ export default function CheckinAttendeesPage() {
         ticketCode
       );
 
+      // อ่าน checkedIn / result / checkedInAt จาก object เดิมของ API
       const result = unwrapResponse(response);
 
-      if (!result || result.checkedIn !== true) {
+      if (!result || typeof result !== 'object' || result.checkedIn !== true) {
         throw new Error(
           result?.message || 'ไม่สามารถเช็กอินตั๋วนี้ได้'
         );
+      }
+
+      if (result.result === 'ALREADY_USED') {
+        // ใช้แล้ว: แสดงเวลาเช็กอินครั้งแรก ไม่ถือเป็นเช็กอินสำเร็จใหม่
+        setScanResult({
+          type: 'error',
+          title: 'ตั๋วนี้ใช้แล้ว',
+          detail: `${result.attendeeName || 'ผู้เข้าร่วม'} • เช็กอินครั้งแรก ${
+            formatDateTime(result.checkedInAt)
+          }${result.checkedInBy ? ` โดย ${result.checkedInBy}` : ''}`,
+        });
+        setCode('');
+        await loadData(false);
+        return;
       }
 
       setScanResult({

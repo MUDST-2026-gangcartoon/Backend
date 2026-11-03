@@ -26,6 +26,8 @@ export const STATUS_OPTIONS = [
   { key: 'open', label: 'เปิดรับ' },
   { key: 'nearfull', label: 'ใกล้เต็ม' },
   { key: 'full', label: 'เต็มแล้ว' },
+  { key: 'closed', label: 'ปิดรับสมัคร' },
+  { key: 'ongoing', label: 'กำลังจัดงาน' },
   { key: 'ended', label: 'จบแล้ว' },
 ];
 
@@ -69,7 +71,10 @@ function normalize(event) {
 export function getEventState(event) {
   const info = normalize(event);
 
+  // ใช้สถานะจาก API เป็นหลัก ไม่ตีความว่าเริ่มงานแล้ว = จบแล้ว
   if (info.status === 'ENDED') return 'ended';
+  if (info.status === 'ONGOING') return 'ongoing';
+  if (info.status === 'CLOSED') return 'closed';
   if (
     info.status === 'FULL' ||
     (info.capacity > 0 && info.registered >= info.capacity)
@@ -84,6 +89,8 @@ const STATE_LABEL = {
   open: 'เปิดรับลงทะเบียน',
   nearfull: 'ใกล้เต็ม เปิดรับลงทะเบียน',
   full: 'เต็มแล้ว',
+  closed: 'ปิดรับสมัคร',
+  ongoing: 'กำลังจัดงาน',
   ended: 'สิ้นสุดแล้ว จบแล้ว',
 };
 

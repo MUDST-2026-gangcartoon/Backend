@@ -1,6 +1,7 @@
 import React from 'react';
 import Icon from './Icon.jsx';
 import BookingTools from './BookingTools.jsx';
+import ReportPanel from './ReportPanel.jsx';
 
 // Drawer รายชื่อผู้เข้าร่วมและรายงานของกิจกรรมเดียว เปิดจากปุ่มในหน้า /manage-events
 export default function AttendeesDrawer({
@@ -39,6 +40,7 @@ export default function AttendeesDrawer({
           {mock && (
             <p className="bt-mock-note">โหมดข้อมูลจำลอง (?mock=1) — ไม่ใช่ข้อมูลจริง</p>
           )}
+          {!mock && <ReportPanel eventId={event.id} refreshKey={bookings.length} />}
           <BookingTools
             bookings={bookings}
             capacity={event.max}

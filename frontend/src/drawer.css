@@ -78,6 +78,7 @@
   padding: 24px 28px;
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden; /* กัน Drawer เลื่อนแนวนอนจนเนื้อหาซ้ายถูกตัด */
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -128,8 +129,26 @@
 
 .field-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
+}
+
+/* ให้ช่อง datetime-local/select ย่อได้ ไม่ดันคอลัมน์ให้กว้างเกิน Drawer */
+.field,
+.field-row > * {
+  min-width: 0;
+}
+.field input,
+.field select,
+.field textarea {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.field input[type="datetime-local"] {
+  font-size: 13px;
+  padding-left: 10px;
+  padding-right: 8px;
 }
 
 /* Grid เลือกรูปปก */
@@ -551,3 +570,10 @@
 .cover-thumb.has-image { height: 120px; background-size: cover; background-position: center; }
 .ticket-lock { font-size: 12.5px; color: #9A3412; margin: 0; }
 .ticket-sale-off { opacity: .8; }
+
+/* จอแคบ: ช่องเวลา 2 คอลัมน์ไม่พอ ให้เรียงเป็นคอลัมน์เดียว */
+@media (max-width: 520px) {
+  .drawer .field-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

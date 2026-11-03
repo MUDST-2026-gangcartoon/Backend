@@ -121,30 +121,35 @@ const mapApiEvent = (event) => {
     status: event.status || '',
     endsAt: toLocalDateTime(event.endsAt),
     registrationClosesAt: toLocalDateTime(event.registrationClosesAt),
-    checkinEnabled: event.checkinEnabled !== false,
-    organizerName: event.organizerName || event.organizer || '',
-    contactInfo: event.contactInfo || event.contact || '',
-    locationType: event.locationType === 'ONLINE' ? 'ONLINE' : 'ONSITE',
-    onlineUrl: event.onlineUrl || '',
+    checkinOpensAt: toLocalDateTime(event.checkinOpensAt),
+    checkinClosesAt: toLocalDateTime(event.checkinClosesAt),
+    // ชื่อใน form (contactInfo/locationType/onlineUrl) map จาก DTO จริง
+    // organizerContact / eventFormat / onlineMeetingUrl
+    organizerName: event.organizerName || '',
+    organizerContact: event.organizerContact || '',
+    contactInfo: event.organizerContact || '',
+    eventFormat: event.eventFormat === 'ONLINE' ? 'ONLINE' : 'ONSITE',
+    locationType: event.eventFormat === 'ONLINE' ? 'ONLINE' : 'ONSITE',
+    // URL ส่วนตัวไม่อยู่ใน EventDto ต้องโหลดจาก online-settings ตอนเปิดแก้ไข
+    onlineUrl: event.onlineMeetingUrl || '',
+    deletable: event.deletable,
+    deletionBlockedReason: event.deletionBlockedReason || '',
   };
 };
 
 // เหตุผลที่ลบอีเวนต์ไม่ได้ (null = ลบได้) ให้หลังบ้านเป็นผู้ตัดสินสุดท้าย
 const getDeleteBlockReason = (event) => {
-  if (event.deleteBlockedReason) return String(event.deleteBlockedReason);
-
-  const registered = Number(event.seats || 0);
-  const sold = (event.ticketTypes || []).reduce(
-    (sum, ticket) => sum + Number(ticket.sold || 0),
-    0
-  );
-
-  if (registered > 0 || sold > 0) {
-    return `ลบไม่ได้: มีผู้ลงทะเบียน/ซื้อบัตรแล้ว ${Math.max(registered, sold)} รายการ ให้ปิดรับสมัครแทน`;
+  // ใช้ flag จาก API (deletable / deletionBlockedReason) เป็นหลัก
+  if (event.deletable === false) {
+    return String(
+      event.deletionBlockedReason ||
+        'ลบไม่ได้: กิจกรรมนี้มีประวัติการลงทะเบียนหรือเช็กอิน'
+    );
   }
-  if (Number(event.checkedInCount || 0) > 0) {
-    return 'ลบไม่ได้: มีประวัติการเช็กอินแล้ว';
-  }
+  if (event.deletable === true) return null;
+
+  // ไม่มี flag จาก API (เช่น ข้อมูล mock) ค่อย fallback
+  if (event.deletionBlockedReason) return String(event.deletionBlockedReason);
   return null;
 };
 
@@ -158,12 +163,22 @@ const FIELD_ERROR_MAP = {
   imageUrl: 'coverUrl',
   endsAt: 'endsAt',
   registrationClosesAt: 'registrationClosesAt',
+  onlineMeetingUrl: 'onlineUrl',
   onlineUrl: 'onlineUrl',
+  eventFormat: 'locationType',
   locationType: 'locationType',
+  organizerName: 'organizerName',
+  organizerContact: 'contactInfo',
+  checkinOpensAt: 'checkinOpensAt',
+  checkinClosesAt: 'checkinClosesAt',
 };
 
 const extractFieldErrors = (error) => {
-  const raw = error?.fieldErrors || error?.errors || error?.data?.errors;
+  const raw =
+    error?.data?.fieldErrors ||
+    error?.fieldErrors ||
+    error?.data?.errors ||
+    error?.errors;
   if (!raw || typeof raw !== 'object') return null;
 
   const entries = Array.isArray(raw)
@@ -216,6 +231,7 @@ const prepareTicketTypes = (formTicketTypes, originalEvent) => {
       description: String(ticket.description ?? '').trim(),
       price: Number(ticket.price),
       capacity: Number(ticket.capacity),
+      salesEnabled: ticket.saleOpen !== false && ticket.salesEnabled !== false,
       sold,
     };
   });
@@ -359,6 +375,13 @@ export default function ManageEventsPage() {
         ticketTypes: detail.ticketTypes,
       });
 
+      // กิจกรรมออนไลน์: URL ส่วนตัวต้องอ่านจาก online-settings (ADMIN เท่านั้น)
+      if (fullEvent.eventFormat === 'ONLINE') {
+        const settingsResponse = await eventService.getOnlineSettings(event.id);
+        const settings = settingsResponse?.data ?? settingsResponse;
+        fullEvent.onlineUrl = settings?.onlineMeetingUrl || '';
+      }
+
       console.log('Loaded event:', fullEvent);
       console.log('Event ID:', fullEvent.id);
       console.log('Event capacity:', fullEvent.max);
@@ -469,8 +492,12 @@ export default function ManageEventsPage() {
     console.log('Event capacity:', form.max);
     console.log('Ticket types:', form.ticketTypes);
 
+    const isOnlineEvent = form.locationType === 'ONLINE';
     const name = String(form.name || '').trim();
-    const place = String(form.place || '').trim();
+    // ออนไลน์: backend ตั้ง location เป็น 'ออนไลน์' เอง ไม่บังคับกรอกสถานที่
+    const place = isOnlineEvent
+      ? String(form.place || '').trim() || 'ออนไลน์'
+      : String(form.place || '').trim();
     const description = String(form.desc || '').trim();
     const capacity = Number(form.max);
     const startsAt = String(form.date || '').trim();
@@ -487,6 +514,30 @@ export default function ManageEventsPage() {
 
     if (Number.isNaN(new Date(startsAt).getTime())) {
       showNotice('วันเวลาไม่ถูกต้อง');
+      return;
+    }
+
+    const startMs = new Date(startsAt).getTime();
+    const toMs = (v) => (v ? new Date(v).getTime() : null);
+    const endMs = toMs(form.endsAt);
+    const closeMs = toMs(form.registrationClosesAt);
+    const ciOpenMs = toMs(form.checkinOpensAt);
+    const ciCloseMs = toMs(form.checkinClosesAt);
+
+    if (endMs !== null && endMs <= startMs) {
+      showNotice('วันสิ้นสุดต้องหลังเวลาเริ่ม');
+      return;
+    }
+    if (closeMs !== null && closeMs > startMs) {
+      showNotice('เวลาปิดรับสมัครต้องไม่เกินเวลาเริ่มกิจกรรม');
+      return;
+    }
+    if (ciOpenMs !== null && ciCloseMs !== null && ciCloseMs <= ciOpenMs) {
+      showNotice('เวลาปิดเช็กอินต้องหลังเวลาเปิดเช็กอิน');
+      return;
+    }
+    if (ciCloseMs !== null && endMs !== null && ciCloseMs > endMs) {
+      showNotice('เวลาปิดเช็กอินต้องไม่เกินเวลาสิ้นสุดกิจกรรม');
       return;
     }
 
@@ -580,20 +631,18 @@ export default function ManageEventsPage() {
         category: toApiCategory(form.category),
         imageUrl,
         detailImages: originalEvent?.detailImages || [],
-        ticketTypes: ticketTypesForRequest.map((ticket, index) => ({
-          ...ticket,
-          saleOpen: form.ticketTypes[index]?.saleOpen !== false,
-        })),
+        // ticketTypesForRequest มี salesEnabled อยู่แล้ว (map จาก saleOpen ใน form)
+        ticketTypes: ticketTypesForRequest,
         endsAt: form.endsAt || null,
         registrationClosesAt: form.registrationClosesAt || null,
-        checkinEnabled: form.checkinEnabled !== false,
+        checkinOpensAt: form.checkinOpensAt || null,
+        checkinClosesAt: form.checkinClosesAt || null,
         organizerName: String(form.organizerName || '').trim(),
-        contactInfo: String(form.contactInfo || '').trim(),
-        locationType: form.locationType === 'ONLINE' ? 'ONLINE' : 'ONSITE',
-        onlineUrl:
-          form.locationType === 'ONLINE'
-            ? String(form.onlineUrl || '').trim()
-            : null,
+        organizerContact: String(form.contactInfo || '').trim(),
+        eventFormat: isOnlineEvent ? 'ONLINE' : 'ONSITE',
+        onlineMeetingUrl: isOnlineEvent
+          ? String(form.onlineUrl || '').trim()
+          : null,
       };
 
       if (isEdit) {
@@ -832,13 +881,14 @@ export default function ManageEventsPage() {
                         <td>
                           <span className="status">
                             <span className="dot" />
-                            {event.status === 'ENDED'
-                              ? 'สิ้นสุดแล้ว'
-                              : event.status === 'FULL'
-                                ? 'เต็มแล้ว'
-                                : isOpen
-                                  ? 'เปิดรับลงทะเบียน'
-                                  : 'เต็มแล้ว'}
+                            {{
+                              ENDED: 'สิ้นสุดแล้ว',
+                              ONGOING: 'กำลังจัดงาน',
+                              CLOSED: 'ปิดรับสมัคร',
+                              FULL: 'เต็มแล้ว',
+                              OPEN: 'เปิดรับลงทะเบียน',
+                            }[event.status] ||
+                              (isOpen ? 'เปิดรับลงทะเบียน' : 'เต็มแล้ว')}
                           </span>
                         </td>
 
@@ -906,7 +956,10 @@ export default function ManageEventsPage() {
                 seats: drawer.event.seats,
                 endsAt: drawer.event.endsAt,
                 registrationClosesAt: drawer.event.registrationClosesAt,
-                checkinEnabled: drawer.event.checkinEnabled,
+                checkinOpensAt: drawer.event.checkinOpensAt,
+                checkinClosesAt: drawer.event.checkinClosesAt,
+                eventFormat: drawer.event.eventFormat,
+                deletable: drawer.event.deletable,
                 organizerName: drawer.event.organizerName,
                 contactInfo: drawer.event.contactInfo,
                 locationType: drawer.event.locationType,

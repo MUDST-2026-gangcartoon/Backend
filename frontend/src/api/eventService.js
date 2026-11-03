@@ -96,6 +96,20 @@ getAllEventsAcrossPages: async (params = {}) => {
   deleteEvent: (eventId) =>
     apiClient.delete(`/admin/events/${encodeURIComponent(eventId)}`),
 
+  // ADMIN เท่านั้น: { eventFormat, onlineMeetingUrl } (URL ส่วนตัว ไม่อยู่ใน EventDto)
+  getOnlineSettings: (eventId) =>
+    apiClient.get(
+      `/admin/events/${encodeURIComponent(eventId)}/online-settings`
+    ),
+
+  // รายงานต่อกิจกรรม (orders, activeOrders, cancelledOrders, participants, checkedIn, ...)
+  getEventReport: (eventId) =>
+    apiClient.get(`/admin/events/${encodeURIComponent(eventId)}/report`),
+
+  // ภาพรวมการดำเนินงาน (orders, participants, checkedIn, cancelledOrders, ช่องทางเช็กอิน)
+  getOperationsStats: () =>
+    apiClient.get('/admin/analytics/operations'),
+
   // ดึงรายชื่อผู้ลงทะเบียนกิจกรรม
   getEventAttendees: (eventId) =>
     apiClient.get(
