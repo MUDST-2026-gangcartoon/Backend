@@ -82,7 +82,12 @@ function RoleRoute({ allow, children }) {
     return <Navigate to={homeForRole(effectiveRole)} replace />;
   }
 
-  return children;
+  // remount ตาม user.id เพื่อไม่ให้ข้อมูลบัญชีเดิมค้างเมื่อสลับบัญชี
+  return (
+    <React.Fragment key={`${effectiveRole}:${user?.id ?? 'guest'}`}>
+      {children}
+    </React.Fragment>
+  );
 }
 
 const AdminRoute = ({ children }) => (
@@ -91,9 +96,13 @@ const AdminRoute = ({ children }) => (
 const StaffRoute = ({ children }) => (
   <RoleRoute allow={['staff']}>{children}</RoleRoute>
 );
-// พื้นที่ผู้ใช้ทั่วไป: เฉพาะผู้เยี่ยมชมและ user
+// หน้าสาธารณะ (ดูกิจกรรม): ผู้เยี่ยมชมและ user เท่านั้น ADMIN/STAFF ถูกส่งกลับหน้าของบทบาทตัวเอง
 const UserRoute = ({ children }) => (
   <RoleRoute allow={['guest', 'user']}>{children}</RoleRoute>
+);
+// ข้อมูลส่วนตัว (ประวัติ/ตั๋ว/การชำระเงิน): เฉพาะ user ที่ล็อกอินแล้ว guest ถูกส่งไปหน้าแรก
+const UserOnlyRoute = ({ children }) => (
+  <RoleRoute allow={['user']}>{children}</RoleRoute>
 );
 
 function AppRoutes() {
@@ -103,9 +112,9 @@ function AppRoutes() {
       <Route path="/" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />
       <Route path="/event-detail" element={<UserRoute><EventDetailPage /></UserRoute>} />
       <Route path="/event-detail/:eventId" element={<UserRoute><EventDetailPage /></UserRoute>} />
-      <Route path="/MyRegistrationsPage" element={<UserRoute><MyRegistrationsPage /></UserRoute>} />
-      <Route path="/MyTicketsPage" element={<UserRoute><MyTicketsPage /></UserRoute>} />
-      <Route path="/payment-history" element={<UserRoute><PaymentHistoryPage /></UserRoute>} />
+      <Route path="/MyRegistrationsPage" element={<UserOnlyRoute><MyRegistrationsPage /></UserOnlyRoute>} />
+      <Route path="/MyTicketsPage" element={<UserOnlyRoute><MyTicketsPage /></UserOnlyRoute>} />
+      <Route path="/payment-history" element={<UserOnlyRoute><PaymentHistoryPage /></UserOnlyRoute>} />
       <Route path="/UpcomingEventsPage" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />
       <Route path="/events" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />
       <Route path="/upcoming-events" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />

@@ -17,7 +17,7 @@ import './booking-tools.css';
 // การ์ดสรุป: แยกจำนวน "รายการจอง" กับ "จำนวนคน"
 export function BookingSummary({ summary }) {
   const tiles = [
-    { key: 'bookings', label: 'รายการจอง', value: summary.bookings, tone: 'accent' },
+    { key: 'bookings', label: 'รายการถือสิทธิ์', value: summary.bookings, tone: 'accent' },
     { key: 'people', label: 'จำนวนคน', value: summary.people },
     { key: 'in', label: 'เช็กอินแล้ว (คน)', value: summary.checkedInPeople },
     { key: 'pending', label: 'ยังไม่มา (คน)', value: summary.pendingPeople },

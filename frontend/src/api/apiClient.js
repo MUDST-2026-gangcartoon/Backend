@@ -73,6 +73,13 @@ const createHttpError = (response, data) => {
   return error;
 };
 
+const clearCsrfCache = () => {
+  csrfToken = null;
+  csrfPromise = null;
+};
+
+export const SESSION_EXPIRED_EVENT = 'eventhub:session-expired';
+
 const getCsrfToken = async () => {
   if (csrfToken) {
     return {
@@ -176,15 +183,32 @@ const request = async (method, endpoint, data) => {
     const result = await parseResponse(response);
 
     if (!response.ok) {
+      // 401/403: token อาจเก่าหรือ session เปลี่ยน ให้ขอ CSRF ใหม่ในครั้งถัดไป
+      if (response.status === 401 || response.status === 403) {
+        clearCsrfCache();
+      }
+
+      // 401 ที่ไม่ใช่ login/signup = session หมดอายุ (403 อาจเป็นสิทธิ์ไม่พอ ไม่ logout)
+      if (
+        response.status === 401 &&
+        !/^\/auth\/(login|signup)$/.test(path.split('?')[0]) &&
+        typeof window !== 'undefined'
+      ) {
+        window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+      }
+
       throw createHttpError(response, result);
     }
 
     return result;
   } finally {
-    // ล้าง CSRF token หลัง Login, Signup และ Logout
-    if (refreshCsrfAfterRequest) {
-      csrfToken = null;
-      csrfPromise = null;
+    // ล้าง CSRF token หลัง Login, Signup, Logout
+    // และหลังแก้โปรไฟล์/รหัสผ่านที่ backend หมุน session/CSRF
+    if (
+      refreshCsrfAfterRequest ||
+      /^\/auth\/(profile|password)$/.test(path.split('?')[0])
+    ) {
+      clearCsrfCache();
     }
   }
 };

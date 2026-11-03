@@ -31,7 +31,8 @@ const toText = (value) => (value == null ? '' : String(value).trim());
 
 function pickSource(raw) {
   const value = toText(
-    raw?.checkInSource ??
+    raw?.checkinSource ??
+      raw?.checkInSource ??
       raw?.checkedInSource ??
       raw?.checkInChannel ??
       raw?.checkinChannel ??

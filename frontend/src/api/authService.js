@@ -19,9 +19,13 @@ export const authService = {
     return apiClient.put('/auth/profile', payload);
   },
 
-  // เปลี่ยนรหัสผ่าน body: { currentPassword, newPassword, confirmPassword }
-  changePassword: (payload) => {
-    return apiClient.put('/auth/password', payload);
+  // เปลี่ยนรหัสผ่าน (controller เป็น POST) body: { currentPassword, newPassword }
+  // confirmPassword ตรวจใน UI เท่านั้น ไม่ส่งไป API
+  changePassword: ({ currentPassword, newPassword }) => {
+    return apiClient.post('/auth/password', {
+      currentPassword,
+      newPassword,
+    });
   },
 
   // อัปโหลดรูปโปรไฟล์ (FormData field: file) -> คืนข้อมูลผู้ใช้หรือ { avatarUrl }

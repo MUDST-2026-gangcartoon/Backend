@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 
 import { authService } from '../api/authService.js';
+import { SESSION_EXPIRED_EVENT } from '../api/apiClient.js';
 
 const AuthContext = createContext(null);
 const USER_KEY = 'authUser';
@@ -217,6 +218,32 @@ export function AuthProvider({ children }) {
     };
   }, [sessionCheckKey]);
 
+
+  // apiClient ส่งสัญญาณนี้เมื่อได้ 401 (session หมดอายุ) ให้ล้างข้อมูลบัญชีและ modal
+  useEffect(() => {
+    const handleExpired = () => {
+      clearStoredAuth();
+      setUser(null);
+      setIsLoggedIn(false);
+      setModal(null);
+    };
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleExpired);
+    return () =>
+      window.removeEventListener(SESSION_EXPIRED_EVENT, handleExpired);
+  }, []);
+
+  // อีกแท็บ login/logout/สลับบัญชี: ตรวจ session กับ backend ใหม่ ไม่เชื่อ localStorage ตรง ๆ
+  useEffect(() => {
+    const handleStorage = (event) => {
+      if (event.key === USER_KEY || event.key === 'isLoggedIn') {
+        setSessionCheckKey((current) => current + 1);
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   const openModal = useCallback((type) => {
     setModal(type);
