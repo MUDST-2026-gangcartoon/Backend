@@ -155,6 +155,7 @@ export function AuthProvider({ children }) {
   );
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [modal, setModal] = useState(null);
+  const [authReturnTo, setAuthReturnTo] = useState(null);
   const [authError, setAuthError] = useState(null);
   const [sessionCheckKey, setSessionCheckKey] = useState(0);
 
@@ -245,11 +246,13 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  const openModal = useCallback((type) => {
+  const openModal = useCallback((type, returnTo = null) => {
+    setAuthReturnTo(returnTo);
     setModal(type);
   }, []);
 
   const closeModal = useCallback(() => {
+    setAuthReturnTo(null);
     setModal(null);
   }, []);
 
@@ -396,6 +399,7 @@ export function AuthProvider({ children }) {
         authError,
         retrySessionCheck,
         modal,
+        authReturnTo,
         openModal,
         closeModal,
         login,

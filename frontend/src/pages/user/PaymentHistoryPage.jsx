@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './PaymentHistoryPage.css';
 import { mockPaymentService } from '../../api/mockPaymentService';
+import { Link } from 'react-router-dom';
+import { EVENT_TIME_ZONE, parseEventDateTime } from './eventDisplay';
 import Navbar from '../../components/Navbar';
 
 const STATUS_CONFIG = {
@@ -22,13 +24,14 @@ const formatCurrency = (amount) =>
 const formatDate = (dateString) => {
   if (!dateString) return '-';
 
-  const date = new Date(dateString);
+  const date = parseEventDateTime(dateString);
 
   if (Number.isNaN(date.getTime())) return '-';
 
   return new Intl.DateTimeFormat('th-TH', {
     dateStyle: 'medium',
     timeStyle: 'short',
+    timeZone: EVENT_TIME_ZONE,
   }).format(date);
 };
 
@@ -47,8 +50,15 @@ export default function PaymentHistoryPage() {
         setLoading(true);
         setError('');
 
-        const response = await mockPaymentService.getHistory();
-        const data = Array.isArray(response) ? response : [];
+        const data = [];
+        for (let page = 0; active; page += 1) {
+          const response = await mockPaymentService.getHistory(page);
+          if (!Array.isArray(response?.items) || !Number.isInteger(response.totalPages)) {
+            throw new Error('ไม่สามารถอ่านประวัติการชำระเงินได้');
+          }
+          data.push(...response.items);
+          if (page + 1 >= response.totalPages) break;
+        }
 
         if (!active) return;
 
@@ -60,7 +70,7 @@ export default function PaymentHistoryPage() {
             eventName: item.eventTitle,
             ticketType: item.ticketTypeName,
             quantity: item.quantity,
-            amount: item.totalAmount,
+            amount: Number(item.totalAmount ?? 0),
             paymentDate: item.createdAt,
             expiresAt: item.expiresAt,
             method: 'Mock Payment',
@@ -280,6 +290,14 @@ export default function PaymentHistoryPage() {
                         <span>ยอดรวม</span>
                         <strong>{formatCurrency(payment.amount)}</strong>
                       </div>
+                      {payment.status === 'PENDING_PAYMENT' && payment.eventId != null && (
+                        <Link
+                          to={'/event-detail/' + encodeURIComponent(payment.eventId)}
+                          state={{ resumePaymentId: payment.paymentId }}
+                        >
+                          ดำเนินการชำระเงินต่อ
+                        </Link>
+                      )}
                     </article>
                   );
                 })}

@@ -5,18 +5,13 @@ import QRCode from 'qrcode';
 import Navbar from '../../components/Navbar';
 import { registrationService } from '../../api/registrationService';
 import './MyTicketsPage.css';
-
-const CATEGORY_LABELS = {
-  TECH: 'ไอที',
-  DESIGN: 'ออกแบบ',
-  CAREER: 'อาชีพ',
-  COMMUNITY: 'ชุมชน',
-};
+import { EVENT_CATEGORY_LABELS, EVENT_TIME_ZONE, parseEventDateTime } from './eventDisplay';
+import { getRegistrationItems, isCancelledRegistration } from './registrationDisplay';
 
 const formatDateTime = (dateString) => {
   if (!dateString) return 'ไม่ระบุวันเวลา';
 
-  const date = new Date(dateString);
+  const date = parseEventDateTime(dateString);
 
   if (Number.isNaN(date.getTime())) {
     return 'ไม่ระบุวันเวลา';
@@ -27,6 +22,7 @@ const formatDateTime = (dateString) => {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    timeZone: EVENT_TIME_ZONE,
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -36,7 +32,7 @@ const formatDateTime = (dateString) => {
 const formatDate = (dateString) => {
   if (!dateString) return 'ไม่ระบุวันที่';
 
-  const date = new Date(dateString);
+  const date = parseEventDateTime(dateString);
 
   if (Number.isNaN(date.getTime())) {
     return 'ไม่ระบุวันที่';
@@ -46,6 +42,7 @@ const formatDate = (dateString) => {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    timeZone: EVENT_TIME_ZONE,
   }).format(date);
 };
 
@@ -66,32 +63,38 @@ const normalizeRegistration = (registration) => {
     : '';
 
   const checkedInAt = registration.checkedInAt ?? null;
+  const cancelled = isCancelledRegistration(registration);
 
   return {
+    registrationId: registration.id ?? registration.registrationId,
     ticketId: ticketCode || String(registration.id ?? ''),
     ticketCode,
     ticketIdLabel: ticketCode ? 'รหัสบัตร' : 'รหัสลงทะเบียน',
     eventName: event.title || 'ไม่พบชื่ออีเวนต์',
     category:
-      CATEGORY_LABELS[event.category] || event.category || 'อีเวนต์',
+      EVENT_CATEGORY_LABELS[event.category] || event.category || 'อีเวนต์',
     startsAt: event.startsAt,
     location: event.location || 'ไม่ระบุสถานที่',
     ticketType: registration.ticketTypeName || 'ไม่ระบุประเภทบัตร',
     registeredAt: registration.registeredAt,
     quantity: registration.quantity ?? 1,
     checkedInAt,
-    isCheckedIn: Boolean(checkedInAt),
+    isCheckedIn: !cancelled && Boolean(checkedInAt),
+    cancelled,
+    cancelReason: registration.cancelReason,
   };
 };
 
 export default function MyTicketsPage() {
   const [searchParams] = useSearchParams();
   const requestedTicketId = searchParams.get('ticketId');
+  const requestedRegistrationId = searchParams.get('registrationId');
 
   const [tickets, setTickets] = useState([]);
   const [qrCodes, setQrCodes] = useState({});
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -103,24 +106,16 @@ export default function MyTicketsPage() {
         setErrorMessage('');
 
         const response = await registrationService.getMyRegistrations();
-        const payload = response?.data ?? response;
-
-        const items = Array.isArray(payload)
-          ? payload
-          : payload?.items ?? payload?.registrations ?? [];
-
-        const normalizedTickets = Array.isArray(items)
-          ? items
-              .map(normalizeRegistration)
-              .filter((ticket) => ticket.ticketId)
-          : [];
+        const normalizedTickets = getRegistrationItems(response)
+          .map(normalizeRegistration)
+          .filter((ticket) => ticket.ticketId);
 
         // สร้าง QR จาก ticketCode ที่ Backend ส่งกลับมา
         // รายการที่เช็กอินแล้วจะไม่สร้าง QR สำหรับใช้งานซ้ำ
         const qrEntries = await Promise.all(
           normalizedTickets
             .filter(
-              (ticket) => ticket.ticketCode && !ticket.isCheckedIn
+              (ticket) => ticket.ticketCode && !ticket.cancelled && !ticket.isCheckedIn
             )
             .map(async (ticket) => {
               try {
@@ -164,25 +159,27 @@ export default function MyTicketsPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [reloadKey]);
 
   // ผูก QR เข้ากับตั๋วแต่ละใบ
   const ticketsWithQr = tickets.map((ticket) => ({
     ...ticket,
-    qrCode: ticket.isCheckedIn
+    qrCode: ticket.cancelled || ticket.isCheckedIn
       ? ''
       : qrCodes[ticket.ticketId] || '',
   }));
 
   // รองรับการเปิดหน้าด้วย ?ticketId=...
-  const visibleTickets = requestedTicketId
+  const visibleTickets = requestedRegistrationId
+    ? ticketsWithQr.filter((ticket) => String(ticket.registrationId) === requestedRegistrationId)
+    : requestedTicketId
     ? ticketsWithQr.filter(
         (ticket) => ticket.ticketId === requestedTicketId
       )
     : ticketsWithQr;
 
   const openTicketQr = (ticket) => {
-    if (!ticket.isCheckedIn && ticket.qrCode) {
+    if (!ticket.cancelled && !ticket.isCheckedIn && ticket.qrCode) {
       setSelectedTicket(ticket);
     }
   };
@@ -225,17 +222,18 @@ export default function MyTicketsPage() {
             </div>
           ) : errorMessage ? (
             <div className="empty-state" role="alert">
-              {errorMessage}
+              <p>{errorMessage}</p>
+              <button type="button" onClick={() => setReloadKey((key) => key + 1)}>ลองโหลดอีกครั้ง</button>
             </div>
           ) : visibleTickets.length === 0 ? (
             <div className="empty-state">
-              {requestedTicketId
+              {requestedRegistrationId || requestedTicketId
                 ? 'ไม่พบตั๋วที่ต้องการ หรือรายการนี้ไม่มีอยู่ในบัญชีของคุณ'
                 : 'คุณยังไม่มีตั๋วในขณะนี้'}
             </div>
           ) : (
             visibleTickets.map((ticket) => (
-              <div className="myticket-card" key={ticket.ticketId}>
+              <div className="myticket-card" key={ticket.registrationId ?? ticket.ticketId}>
                 <div className="myticket-left">
                   <div className="myticket-badge">
                     {ticket.category} · {ticket.quantity} ใบ
@@ -243,12 +241,12 @@ export default function MyTicketsPage() {
 
                   <span
                     className={`ticket-status ${
-                      ticket.isCheckedIn
+                      ticket.cancelled ? 'ticket-status-cancelled' : ticket.isCheckedIn
                         ? 'ticket-status-checked-in'
                         : 'ticket-status-valid'
                     }`}
                   >
-                    {ticket.isCheckedIn
+                    {ticket.cancelled ? 'ยกเลิกแล้ว' : ticket.isCheckedIn
                       ? 'เช็กอินแล้ว'
                       : 'ลงทะเบียนแล้ว'}
                   </span>
@@ -315,7 +313,11 @@ export default function MyTicketsPage() {
                     }
                   }}
                 >
-                  {ticket.isCheckedIn ? (
+                  {ticket.cancelled ? (
+                    <div className="ticket-qr-unavailable">
+                      {ticket.cancelReason || 'บัตรนี้ถูกยกเลิกแล้ว'}
+                    </div>
+                  ) : ticket.isCheckedIn ? (
                     <div className="ticket-qr-unavailable">
                       <div
                         className="ticket-checked-in-icon"

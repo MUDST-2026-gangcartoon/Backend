@@ -19,8 +19,11 @@ export const mockPaymentService = {
       `/payments/mock/${encodeURIComponent(paymentId)}`
     ),
 
-  getHistory: () =>
-    apiClient.get('/payments/mock/history'),
+  getHistory: (page = 0, status = 'ALL') =>
+    apiClient.get('/payments/mock/history?' + new URLSearchParams({ page, status })),
+
+  resume: (paymentId) =>
+    apiClient.get('/payments/mock/' + encodeURIComponent(paymentId) + '/resume'),
 
   cancel: (paymentId) =>
     apiClient.post(

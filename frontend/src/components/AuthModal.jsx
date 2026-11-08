@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 export default function AuthModal() {
   const {
     modal,
+    authReturnTo,
     closeModal,
     openModal,
     login,
@@ -32,6 +33,9 @@ export default function AuthModal() {
       navigate('/admin/dashboard');
     } else if (role === 'staff') {
       navigate('/staff/checkin');
+    } else if (role === 'user' && authReturnTo) {
+      const { pathname, search, hash, state } = authReturnTo;
+      navigate({ pathname, search, hash }, { state, replace: true });
     } else {
       navigate('/');
     }
@@ -107,7 +111,7 @@ export default function AuthModal() {
   const switchModal = (type) => {
     setLoginError('');
     setRegisterError('');
-    openModal(type);
+    openModal(type, authReturnTo);
   };
 
   return (

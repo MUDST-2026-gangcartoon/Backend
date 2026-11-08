@@ -39,6 +39,7 @@
 .reg-right-actions { display: flex; flex: 0 0 190px; flex-direction: column; align-items: stretch; gap: 10px; }
 .status-pill { display: inline-flex; align-self: flex-end; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; line-height: 1.4; white-space: nowrap; }
 .status-pill.success { color: #065f46; background: #d1fae5; }
+.status-pill.cancelled { color: #991b1b; background: #fee2e2; }
 .status-pill.checked { color: #3f6212; background: #ecfccb; }
 .btn-view-ticket { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 16px; border: 1px solid var(--dark-blue); border-radius: 8px; background: var(--dark-blue); color: #fff; font-size: 14px; font-weight: 700; text-align: center; text-decoration: none; transition: background-color .2s ease, transform .1s ease; }
 .btn-view-ticket:hover { background: #0369a1; color: #fff; }
