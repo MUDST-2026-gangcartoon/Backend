@@ -10,6 +10,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar.jsx';
 import BookingTools from '../components/BookingTools.jsx';
 import OperationsStats from '../components/OperationsStats.jsx';
+import ReportPanel from '../components/ReportPanel.jsx';
+import { bookingsToCsv, getAttendeeContact, normalizeBookings } from '../utils/bookingModel.js';
 import { MOCK_BOOKINGS, MOCK_CAPACITY, isMockMode } from '../data/mockBookings.js';
 import EventFilterBar, { Highlight } from '../components/EventFilterBar.jsx';
 import { useEventFilters } from '../hooks/useEventFilters.js';
@@ -20,7 +22,6 @@ import {
   sortEvents,
 } from '../utils/eventFilters.js';
 import {
-  attendeesToCsv,
   copyText,
   downloadTextFile,
   getUniqueEmails,
@@ -290,9 +291,10 @@ export default function AdminDashboardPage() {
   const extraText = useCallback(
     (event) =>
       (allAttendees[event.id] || [])
-        .map((a) =>
-          [a.name || a.attendeeName, a.email, a.ticketCode].join(' '),
-        )
+        .map((attendee) => {
+          const { name, email } = getAttendeeContact(attendee);
+          return [name, email, attendee.ticketCode].join(' ');
+        })
         .join(' '),
     [allAttendees],
   );
@@ -318,15 +320,15 @@ export default function AdminDashboardPage() {
     const found = [];
     events.forEach((event) => {
       (allAttendees[event.id] || []).forEach((a, index) => {
-        const name = a.name || a.attendeeName || '';
-        if (!matchesTokens([name, a.email, a.ticketCode].join(' '), filters.q)) {
+        const { name, email } = getAttendeeContact(a);
+        if (!matchesTokens([name, email, a.ticketCode].join(' '), filters.q)) {
           return;
         }
 
         found.push({
-          key: `${event.id}-${a.id ?? a.registrationId ?? index}`,
+          key: `${event.id}-${a.registrationId ?? a.ticketCode ?? index}`,
           name: name || 'ไม่ระบุชื่อ',
-          email: a.email || '',
+          email,
           eventId: event.id,
           eventName: event.title || event.name || '',
         });
@@ -385,7 +387,7 @@ export default function AdminDashboardPage() {
 
   // ---- เครื่องมือของอีเวนต์ที่เลือก ----
   const attendeeEmails = useMemo(
-    () => getUniqueEmails(attendees),
+    () => getUniqueEmails(attendees.map(getAttendeeContact)),
     [attendees],
   );
   const hasAttendees = attendees.length > 0 && !attendeesLoading;
@@ -403,7 +405,7 @@ export default function AdminDashboardPage() {
 
     downloadTextFile(
       `ผู้ลงทะเบียน-${safeFileName(title)}-${date}.csv`,
-      attendeesToCsv(attendees),
+      bookingsToCsv(normalizeBookings(attendees)),
     );
     showNote(`ส่งออกรายชื่อ ${attendees.length} รายการแล้ว`);
   };
@@ -725,6 +727,17 @@ export default function AdminDashboardPage() {
               )}
             </div>
           </article>
+          <article className="dashboard-chart-card">
+            <div className="dashboard-chart-header">
+              <div>
+                <div className="dashboard-chart-label">เริ่มจอง → ยืนยัน → เช็กอิน</div>
+                <h2>เส้นทางการจอง</h2>
+              </div>
+            </div>
+            <p className="dashboard-events-empty" role="status">
+              ยังไม่มีข้อมูลการเริ่มจองและการจองที่ไม่สำเร็จสำหรับรายงานนี้
+            </p>
+          </article>
         </section>
 
         <section className="dashboard-events" aria-busy={isLoading}>
@@ -789,7 +802,7 @@ export default function AdminDashboardPage() {
                       onClick={handleExportCsv}
                       disabled={!hasAttendees}
                     >
-                      <Icon name="download" /> ส่งออก CSV
+                      <Icon name="download" /> ส่งออก CSV ทั้งกิจกรรม
                     </button>
                     <button
                       type="button"
@@ -929,8 +942,15 @@ export default function AdminDashboardPage() {
                 </p>
               </div>
 
-              {isMockMode() && (
+              {isMockMode() ? (
                 <p className="bt-mock-note">โหมดข้อมูลจำลอง (?mock=1) — ไม่ใช่ข้อมูลจริง</p>
+              ) : (
+                <ReportPanel
+                  key={selectedEventId}
+                  eventId={selectedEventId}
+                  eventEnded={selectedEvent.status === 'ENDED'}
+                  refreshKey={attendeesReload}
+                />
               )}
               <BookingTools
                 key={`${selectedEventId}-${focusPerson}`}
@@ -939,6 +959,7 @@ export default function AdminDashboardPage() {
                 capacity={
                   isMockMode() ? MOCK_CAPACITY : toNumber(selectedEvent.capacity)
                 }
+                showSummary={isMockMode()}
                 bookings={isMockMode() ? MOCK_BOOKINGS : attendees}
                 loading={isMockMode() ? false : attendeesLoading}
                 error={isMockMode() ? '' : attendeesError}

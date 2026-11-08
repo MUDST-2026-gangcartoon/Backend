@@ -1,12 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { eventService } from '../api/eventService.js';
 import { useLiveRefresh } from '../hooks/useLiveRefresh.js';
+import { getAttendanceMetrics, reportCount } from '../utils/attendanceMetrics.js';
 import './booking-tools.css';
-
-const num = (value) => {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-};
 
 // ภาพรวมการดำเนินงานจาก GET /api/admin/analytics/operations
 // ถือสิทธิ์ใช้ participants; ยังไม่เช็กอิน = participants − checkedIn
@@ -45,36 +41,42 @@ export default function OperationsStats() {
     );
   }
 
-  if (!stats) return null;
+  if (!stats) return <p className="bt-mock-note" role="status">ยังไม่มีข้อมูลการดำเนินงาน</p>;
 
-  const participants = num(stats.participants);
-  const checkedIn = num(stats.checkedIn);
-
+  const { activeOrders, activeSeats, checkedInSeats, notCheckedInSeats, showRate } = getAttendanceMetrics(stats);
   const tiles = [
-    { key: 'orders', label: 'รายการทั้งหมด', value: num(stats.orders), sub: 'รวมที่ยกเลิก' },
-    { key: 'people', label: 'ผู้ถือสิทธิ์ (คน)', value: participants, tone: 'accent' },
-    { key: 'in', label: 'เช็กอินแล้ว (คน)', value: checkedIn },
-    { key: 'not', label: 'ยังไม่เช็กอิน (คน)', value: Math.max(participants - checkedIn, 0) },
-    { key: 'cancel', label: 'รายการยกเลิก', value: num(stats.cancelledOrders) },
+    { key: 'orders', label: 'รายการจองที่ถือสิทธิ์', value: activeOrders },
+    { key: 'people', label: 'ที่นั่งที่ถือสิทธิ์', value: activeSeats, tone: 'accent' },
+    { key: 'in', label: 'เช็กอินแล้ว (ที่นั่ง)', value: checkedInSeats },
+    { key: 'not', label: 'ยังไม่เช็กอิน (ที่นั่ง)', value: notCheckedInSeats },
+    { key: 'cancel', label: 'รายการยกเลิก', value: reportCount(stats.cancelledOrders) },
+    { key: 'show', label: 'Show rate', value: showRate, sub: 'ที่นั่งที่เช็กอิน ÷ ที่นั่งที่ถือสิทธิ์' },
   ];
 
   return (
     <section className="bt-summary-wrap dashboard-operations" aria-label="สถิติการดำเนินงาน">
       <h3>การดำเนินงานทุกกิจกรรม</h3>
+      <p className="bt-mock-note">ข้อมูลรวมทุกช่วงเวลา</p>
+      {error && (
+        <p className="bt-mock-note" role="alert">
+          อัปเดตสถิติไม่สำเร็จ กำลังแสดงข้อมูลล่าสุดที่โหลดได้{' '}
+          <button type="button" onClick={() => load()}>ลองอีกครั้ง</button>
+        </p>
+      )}
       <div className="bt-summary">
         {tiles.map((tile) => (
           <div key={tile.key} className={`bt-tile${tile.tone ? ` ${tile.tone}` : ''}`}>
             <span>{tile.label}</span>
-            <strong>{tile.value}</strong>
+            <strong>{tile.value ?? 'N/A'}</strong>
             {tile.sub && <small>{tile.sub}</small>}
           </div>
         ))}
       </div>
       <div className="bt-sources" aria-label="ช่องทางเช็กอิน">
-        <span className="bt-sources-title">ช่องทางเช็กอิน (คน)</span>
-        <span className="bt-src staff">เจ้าหน้าที่ <b>{num(stats.staffCheckedIn)}</b></span>
-        <span className="bt-src online">ออนไลน์ผ่านเว็บ <b>{num(stats.onlineCheckedIn)}</b></span>
-        <span className="bt-src unknown">ไม่ทราบที่มา <b>{num(stats.unknownCheckedIn)}</b></span>
+        <span className="bt-sources-title">ช่องทางเช็กอิน (ที่นั่ง)</span>
+        <span className="bt-src staff">เจ้าหน้าที่ <b>{reportCount(stats.staffCheckedIn) ?? '—'}</b></span>
+        <span className="bt-src online">ออนไลน์ผ่านเว็บ <b>{reportCount(stats.onlineCheckedIn) ?? '—'}</b></span>
+        <span className="bt-src unknown">ไม่ทราบที่มา <b>{reportCount(stats.unknownCheckedIn) ?? '—'}</b></span>
       </div>
     </section>
   );

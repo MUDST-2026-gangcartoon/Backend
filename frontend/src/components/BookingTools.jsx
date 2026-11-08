@@ -18,9 +18,9 @@ import './booking-tools.css';
 export function BookingSummary({ summary }) {
   const tiles = [
     { key: 'bookings', label: 'รายการถือสิทธิ์', value: summary.bookings, tone: 'accent' },
-    { key: 'people', label: 'จำนวนคน', value: summary.people },
-    { key: 'in', label: 'เช็กอินแล้ว (คน)', value: summary.checkedInPeople },
-    { key: 'pending', label: 'ยังไม่มา (คน)', value: summary.pendingPeople },
+    { key: 'people', label: 'ที่นั่งที่ถือสิทธิ์', value: summary.people },
+    { key: 'in', label: 'เช็กอินแล้ว (ที่นั่ง)', value: summary.checkedInPeople },
+    { key: 'pending', label: 'ยังไม่เช็กอิน (ที่นั่ง)', value: summary.pendingPeople },
     {
       key: 'cancel',
       label: 'ยกเลิก',
@@ -68,6 +68,9 @@ function BookingRow({ row, onPickCode }) {
           {row.isGroup && <span className="bt-group">กลุ่ม {row.people} คน</span>}
         </div>
         {row.email && <div className="bt-sub">{row.email}</div>}
+        {(row.origin || row.claimStatus) && (
+          <div className="bt-sub">{[row.origin, row.claimStatus].filter(Boolean).join(' · ')}</div>
+        )}
         {row.ticketType && <div className="bt-sub">{row.ticketType}</div>}
 
         {row.codes.length > 0 && (
