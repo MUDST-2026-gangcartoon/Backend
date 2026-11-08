@@ -4,24 +4,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import { eventService } from '../../api/eventService';
 import './UpcomingEventsPage.css';
+import { EVENT_CATEGORY_LABELS, EVENT_STATUS_LABELS, EVENT_TIME_ZONE, parseEventDateTime } from './eventDisplay';
 
 const PAGE_SIZE = 20;
 
-const categories = [
-  'ทุกความสนใจ',
-  'เทคโนโลยี',
-  'ออกแบบ',
-  'อาชีพ',
-  'คอมมูนิตี้',
-];
-
-const categoryValues = [
-  'ALL',
-  'TECH',
-  'DESIGN',
-  'CAREER',
-  'COMMUNITY',
-];
+const categoryValues = ['ALL', ...Object.keys(EVENT_CATEGORY_LABELS)];
+const categories = ['ทุกความสนใจ', ...Object.values(EVENT_CATEGORY_LABELS)];
 
 const bannerBackgrounds = {
   DESIGN: 'linear-gradient(135deg, #1e1b4b 0%, #311b92 100%)',
@@ -37,19 +25,12 @@ const getStatusLabel = (event) => {
 
   const status = String(event.status || '').toUpperCase();
 
-  const labels = {
-    OPEN: 'เปิดรับลงทะเบียน',
-    FULL: 'เต็มแล้ว',
-    ENDED: 'สิ้นสุดแล้ว',
-    REGISTERED: 'ลงทะเบียนแล้ว',
-  };
-
-  return labels[status] || event.status || 'ไม่ระบุสถานะ';
+  return EVENT_STATUS_LABELS[status] || 'ไม่ระบุสถานะ';
 };
 
 const mapEvent = (item) => {
-  const date = item.startsAt ? new Date(item.startsAt) : null;
-  const validDate = date && !Number.isNaN(date.getTime());
+  const date = parseEventDateTime(item.startsAt);
+  const validDate = !Number.isNaN(date.getTime());
   const categoryCode = String(item.category || '').toUpperCase();
 
   return {
@@ -60,16 +41,16 @@ const mapEvent = (item) => {
       'linear-gradient(135deg, #334155 0%, #64748b 100%)',
     bannerText: item.title || '',
     month: validDate
-      ? date.toLocaleDateString('th-TH', { month: 'short' })
+      ? date.toLocaleDateString('th-TH', { month: 'short', timeZone: EVENT_TIME_ZONE })
       : '-',
     day: validDate
-      ? date.toLocaleDateString('th-TH', { day: 'numeric' })
+      ? date.toLocaleDateString('th-TH', { day: 'numeric', timeZone: EVENT_TIME_ZONE })
       : '-',
     time: validDate
       ? date.toLocaleTimeString('th-TH', {
           hour: '2-digit',
           minute: '2-digit',
-          hour12: false,
+          hour12: false, timeZone: EVENT_TIME_ZONE,
         })
       : '-',
     description: item.description || '',

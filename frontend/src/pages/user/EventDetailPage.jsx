@@ -1,24 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import { eventService } from '../../api/eventService';
 import { registrationService } from '../../api/registrationService';
 import '../../EventDetailPage.css';
 import QRCode from 'qrcode';
 import { mockPaymentService } from '../../api/mockPaymentService';
-import { useLocation } from 'react-router-dom';
-
-const categoryLabels = {
-  TECH: 'เทคโนโลยี',
-  DESIGN: 'ออกแบบ',
-  CAREER: 'อาชีพ',
-  COMMUNITY: 'คอมมูนิตี้',
-};
+import { useAuth } from '../../context/AuthContext';
+import { EVENT_CATEGORY_LABELS, EVENT_STATUS_LABELS, EVENT_TIME_ZONE, parseEventDateTime } from './eventDisplay';
 
 const formatDateTime = (value) => {
   if (!value) return '-';
 
-  const date = new Date(value);
+  const date = parseEventDateTime(value);
 
   if (Number.isNaN(date.getTime())) {
     return value;
@@ -28,15 +22,17 @@ const formatDateTime = (value) => {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    timeZone: EVENT_TIME_ZONE,
   });
 
   const timeText = date.toLocaleTimeString('th-TH', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
+    timeZone: EVENT_TIME_ZONE,
   });
 
-  return `${dateText} • ${timeText}`;
+  return `${dateText} • ${timeText} น. (เวลาไทย)`;
 };
 
 const formatMoney = (value) =>
@@ -98,13 +94,17 @@ const getErrorMessage = (error) => {
   return message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
 };
 
+const canBuyTicket = (ticket) => ticket.salesEnabled !== false && Number(ticket.remaining) > 0;
+
 export default function EventDetailPage() {
   const navigate = useNavigate();
   const { eventId } = useParams();
   const location = useLocation();
+  const { isLoggedIn, openModal } = useAuth();
 
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
   const [loadError, setLoadError] = useState('');
 
   const [selectedTicketId, setSelectedTicketId] = useState(null);
@@ -150,7 +150,7 @@ export default function EventDetailPage() {
           ? data.ticketTypes
           : [];
 
-        setSelectedTicketId(loadedTickets[0]?.id ?? null);
+        setSelectedTicketId(loadedTickets.find(canBuyTicket)?.id ?? null);
       } catch (error) {
         if (!cancelled) {
           setLoadError(
@@ -169,13 +169,14 @@ export default function EventDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [eventId, location.state?.resumePaymentId]);
+  }, [eventId, reloadKey]);
 
   // กู้คืนรายการชำระเงินที่ค้างอยู่เมื่อรีเฟรชหน้า
   useEffect(() => {
     let cancelled = false;
 
     const restorePendingPayment = async () => {
+      if (!isLoggedIn) return;
       const storageKey = `mock-payment:${eventId}`;
 
       try {
@@ -206,7 +207,7 @@ export default function EventDetailPage() {
 
         const notExpired =
           order.expiresAt &&
-          new Date(order.expiresAt).getTime() > Date.now();
+          parseEventDateTime(order.expiresAt).getTime() > Date.now();
 
         if (paymentStatus === 'PENDING_PAYMENT' && notExpired) {
           setPaymentOrder(order);
@@ -225,7 +226,7 @@ export default function EventDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [eventId, isLoggedIn, location.state?.resumePaymentId]);
 
   // สร้าง QR จาก payload
   useEffect(() => {
@@ -268,7 +269,7 @@ export default function EventDetailPage() {
     }
 
     const updateRemaining = () => {
-      const expiry = new Date(paymentOrder.expiresAt).getTime();
+      const expiry = parseEventDateTime(paymentOrder.expiresAt).getTime();
       const seconds = Math.max(
         0,
         Math.ceil((expiry - Date.now()) / 1000)
@@ -284,6 +285,27 @@ export default function EventDetailPage() {
     return () => window.clearInterval(timer);
   }, [paymentOrder]);
 
+  const resumeBooking = location.state?.resumeBooking;
+  useEffect(() => {
+    if (!isLoggedIn || !eventData || !resumeBooking) return;
+    const { resumeBooking: intent, ...state } = location.state;
+    navigate({ pathname: location.pathname, search: location.search, hash: location.hash }, {
+      replace: true,
+      state,
+    });
+
+    const availableTickets = (eventData.ticketTypes ?? []).filter(canBuyTicket);
+    const ticket = availableTickets.find((item) => String(item.id) === String(intent.ticketId));
+    const eventSeats = Number(eventData.spotsLeft);
+    if (ticket) {
+      setSelectedTicketId(ticket.id);
+      setQty(Math.max(1, Math.min(10, intent.quantity, Number(ticket.remaining), eventSeats)));
+    }
+    if (eventData.status === 'OPEN' && !eventData.registered && eventSeats > 0 && availableTickets.length) {
+      setActiveModal((current) => current ?? 'booking');
+    }
+  }, [eventData, isLoggedIn, location, navigate, resumeBooking]);
+
   const tickets = Array.isArray(eventData?.ticketTypes)
     ? eventData.ticketTypes
     : [];
@@ -291,7 +313,7 @@ export default function EventDetailPage() {
   const selectedTicket =
     tickets.find(
       (ticket) => String(ticket.id) === String(selectedTicketId)
-    ) ?? tickets[0] ?? null;
+    ) ?? tickets.find(canBuyTicket) ?? tickets[0] ?? null;
 
   const totalPrice = Number(selectedTicket?.price ?? 0) * qty;
 
@@ -299,36 +321,30 @@ export default function EventDetailPage() {
     ? Number(selectedTicket.remaining ?? 0)
     : 0;
 
-  const maxQty = Math.min(10, Math.max(0, ticketRemaining));
-
   const status = String(eventData?.status || '').toUpperCase();
-
-  // ป้องกันการลงทะเบียนเมื่อถึงหรือเลยเวลาเริ่มกิจกรรม
-  const startsAtTime = eventData?.startsAt
-    ? new Date(eventData.startsAt).getTime()
-    : NaN;
-
-  const hasStarted =
-    Number.isFinite(startsAtTime) &&
-    startsAtTime <= Date.now();
-
   const spotsLeft = Number(eventData?.spotsLeft ?? 0);
-
-  const eventUnavailable =
-    ['FULL', 'ENDED'].includes(status) ||
-    spotsLeft <= 0 ||
-    hasStarted;
+  const maxQty = Math.max(0, Math.min(10, ticketRemaining, spotsLeft));
+  const eventUnavailable = status !== 'OPEN' || spotsLeft <= 0;
+  const canChooseTicket = tickets.some(canBuyTicket);
 
   const alreadyRegistered = Boolean(eventData?.registered);
 
   const canRegister =
-    Boolean(selectedTicket) &&
-    ticketRemaining > 0 &&
+    canChooseTicket &&
     !eventUnavailable &&
     !alreadyRegistered;
 
   const handleRegisterClick = () => {
     if (!canRegister) return;
+    if (!isLoggedIn) {
+      openModal('login', {
+        pathname: location.pathname,
+        search: location.search,
+        hash: location.hash,
+        state: { resumeBooking: { ticketId: selectedTicket?.id, quantity: qty } },
+      });
+      return;
+    }
 
     // ถ้ามีรายการชำระเงินที่ยังไม่หมดอายุ ให้เปิดกลับมาแทนการสร้างใหม่
     if (paymentOrder && remainingSeconds > 0) {
@@ -357,26 +373,14 @@ export default function EventDetailPage() {
   const handleConfirmBooking = async () => {
     if (!selectedTicket || submitting) return;
 
-    const currentStartsAt = eventData?.startsAt
-      ? new Date(eventData.startsAt).getTime()
-      : NaN;
-
-    const hasEventStarted =
-      Number.isFinite(currentStartsAt) &&
-      currentStartsAt <= Date.now();
-
-    if (
-      ['FULL', 'ENDED'].includes(status) ||
-      Number(eventData?.spotsLeft ?? 0) <= 0 ||
-      hasEventStarted
-    ) {
+    if (!isLoggedIn || eventUnavailable || alreadyRegistered) {
       setRegisterError(
         'กิจกรรมเริ่มแล้วหรือปิดรับลงทะเบียน ไม่สามารถลงทะเบียนได้'
       );
       return;
     }
 
-    if (qty < 1 || qty > maxQty) {
+    if (!canBuyTicket(selectedTicket) || qty < 1 || qty > maxQty) {
       setRegisterError('จำนวนบัตรไม่ถูกต้องหรือบัตรมีไม่เพียงพอ');
       return;
     }
@@ -529,9 +533,12 @@ export default function EventDetailPage() {
       <>
         <Navbar />
         <div style={{ textAlign: 'center', margin: '100px 20px' }}>
-          <p style={{ color: '#dc2626' }}>
+          <p role="alert" style={{ color: '#dc2626' }}>
             {loadError || 'ไม่พบข้อมูลอีเวนต์'}
           </p>
+          <button type="button" className="btn-back" onClick={() => setReloadKey((key) => key + 1)}>
+            ลองโหลดอีกครั้ง
+          </button>
           <button className="btn-back" onClick={() => navigate(-1)}>
             ← กลับไปดูอีเวนต์
           </button>
@@ -547,24 +554,6 @@ export default function EventDetailPage() {
 
   const registeredCount = Number(eventData.registeredCount ?? 0);
   const capacity = Number(eventData.capacity ?? 0);
-
-  const statusLabels = {
-    OPEN: 'เปิดรับลงทะเบียน',
-    FULL: 'เต็มแล้ว',
-    ENDED: 'สิ้นสุดแล้ว',
-    REGISTERED: 'ลงทะเบียนแล้ว',
-  };
-
-  // ข้อความสถานะที่แสดงบนหน้า User
-  const displayStatus = hasStarted
-    ? 'ENDED'
-    : status === 'OPEN' && spotsLeft > 0
-      ? 'OPEN'
-      : status === 'ENDED'
-        ? 'ENDED'
-        : spotsLeft <= 0 || status === 'FULL'
-          ? 'FULL'
-          : status;
 
   const ticketCode = registrationResult?.ticketCode;
   const registrationId = registrationResult?.id;
@@ -583,7 +572,7 @@ export default function EventDetailPage() {
         <div className="event-content-wrapper">
           <div className="event-main-content">
             <div className="section-subtitle theme-text">
-              {categoryLabels[
+              {EVENT_CATEGORY_LABELS[
                 String(eventData.category || '').toUpperCase()
               ] || eventData.category || 'อีเวนต์'}
             </div>
@@ -591,7 +580,7 @@ export default function EventDetailPage() {
             <h1 className="event-title">{eventData.title}</h1>
 
             {eventData.status && (
-              <p>สถานะ: {statusLabels[displayStatus] || eventData.status}</p>
+              <p>สถานะ: {EVENT_STATUS_LABELS[status] || 'ไม่ระบุสถานะ'}</p>
             )}
 
             <div className="info-row">
@@ -767,15 +756,16 @@ export default function EventDetailPage() {
                 {alreadyRegistered
                   ? 'ลงทะเบียนแล้ว'
                   : eventUnavailable
-                    ? displayStatus === 'ENDED'
-                      ? 'กิจกรรมสิ้นสุดแล้ว'
-                      : 'ปิดรับลงทะเบียน'
-                    : !selectedTicket
+                    ? EVENT_STATUS_LABELS[status] || 'ปิดรับลงทะเบียน'
+                    : !tickets.length
                       ? 'ไม่มีประเภทบัตร'
-                      : ticketRemaining <= 0
-                        ? 'บัตรหมด'
-                        : 'ลงทะเบียน →'}
+                      : !canChooseTicket
+                        ? 'ไม่มีบัตรที่เปิดขาย'
+                        : isLoggedIn ? 'ลงทะเบียน →' : 'เข้าสู่ระบบเพื่อลงทะเบียน'}
               </button>
+              {!isLoggedIn && canRegister && (
+                <p className="ticket-reg">ขณะนี้การลงทะเบียนรองรับบัญชีสมาชิก</p>
+              )}
             </div>
           </div>
         </div>
@@ -810,6 +800,7 @@ export default function EventDetailPage() {
                     String(selectedTicket?.id) === String(ticket.id);
 
                   const remaining = Number(ticket.remaining ?? 0);
+                  const available = canBuyTicket(ticket);
 
                   return (
                     <button
@@ -818,7 +809,7 @@ export default function EventDetailPage() {
                       className={`modal-ticket-card ${
                         isSelected ? 'active' : ''
                       }`}
-                      disabled={remaining <= 0 || submitting}
+                      disabled={!available || submitting}
                       onClick={() => {
                         setSelectedTicketId(ticket.id);
                         setQty(1);
@@ -827,8 +818,8 @@ export default function EventDetailPage() {
                       style={{
                         width: '100%',
                         textAlign: 'left',
-                        cursor: remaining > 0 ? 'pointer' : 'not-allowed',
-                        opacity: remaining > 0 ? 1 : 0.55,
+                        cursor: available ? 'pointer' : 'not-allowed',
+                        opacity: available ? 1 : 0.55,
                       }}
                     >
                       <div>
@@ -837,7 +828,7 @@ export default function EventDetailPage() {
                           {ticket.description || ''}
                         </div>
                         <div className="t-desc">
-                          {remaining > 0 ? `เหลือ ${remaining} ใบ` : 'บัตรหมด'}
+                          {ticket.salesEnabled === false ? 'ปิดขายชั่วคราว' : remaining > 0 ? `เหลือ ${remaining} ใบ` : 'บัตรหมด'}
                         </div>
                       </div>
 
@@ -918,6 +909,8 @@ export default function EventDetailPage() {
                 disabled={
                   submitting ||
                   !selectedTicket ||
+                  !canBuyTicket(selectedTicket) ||
+                  alreadyRegistered ||
                   qty > maxQty ||
                   eventUnavailable
                 }
