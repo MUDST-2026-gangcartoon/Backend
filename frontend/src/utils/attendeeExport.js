@@ -28,9 +28,9 @@ function formatDateTime(value) {
 }
 
 // กันสูตรใน Excel/Sheets (ค่าที่ขึ้นต้นด้วย = + - @) และครอบด้วย "" พร้อมescape
-function csvCell(value) {
+export function csvCell(value) {
   let text = String(value ?? '');
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  if (/^(?:\s*[=+\-@]|[\t\r\n])/.test(text)) text = `'${text}`;
   return `"${text.replace(/"/g, '""')}"`;
 }
 

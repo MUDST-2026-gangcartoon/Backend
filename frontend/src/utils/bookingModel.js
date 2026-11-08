@@ -1,3 +1,5 @@
+import { csvCell } from './attendeeExport.js';
+
 // โมเดลกลางของ "รายการจอง" ใช้ร่วมกันทั้ง Drawer ผู้เข้าร่วม, Dashboard และหน้าเช็กอินของสตาฟ
 // รองรับข้อมูลเก่าที่ยังไม่มี ที่มาของการเช็กอิน / สถานะยกเลิก / จำนวนคนต่อรายการ
 
@@ -68,6 +70,14 @@ function isCheckedIn(raw) {
   );
 }
 
+export function getAttendeeContact(raw) {
+  const snapshot = raw?.contactSnapshot;
+  return {
+    name: toText(snapshot?.name ?? raw?.contactName) || toText(raw?.name ?? raw?.attendeeName ?? raw?.guestName),
+    email: toText(snapshot?.email ?? raw?.contactEmail) || toText(raw?.email ?? raw?.guestEmail),
+  };
+}
+
 export function normalizeBooking(raw, index = 0) {
   const people = Math.max(1, Number(raw?.quantity ?? raw?.people ?? raw?.seats) || 1);
   const cancelled = isCancelled(raw);
@@ -81,10 +91,17 @@ export function normalizeBooking(raw, index = 0) {
 
   const status = cancelled ? 'cancelled' : checkedIn ? 'checkedin' : 'pending';
 
+  const registrationId = raw?.registrationId ?? raw?.bookingId ?? null;
+  const { name, email } = getAttendeeContact(raw);
+  const origin = toText(raw?.origin).toUpperCase();
   return {
-    key: raw?.id ?? raw?.registrationId ?? raw?.bookingId ?? `${raw?.email || 'row'}-${index}`,
-    name: toText(raw?.name ?? raw?.attendeeName) || 'ไม่ระบุชื่อ',
-    email: toText(raw?.email),
+    // id ใน AttendeeDto เดิมเป็น userId และซ้ำได้เมื่อมีรายการเดิมที่ยกเลิก
+    key: registrationId ?? (mainCode || `row-${index}`),
+    registrationId,
+    name: name || 'ไม่ระบุชื่อ',
+    email,
+    origin: ['USER', 'GUEST'].includes(origin) ? origin : '',
+    claimStatus: toText(raw?.claimStatus),
     people,
     isGroup: people > 1,
     codes,
@@ -176,20 +193,16 @@ export function formatTimeOnly(value) {
   return `${date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.`;
 }
 
-// กันสูตรใน Excel/Sheets และ escape เครื่องหมายคำพูด
-function csvCell(value) {
-  let text = String(value ?? '');
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
 // CSV ตามตัวกรองที่ผู้ใช้เลือกอยู่ (ส่งแถวที่กรองแล้วเข้ามา)
 export function bookingsToCsv(rows) {
   const header = [
     'ลำดับ',
+    'รหัสรายการจอง',
     'ชื่อ',
     'อีเมล',
-    'จำนวนคน',
+    'ประเภทผู้จอง',
+    'สถานะผูกบัญชี',
+    'จำนวนที่นั่ง',
     'รหัสบัตร',
     'ประเภทบัตร',
     'สถานะ',
@@ -201,8 +214,11 @@ export function bookingsToCsv(rows) {
 
   const lines = rows.map((row, index) => [
     index + 1,
+    row.registrationId,
     row.name,
     row.email,
+    row.origin,
+    row.claimStatus,
     row.people,
     row.codes.join(' '),
     row.ticketType,
