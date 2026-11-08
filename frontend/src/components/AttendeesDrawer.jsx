@@ -40,9 +40,12 @@ export default function AttendeesDrawer({
           {mock && (
             <p className="bt-mock-note">โหมดข้อมูลจำลอง (?mock=1) — ไม่ใช่ข้อมูลจริง</p>
           )}
-          {!mock && <ReportPanel eventId={event.id} refreshKey={bookings.length} />}
+          {!mock && (
+            <ReportPanel key={event.id} eventId={event.id} eventEnded={event.status === 'ENDED'} refreshKey={bookings} />
+          )}
           <BookingTools
             bookings={bookings}
+            showSummary={mock}
             capacity={event.max}
             loading={loading}
             error={error}

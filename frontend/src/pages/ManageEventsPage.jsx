@@ -16,6 +16,7 @@ import EventFilterBar, { Highlight } from '../components/EventFilterBar.jsx';
 import { useEventFilters } from '../hooks/useEventFilters.js';
 import {
   applyEventFilters,
+  CATEGORY_META,
   getFacetCounts,
   sortEvents,
 } from '../utils/eventFilters.js';
@@ -41,23 +42,9 @@ const CATEGORY_ALIASES = {
   'ไลฟ์สไตล์': 'COMMUNITY',
 };
 
-const CATEGORY_LABEL = {
-  TECH: 'เทคโนโลยี',
-  DESIGN: 'ออกแบบ',
-  CAREER: 'อาชีพ',
-  COMMUNITY: 'ชุมชน',
-};
-
-const toApiCategory = (category) => {
+const readEventCategory = (category) => {
   const value = String(category ?? '').trim();
-  const normalized =
-    CATEGORY_ALIASES[value] || value.toUpperCase();
-
-  return ['TECH', 'DESIGN', 'CAREER', 'COMMUNITY'].includes(
-    normalized
-  )
-    ? normalized
-    : 'COMMUNITY';
+  return (Object.hasOwn(CATEGORY_ALIASES, value) ? CATEGORY_ALIASES[value] : value.toUpperCase()) || 'COMMUNITY';
 };
 
 const toLocalDateTime = (value) => {
@@ -95,7 +82,7 @@ const formatDate = (value) => {
 };
 
 const mapApiEvent = (event) => {
-  const category = toApiCategory(event.category);
+  const category = readEventCategory(event.category);
 
   return {
     ...event,
@@ -628,7 +615,7 @@ export default function ManageEventsPage() {
         location: place,
         startsAt,
         capacity,
-        category: toApiCategory(form.category),
+        category: form.category,
         imageUrl,
         detailImages: originalEvent?.detailImages || [],
         // ticketTypesForRequest มี salesEnabled อยู่แล้ว (map จาก saleOpen ใน form)
@@ -848,7 +835,7 @@ export default function ManageEventsPage() {
                                 <Highlight text={event.name} query={filters.q} />
                               </div>
                               <div className="ev-cat">
-                                {CATEGORY_LABEL[event.category] ||
+                                {(Object.hasOwn(CATEGORY_META, event.category) && CATEGORY_META[event.category].label) ||
                                   event.category}
                               </div>
                             </div>

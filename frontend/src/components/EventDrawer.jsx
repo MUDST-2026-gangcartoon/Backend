@@ -1,12 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Icon from './Icon.jsx';
-
-const CATEGORY_OPTIONS = [
-  { value: 'TECH', label: 'เทคโนโลยี' },
-  { value: 'DESIGN', label: 'ออกแบบ' },
-  { value: 'CAREER', label: 'อาชีพ' },
-  { value: 'COMMUNITY', label: 'ชุมชน' },
-];
+import { CATEGORY_META } from '../utils/eventFilters.js';
 
 const emptyForm = {
   id: null,
@@ -54,7 +48,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
         name: initialEvent.name || '',
         desc: initialEvent.desc || '',
         place: initialEvent.place || '',
-        category: initialEvent.category || 'TECH',
+        category: Object.hasOwn(CATEGORY_META, initialEvent.category) ? initialEvent.category : '',
         date: initialEvent.date || '',
         max: initialEvent.max || 30,
         coverIndex: initialEvent.coverIndex ?? 0,
@@ -129,6 +123,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
     if (!form.name.trim()) nextErrors.name = 'กรุณากรอกชื่ออีเวนต์';
     if (!isOnline && !form.place.trim()) nextErrors.place = 'กรุณากรอกสถานที่';
     if (!form.date) nextErrors.date = 'กรุณาเลือกวันและเวลา';
+    if (!Object.hasOwn(CATEGORY_META, form.category)) nextErrors.category = 'กรุณาเลือกหมวดหมู่ที่รองรับ';
 
     if (isOnline) {
       if (!form.onlineUrl.trim()) nextErrors.onlineUrl = 'กรุณากรอกลิงก์ห้องออนไลน์';
@@ -407,13 +402,13 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
             </div>
             <div className="field">
               <label htmlFor="ev-cat">หมวดหมู่</label>
-              <select id="ev-cat" value={form.category} onChange={set('category')}>
-                {CATEGORY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
+              <select id="ev-cat" value={form.category} onChange={set('category')} aria-invalid={Boolean(errors.category)}>
+                <option value="" disabled>เลือกหมวดหมู่</option>
+                {Object.entries(CATEGORY_META).map(([value, { label }]) => (
+                  <option key={value} value={value}>{label}</option>
                 ))}
               </select>
+              {errors.category && <small className="helper-text err">{errors.category}</small>}
             </div>
           </div>
 
