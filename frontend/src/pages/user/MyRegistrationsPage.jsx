@@ -3,23 +3,25 @@ import { Link } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import { registrationService } from '../../api/registrationService';
 import './MyRegistrationsPage.css';
+import { EVENT_TIME_ZONE, parseEventDateTime } from './eventDisplay';
+import { getRegistrationItems, isCancelledRegistration } from './registrationDisplay';
 
 const formatEventDate = (dateString) => {
   if (!dateString) return { month: '-', day: '-' };
-  const date = new Date(dateString);
+  const date = parseEventDateTime(dateString);
   if (Number.isNaN(date.getTime())) return { month: '-', day: '-' };
   return {
-    month: new Intl.DateTimeFormat('th-TH', { month: 'short' }).format(date),
-    day: new Intl.DateTimeFormat('th-TH', { day: 'numeric' }).format(date),
+    month: new Intl.DateTimeFormat('th-TH', { month: 'short', timeZone: EVENT_TIME_ZONE }).format(date),
+    day: new Intl.DateTimeFormat('th-TH', { day: 'numeric', timeZone: EVENT_TIME_ZONE }).format(date),
   };
 };
 
 const formatEventTime = (dateString) => {
   if (!dateString) return 'ไม่ระบุเวลา';
-  const date = new Date(dateString);
+  const date = parseEventDateTime(dateString);
   if (Number.isNaN(date.getTime())) return 'ไม่ระบุเวลา';
   return `${new Intl.DateTimeFormat('th-TH', {
-    hour: '2-digit', minute: '2-digit', hour12: false,
+    hour: '2-digit', minute: '2-digit', hour12: false, timeZone: EVENT_TIME_ZONE,
   }).format(date)} น.`;
 };
 
@@ -31,12 +33,16 @@ const isTicketCheckedIn = (item) => Boolean(
   item?.checkedInAt || item?.checkInAt || item?.status === 'CHECKED_IN'
 );
 
-const getResponseItems = (response) => {
-  const payload = response?.data ?? response;
-  const items = Array.isArray(payload)
-    ? payload
-    : payload?.items ?? payload?.registrations ?? [];
-  return Array.isArray(items) ? items : [];
+const getCancellationBlock = (item, registrations) => {
+  if (isCancelledRegistration(item)) return item.cancelReason || 'ยกเลิกรายการแล้ว';
+  if (item?.event?.id == null || item.id == null) return 'ข้อมูลรายการลงทะเบียนไม่ครบ';
+  if (item.cancellable === false || isTicketCheckedIn(item)) {
+    return item.cancellationBlockedReason || 'รายการนี้ไม่สามารถยกเลิกได้';
+  }
+  const activeForEvent = registrations.filter((entry) =>
+    !isCancelledRegistration(entry) && String(entry.event?.id) === String(item.event.id)
+  );
+  return activeForEvent.length > 1 ? 'มีหลายรายการสำหรับกิจกรรมนี้ กรุณาติดต่อผู้จัดเพื่อยกเลิกรายการที่ถูกต้อง' : '';
 };
 
 const getLoadErrorMessage = (error) => {
@@ -74,7 +80,7 @@ export default function MyRegistrationsPage() {
     setErrorMessage('');
     try {
       const response = await registrationService.getMyRegistrations();
-      setRegistrations(getResponseItems(response));
+      setRegistrations(getRegistrationItems(response));
     } catch (error) {
       setErrorMessage(getLoadErrorMessage(error));
       setRegistrations([]);
@@ -90,7 +96,7 @@ export default function MyRegistrationsPage() {
       setErrorMessage('');
       try {
         const response = await registrationService.getMyRegistrations();
-        if (isMounted) setRegistrations(getResponseItems(response));
+        if (isMounted) setRegistrations(getRegistrationItems(response));
       } catch (error) {
         if (isMounted) {
           setErrorMessage(getLoadErrorMessage(error));
@@ -105,24 +111,16 @@ export default function MyRegistrationsPage() {
   }, []);
 
   const handleCancelRegistration = async (item) => {
-    const eventId = item?.event?.id;
-    const registrationId = item?.id ?? item?.ticketCode;
-    if (eventId == null || registrationId == null) {
-      setCancelError('ไม่พบข้อมูลอีเวนต์หรือรายการลงทะเบียนที่ต้องการยกเลิก');
+    const block = getCancellationBlock(item, registrations);
+    if (cancellingId != null) return;
+    if (block) {
+      setCancelError(block);
       setNoticeMessage('');
       return;
     }
 
-    // ตรวจใน UI เพื่อช่วยผู้ใช้เท่านั้น; Backend ต้องตรวจซ้ำเสมอ
-    const eventHasCheckedInRegistration = registrations.some((registration) =>
-      String(registration?.event?.id) === String(eventId) && isTicketCheckedIn(registration)
-    );
-    if (eventHasCheckedInRegistration) {
-      setCancelError('ไม่สามารถยกเลิกได้ เพราะมีรายการเช็กอินของอีเวนต์นี้แล้ว');
-      setNoticeMessage('');
-      return;
-    }
-
+    const eventId = item.event.id;
+    const registrationId = item.id;
     const confirmed = window.confirm(
       `คุณต้องการยกเลิกการลงทะเบียน "${item?.event?.title ?? 'อีเวนต์นี้'}" ใช่หรือไม่?`
     );
@@ -133,15 +131,15 @@ export default function MyRegistrationsPage() {
     setCancellingId(String(registrationId));
     try {
       await registrationService.cancelRegistration(eventId);
-      // Backend ลบด้วย userId + eventId จึงนำรายการทั้งหมดของอีเวนต์นี้ออก
-      setRegistrations((current) => current.filter(
-        (registration) => String(registration?.event?.id) !== String(eventId)
-      ));
+      await fetchRegistrations();
       setNoticeMessage('ยกเลิกการลงทะเบียนเรียบร้อยแล้ว');
     } catch (error) {
       setCancelError(getCancelErrorMessage(error));
-      // ถ้าข้อมูลเช็กอินเปลี่ยนระหว่างเปิดหน้า ให้ดึงสถานะล่าสุดจาก Backend
-      if (getHttpStatus(error) === 409) await fetchRegistrations();
+      // If the server may have accepted the request, refresh before the user can retry.
+      const status = getHttpStatus(error);
+      if (!status || status === 408 || status === 404 || status === 409 || status >= 500) {
+        await fetchRegistrations();
+      }
     } finally {
       setCancellingId(null);
     }
@@ -185,15 +183,12 @@ export default function MyRegistrationsPage() {
           ) : registrations.map((item) => {
             const event = item?.event ?? {};
             const eventDate = formatEventDate(event.startsAt);
-            const ticketId = item?.ticketCode || item?.id;
-            const registrationKey = String(item?.id ?? ticketId ?? `${event.id}-registration`);
-            const actionId = String(item?.id ?? item?.ticketCode ?? '');
-            const isCancelling = cancellingId === actionId;
-            const checkedIn = isTicketCheckedIn(item);
-            const eventHasCheckedInRegistration = registrations.some((registration) =>
-              String(registration?.event?.id) === String(event.id) && isTicketCheckedIn(registration)
-            );
-            const cancelLocked = eventHasCheckedInRegistration || event.id == null;
+            const registrationId = item?.id ?? item?.registrationId;
+            const registrationKey = String(registrationId ?? item?.ticketCode ?? event.id);
+            const isCancelling = cancellingId === String(registrationId);
+            const cancelled = isCancelledRegistration(item);
+            const checkedIn = !cancelled && isTicketCheckedIn(item);
+            const cancellationBlock = getCancellationBlock(item, registrations);
 
             return (
               <article key={registrationKey} className="registration-card">
@@ -221,25 +216,25 @@ export default function MyRegistrationsPage() {
                 </div>
 
                 <div className="reg-right-actions">
-                  <span className={`status-pill ${checkedIn ? 'checked' : 'success'}`}>
-                    {checkedIn ? 'เช็กอินแล้ว' : 'ลงทะเบียนสำเร็จ'}
+                  <span className={'status-pill ' + (cancelled ? 'cancelled' : checkedIn ? 'checked' : 'success')}>
+                    {cancelled ? 'ยกเลิกแล้ว' : checkedIn ? 'เช็กอินแล้ว' : 'ลงทะเบียนสำเร็จ'}
                   </span>
-                  {ticketId != null ? (
-                    <Link to={`/MyTicketsPage?ticketId=${encodeURIComponent(String(ticketId))}`} className="btn-view-ticket">
-                      ดูตั๋วของฉัน →
+                  {registrationId != null && (
+                    <Link to={'/MyTicketsPage?registrationId=' + encodeURIComponent(String(registrationId))} className="btn-view-ticket">
+                      ดูรายละเอียดบัตร →
                     </Link>
-                  ) : <span className="missing-ticket">ไม่มีรหัสตั๋ว</span>}
+                  )}
                   <div className="cancel-block">
                     <button
                       type="button"
                       className="btn-cancel-registration"
-                      disabled={isCancelling || cancelLocked}
+                      disabled={cancellingId != null || Boolean(cancellationBlock)}
                       onClick={() => handleCancelRegistration(item)}
                     >
-                      {cancelLocked ? 'ยกเลิกไม่ได้' : isCancelling ? 'กำลังยกเลิก...' : 'ยกเลิกการลงทะเบียน'}
+                      {cancellationBlock ? 'ยกเลิกไม่ได้' : isCancelling ? 'กำลังยกเลิก...' : 'ยกเลิกการลงทะเบียน'}
                     </button>
                     <span className="cancel-note">
-                      {cancelLocked ? 'อีเวนต์นี้มีรายการเช็กอินแล้ว หรือข้อมูลอีเวนต์ไม่ครบ' : 'ยกเลิกได้จนกว่าจะเช็กอิน'}
+                      {cancellationBlock || 'ยกเลิกได้ตามเงื่อนไขของกิจกรรม'}
                     </span>
                   </div>
                 </div>

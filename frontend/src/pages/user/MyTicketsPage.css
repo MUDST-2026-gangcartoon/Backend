@@ -328,6 +328,11 @@
   background: #DCFCE7;
 }
 
+.ticket-status-cancelled {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
 .ticket-status-checked-in {
   color: #1D4ED8;
   background: #DBEAFE;

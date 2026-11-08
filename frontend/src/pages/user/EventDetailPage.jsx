@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import { eventService } from '../../api/eventService';
@@ -8,6 +8,7 @@ import QRCode from 'qrcode';
 import { mockPaymentService } from '../../api/mockPaymentService';
 import { useAuth } from '../../context/AuthContext';
 import { EVENT_CATEGORY_LABELS, EVENT_STATUS_LABELS, EVENT_TIME_ZONE, parseEventDateTime } from './eventDisplay';
+import { getRegistrationItems, isCancelledRegistration } from './registrationDisplay';
 
 const formatDateTime = (value) => {
   if (!value) return '-';
@@ -80,12 +81,12 @@ const getErrorMessage = (error) => {
       return 'บัตรเต็มแล้ว กรุณาโหลดข้อมูลกิจกรรมใหม่';
     }
 
-    if (/already|duplicate|exist|ลงทะเบียนแล้ว|ซ้ำ/.test(normalized)) {
-      return 'คุณมีรายการลงทะเบียนสำหรับกิจกรรมนี้อยู่แล้ว';
-    }
-
     if (/pending|checkout|ชำระเงิน/.test(normalized)) {
       return 'มีรายการชำระเงินที่ยังดำเนินการไม่เสร็จ กรุณาตรวจสอบรายการเดิม';
+    }
+
+    if (/already|duplicate|exist|ลงทะเบียนแล้ว|ซ้ำ/.test(normalized)) {
+      return 'คุณมีรายการลงทะเบียนสำหรับกิจกรรมนี้อยู่แล้ว';
     }
 
     return message || 'ข้อมูลรายการเปลี่ยนแปลง กรุณาโหลดข้อมูลใหม่แล้วลองอีกครั้ง';
@@ -96,9 +97,37 @@ const getErrorMessage = (error) => {
 
 const canBuyTicket = (ticket) => ticket.salesEnabled !== false && Number(ticket.remaining) > 0;
 
+const isUncertainResult = (error) =>
+  !error?.status || error.status === 408 || error.status >= 500;
+
+async function findActiveRegistration(eventId, registrationId) {
+  const registrations = getRegistrationItems(await registrationService.getMyRegistrations());
+  return registrations.find((item) =>
+    !isCancelledRegistration(item) &&
+    String(item.event?.id) === String(eventId) &&
+    (registrationId == null || String(item.id) === String(registrationId))
+  );
+}
+
+async function findPendingPayment(eventId) {
+  for (let page = 0; ; page += 1) {
+    const result = await mockPaymentService.getHistory(page, 'PENDING_PAYMENT');
+    if (!Array.isArray(result?.items) || !Number.isInteger(result.totalPages)) {
+      throw new Error('ไม่สามารถตรวจสอบรายการรอชำระเงินได้');
+    }
+    const pending = result.items.find((item) => String(item.eventId) === String(eventId));
+    if (pending) return pending;
+    if (page + 1 >= result.totalPages) return null;
+  }
+}
+
 export default function EventDetailPage() {
-  const navigate = useNavigate();
   const { eventId } = useParams();
+  return <EventDetails key={eventId} eventId={eventId} />;
+}
+
+function EventDetails({ eventId }) {
+  const navigate = useNavigate();
   const location = useLocation();
   const { isLoggedIn, openModal } = useAuth();
 
@@ -116,12 +145,14 @@ export default function EventDetailPage() {
   const [activeModal, setActiveModal] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [registerError, setRegisterError] = useState('');
+  const [inventoryError, setInventoryError] = useState('');
+  const [paymentNeedsReview, setPaymentNeedsReview] = useState(false);
+  const busy = useRef(false);
   const [registrationResult, setRegistrationResult] = useState(null);
   const [paymentOrder, setPaymentOrder] = useState(null);
   const [paymentQr, setPaymentQr] = useState('');
   const [paymentError, setPaymentError] = useState('');
   const [remainingSeconds, setRemainingSeconds] = useState(0);
-  const [restoredPaymentStatus, setRestoredPaymentStatus] = useState('');
 
   // โหลดข้อมูลกิจกรรม
   useEffect(() => {
@@ -130,6 +161,7 @@ export default function EventDetailPage() {
     const loadEvent = async () => {
       setLoading(true);
       setLoadError('');
+      setInventoryError('');
       setEventData(null);
       setSelectedTicketId(null);
       setQty(1);
@@ -171,62 +203,29 @@ export default function EventDetailPage() {
     };
   }, [eventId, reloadKey]);
 
-  // กู้คืนรายการชำระเงินที่ค้างอยู่เมื่อรีเฟรชหน้า
+  // Resume by ID through the owner-checked API. The server returns the QR payload.
+  const resumePaymentId = location.state?.resumePaymentId;
+  const hasEventData = Boolean(eventData);
   useEffect(() => {
+    if (!isLoggedIn || !hasEventData || !resumePaymentId) return;
     let cancelled = false;
-
-    const restorePendingPayment = async () => {
-      if (!isLoggedIn) return;
-      const storageKey = `mock-payment:${eventId}`;
-
+    const resume = async () => {
       try {
-        const resumePaymentId = location.state?.resumePaymentId;
-        const saved = window.localStorage.getItem(storageKey);
-
-        let order = saved ? JSON.parse(saved) : null;
-
-        // ถ้ามาจากหน้าประวัติ ให้ใช้ paymentId ที่เลือก
-        if (
-          resumePaymentId &&
-          (!order || String(order.paymentId) !== String(resumePaymentId))
-        ) {
-          order = { paymentId: resumePaymentId };
-        }
-
-        if (!order?.paymentId) return;
-
-        const statusResult = await mockPaymentService.getStatus(
-          order.paymentId
-        );
-
+        const order = await mockPaymentService.resume(resumePaymentId);
         if (cancelled) return;
-
-        const paymentStatus = String(
-          statusResult?.status ?? ''
-        ).toUpperCase();
-
-        const notExpired =
-          order.expiresAt &&
-          parseEventDateTime(order.expiresAt).getTime() > Date.now();
-
-        if (paymentStatus === 'PENDING_PAYMENT' && notExpired) {
-          setPaymentOrder(order);
-          setPaymentError('');
-          setActiveModal('payment');
-        } else {
-          window.localStorage.removeItem(storageKey);
+        if (String(order.eventId) !== String(eventId)) {
+          throw new Error('รายการชำระเงินนี้ไม่ตรงกับกิจกรรมที่เปิดอยู่');
         }
-      } catch {
-        // ถ้าตรวจสอบสถานะไม่ได้ อย่าถือว่ารายการสำเร็จ
+        setPaymentOrder(order);
+        setPaymentError('');
+        setActiveModal('payment');
+      } catch (error) {
+        if (!cancelled) setRegisterError(getErrorMessage(error));
       }
     };
-
-    restorePendingPayment();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [eventId, isLoggedIn, location.state?.resumePaymentId]);
+    resume();
+    return () => { cancelled = true; };
+  }, [eventId, hasEventData, isLoggedIn, resumePaymentId]);
 
   // สร้าง QR จาก payload
   useEffect(() => {
@@ -326,6 +325,7 @@ export default function EventDetailPage() {
   const maxQty = Math.max(0, Math.min(10, ticketRemaining, spotsLeft));
   const eventUnavailable = status !== 'OPEN' || spotsLeft <= 0;
   const canChooseTicket = tickets.some(canBuyTicket);
+  const checkPaymentFirst = paymentNeedsReview || !(remainingSeconds > 0);
 
   const alreadyRegistered = Boolean(eventData?.registered);
 
@@ -335,7 +335,7 @@ export default function EventDetailPage() {
     !alreadyRegistered;
 
   const handleRegisterClick = () => {
-    if (!canRegister) return;
+    if (!canRegister || busy.current) return;
     if (!isLoggedIn) {
       openModal('login', {
         pathname: location.pathname,
@@ -362,7 +362,7 @@ export default function EventDetailPage() {
     setQty((current) => {
       const next = current + change;
 
-      if (next < 1 || next > maxQty) {
+      if (next < 1 || (change > 0 && next > maxQty)) {
         return current;
       }
 
@@ -370,150 +370,180 @@ export default function EventDetailPage() {
     });
   };
 
-  const handleConfirmBooking = async () => {
-    if (!selectedTicket || submitting) return;
-
-    if (!isLoggedIn || eventUnavailable || alreadyRegistered) {
-      setRegisterError(
-        'กิจกรรมเริ่มแล้วหรือปิดรับลงทะเบียน ไม่สามารถลงทะเบียนได้'
-      );
-      return;
+  const refreshInventory = async () => {
+    try {
+      const latest = await eventService.getEventById(eventId);
+      setEventData(latest);
+      setInventoryError('');
+      return latest;
+    } catch {
+      setInventoryError('ตรวจสอบจำนวนที่นั่งล่าสุดไม่ได้ กรุณาลองโหลดข้อมูลอีกครั้ง');
+      return null;
     }
+  };
 
-    if (!canBuyTicket(selectedTicket) || qty < 1 || qty > maxQty) {
-      setRegisterError('จำนวนบัตรไม่ถูกต้องหรือบัตรมีไม่เพียงพอ');
-      return;
-    }
+  const showRegistration = (registration) => {
+    setRegistrationResult(registration);
+    setPaymentOrder(null);
+    setPaymentQr('');
+    setPaymentNeedsReview(false);
+    setActiveModal('success');
+  };
 
+  const withBookingLock = async (action) => {
+    if (busy.current) return;
+    busy.current = true;
     setSubmitting(true);
+    try {
+      await action();
+    } finally {
+      busy.current = false;
+      setSubmitting(false);
+    }
+  };
+
+  const recoverPendingPayment = async () => {
+    const pending = await findPendingPayment(eventId);
+    if (!pending) return false;
+    const order = await mockPaymentService.resume(pending.paymentId);
+    setPaymentError('');
+    setPaymentNeedsReview(false);
+    setPaymentOrder(order);
+    setActiveModal('payment');
+    return true;
+  };
+
+  const handleConfirmBooking = () => withBookingLock(async () => {
+    if (!isLoggedIn || !selectedTicket) return;
     setRegisterError('');
 
+    const latest = await refreshInventory();
+    if (!latest) return;
+
+    const paid = Number(selectedTicket.price ?? 0) > 0;
     try {
-      // บัตรมีราคา: สร้างรายการชำระเงินก่อน
-      if (Number(selectedTicket.price ?? 0) > 0) {
-        const order = await mockPaymentService.checkout({
-          eventId: Number(eventId),
-          ticketTypeId: Number(selectedTicket.id),
-          quantity: qty,
-        });
+      // Check server state before re-sending a booking or checkout after a lost response.
+      if (latest.registered) {
+        const registration = await findActiveRegistration(eventId);
+        if (registration) showRegistration(registration);
+        else setRegisterError('คุณมีรายการลงทะเบียนอยู่แล้ว กรุณาตรวจสอบในประวัติ');
+        return;
+      }
+      if (paid && await recoverPendingPayment()) return;
 
-        setPaymentError('');
-        setPaymentOrder(order);
-        setActiveModal('payment');
-
-        // เก็บข้อมูลรายการไว้เพื่อกู้คืนได้เมื่อรีเฟรชหน้า
-        window.localStorage.setItem(
-          `mock-payment:${eventId}`,
-          JSON.stringify(order)
-        );
-
+      const latestTicket = (latest.ticketTypes ?? []).find((item) =>
+        String(item.id) === String(selectedTicket.id)
+      );
+      if (latest.status !== 'OPEN' || !latestTicket || !canBuyTicket(latestTicket)) {
+        setRegisterError('กิจกรรมหรือบัตรประเภทนี้ปิดรับลงทะเบียนแล้ว');
+        return;
+      }
+      const available = Math.min(10, Number(latestTicket.remaining), Number(latest.spotsLeft));
+      if (qty < 1 || qty > available) {
+        setRegisterError('จำนวนบัตรเกินที่ว่างล่าสุด กรุณาปรับจำนวนบัตร');
+        return;
+      }
+      if (Number(latestTicket.price) !== Number(selectedTicket.price)) {
+        setRegisterError('ราคาบัตรมีการเปลี่ยนแปลง กรุณาตรวจสอบราคาใหม่');
         return;
       }
 
-      // บัตรฟรี: ใช้ flow ลงทะเบียนเดิม
-      const result = await registrationService.registerForEvent(
-        eventId,
-        {
-          ticketTypeId: selectedTicket.id,
-          quantity: qty,
+      const payload = { ticketTypeId: latestTicket.id, quantity: qty };
+      if (paid) {
+        const order = await mockPaymentService.checkout({ eventId: Number(eventId), ...payload });
+        setPaymentError('');
+        setPaymentNeedsReview(false);
+        setPaymentOrder(order);
+        setActiveModal('payment');
+      } else {
+        showRegistration(await registrationService.registerForEvent(eventId, payload));
+      }
+      await refreshInventory();
+    } catch (error) {
+      if (isUncertainResult(error)) {
+        try {
+          const registration = await findActiveRegistration(eventId);
+          if (registration) {
+            showRegistration(registration);
+            await refreshInventory();
+            return;
+          }
+          if (paid && await recoverPendingPayment()) {
+            await refreshInventory();
+            return;
+          }
+        } catch {
+          // The next submission will recheck server state before sending any write.
         }
-      );
-
-      setRegistrationResult(result);
-      setActiveModal('success');
-
-      setEventData((previous) => {
-        if (!previous) return previous;
-
-        return {
-          ...previous,
-          registered: true,
-          registeredCount:
-            Number(previous.registeredCount ?? 0) + qty,
-          spotsLeft: Math.max(
-            0,
-            Number(previous.spotsLeft ?? 0) - qty
-          ),
-          ticketTypes: (previous.ticketTypes ?? []).map((ticket) =>
-            String(ticket.id) !== String(selectedTicket.id)
-              ? ticket
-              : {
-                  ...ticket,
-                  sold: Number(ticket.sold ?? 0) + qty,
-                  remaining: Math.max(
-                    0,
-                    Number(ticket.remaining ?? 0) - qty
-                  ),
-                }
-          ),
-        };
-      });
-    } catch (error) {
-      setRegisterError(getErrorMessage(error));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleConfirmPayment = async () => {
-    if (!paymentOrder?.paymentId || submitting) return;
-
-    setSubmitting(true);
-    setPaymentError('');
-
-    try {
-      const result = await mockPaymentService.confirm(
-        paymentOrder.paymentId
-      );
-
-      if (
-        String(result?.paymentStatus ?? '').toUpperCase() !==
-        'CONFIRMED'
-      ) {
-        throw new Error('backend ยังไม่ได้ยืนยันการชำระเงิน');
+        setRegisterError('ยังยืนยันผลไม่ได้ ระบบจะตรวจรายการเดิมก่อนดำเนินการครั้งถัดไป');
+      } else {
+        setRegisterError(getErrorMessage(error));
       }
-
-      // API คืนข้อมูลการลงทะเบียนไว้ใน result.registration
-      setRegistrationResult(result.registration ?? null);
-
-      window.localStorage.removeItem(`mock-payment:${eventId}`);
-
-      setPaymentOrder(null);
-      setPaymentQr('');
-      setActiveModal('success');
-
-      // โหลดข้อมูลกิจกรรมใหม่ เพื่อให้จำนวนบัตรอ้างอิง backend
-      try {
-        const updatedEvent = await eventService.getEventById(eventId);
-        setEventData(updatedEvent);
-      } catch {
-        // การยืนยันสำเร็จแล้ว ไม่ควรแสดงเป็นการชำระเงินล้มเหลว
-      }
-    } catch (error) {
-      setPaymentError(getErrorMessage(error));
-    } finally {
-      setSubmitting(false);
+      await refreshInventory();
     }
-  };
+  });
 
-  const handleCancelPayment = async () => {
-    if (!paymentOrder?.paymentId || submitting) return;
-
-    setSubmitting(true);
-    setPaymentError('');
-
-    try {
-      await mockPaymentService.cancel(paymentOrder.paymentId);
-
-      window.localStorage.removeItem(`mock-payment:${eventId}`);
-
+  const checkPaymentStatus = async (paymentId) => {
+    const result = await mockPaymentService.getStatus(paymentId);
+    if (result.status === 'CONFIRMED') {
+      const registration = await findActiveRegistration(eventId, result.registrationId).catch(() => null);
+      showRegistration(registration ?? { id: result.registrationId });
+    } else if (result.status === 'CANCELLED' || result.status === 'EXPIRED') {
       setPaymentOrder(null);
       setPaymentQr('');
       setActiveModal('booking');
+      setRegisterError(result.status === 'CANCELLED' ? 'รายการชำระเงินถูกยกเลิกแล้ว' : 'รายการชำระเงินหมดอายุแล้ว');
+    } else if (result.status !== 'PENDING_PAYMENT') {
+      throw new Error('ยังไม่ทราบสถานะของรายการชำระเงิน');
+    }
+    setPaymentNeedsReview(false);
+    await refreshInventory();
+    return result.status;
+  };
+
+  const handleConfirmPayment = () => withBookingLock(async () => {
+    if (!paymentOrder?.paymentId) return;
+    setPaymentError('');
+    try {
+      if (checkPaymentFirst) {
+        await checkPaymentStatus(paymentOrder.paymentId);
+        return;
+      }
+      const result = await mockPaymentService.confirm(paymentOrder.paymentId);
+      if (result.paymentStatus !== 'CONFIRMED') {
+        throw new Error('ยังไม่ได้รับการยืนยันการชำระเงิน');
+      }
+      showRegistration(result.registration);
+      await refreshInventory();
     } catch (error) {
-      setPaymentError(getErrorMessage(error));
-    } finally {
-      setSubmitting(false);
+      await reconcilePaymentError(error);
+    }
+  });
+
+  const handleCancelPayment = () => withBookingLock(async () => {
+    if (!paymentOrder?.paymentId) return;
+    setPaymentError('');
+    try {
+      await mockPaymentService.cancel(paymentOrder.paymentId);
+      setPaymentOrder(null);
+      setPaymentQr('');
+      setActiveModal('booking');
+      setPaymentNeedsReview(false);
+      await refreshInventory();
+    } catch (error) {
+      await reconcilePaymentError(error);
+    }
+  });
+
+  const reconcilePaymentError = async (error) => {
+    setPaymentError(getErrorMessage(error));
+    if (isUncertainResult(error) || error.status === 409) {
+      try {
+        await checkPaymentStatus(paymentOrder.paymentId);
+      } catch {
+        setPaymentNeedsReview(true);
+        setPaymentError('ตรวจสอบผลการชำระเงินไม่ได้ กรุณาตรวจสอบสถานะก่อนลองใหม่');
+      }
     }
   };
 
@@ -763,6 +793,13 @@ export default function EventDetailPage() {
                         ? 'ไม่มีบัตรที่เปิดขาย'
                         : isLoggedIn ? 'ลงทะเบียน →' : 'เข้าสู่ระบบเพื่อลงทะเบียน'}
               </button>
+              {!activeModal && registerError && <p role="alert">{registerError}</p>}
+              {!activeModal && inventoryError && (
+                <p role="alert">
+                  {inventoryError}{' '}
+                  <button type="button" onClick={refreshInventory}>ลองอีกครั้ง</button>
+                </p>
+              )}
               {!isLoggedIn && canRegister && (
                 <p className="ticket-reg">ขณะนี้การลงทะเบียนรองรับบัญชีสมาชิก</p>
               )}
@@ -883,6 +920,7 @@ export default function EventDetailPage() {
                 </p>
               )}
 
+              {inventoryError && <p role="alert">{inventoryError}</p>}
               {registerError && (
                 <p
                   role="alert"
@@ -1013,7 +1051,7 @@ export default function EventDetailPage() {
                 type="button"
                 className="btn-modal-confirm theme-bg"
                 onClick={handleConfirmPayment}
-                disabled={submitting || !paymentQr || remainingSeconds <= 0}
+                disabled={submitting || (!checkPaymentFirst && !paymentQr)}
                 style={{
                   width: '100%',
                   padding: 12,
@@ -1022,18 +1060,18 @@ export default function EventDetailPage() {
                   color: '#fff',
                   cursor: submitting ? 'wait' : 'pointer',
                   opacity:
-                    submitting || !paymentQr || remainingSeconds <= 0
+                    submitting || (!checkPaymentFirst && !paymentQr)
                       ? 0.6
                       : 1,
                 }}
               >
-                {submitting ? 'กำลังตรวจสอบ...' : 'ยืนยันการชำระเงิน (Demo)'}
+                {submitting ? 'กำลังตรวจสอบ...' : checkPaymentFirst ? 'ตรวจสอบสถานะ' : 'ยืนยันการชำระเงิน (Demo)'}
               </button>
 
               <button
                 type="button"
                 onClick={handleCancelPayment}
-                disabled={submitting}
+                disabled={submitting || paymentNeedsReview}
                 style={{
                   width: '100%',
                   padding: 12,
