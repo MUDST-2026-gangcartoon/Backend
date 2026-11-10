@@ -11,6 +11,7 @@ import AdminNavbar from '../components/AdminNavbar.jsx';
 import BookingTools from '../components/BookingTools.jsx';
 import OperationsStats from '../components/OperationsStats.jsx';
 import ReportPanel from '../components/ReportPanel.jsx';
+import FunnelReport from '../components/FunnelReport.jsx';
 import { bookingsToCsv, getAttendeeContact, normalizeBookings } from '../utils/bookingModel.js';
 import { MOCK_BOOKINGS, MOCK_CAPACITY, isMockMode } from '../data/mockBookings.js';
 import EventFilterBar, { Highlight } from '../components/EventFilterBar.jsx';
@@ -735,7 +736,7 @@ export default function AdminDashboardPage() {
               </div>
             </div>
             <p className="dashboard-events-empty" role="status">
-              ยังไม่มีข้อมูลการเริ่มจองและการจองที่ไม่สำเร็จสำหรับรายงานนี้
+              เลือกรายการกิจกรรมด้านล่างเพื่อดูรายงานขั้นตอนการลงทะเบียนแยก Guest และสมาชิก
             </p>
           </article>
         </section>
@@ -952,6 +953,7 @@ export default function AdminDashboardPage() {
                   refreshKey={attendeesReload}
                 />
               )}
+              {!isMockMode() && <FunnelReport key={`funnel-${selectedEventId}`} eventId={selectedEventId} />}
               <BookingTools
                 key={`${selectedEventId}-${focusPerson}`}
                 initialSearch={focusPerson}

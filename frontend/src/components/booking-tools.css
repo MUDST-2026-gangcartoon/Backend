@@ -54,3 +54,9 @@
   .bt-row { flex-wrap: wrap; }
   .bt-status { flex-direction: row; flex-wrap: wrap; align-items: center; text-align: left; width: 100%; }
 }
+.funnel-filters { display: flex; gap: .75rem; align-items: end; flex-wrap: wrap; }
+.funnel-filters label { display: grid; gap: .3rem; }
+.funnel-table-wrap { overflow-x: auto; }
+.funnel-table { width: 100%; border-collapse: collapse; text-align: right; }
+.funnel-table th, .funnel-table td { padding: .5rem; border-bottom: 1px solid #e4ded8; }
+.funnel-table th:first-child { text-align: left; }
