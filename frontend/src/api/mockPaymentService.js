@@ -2,11 +2,12 @@
 import apiClient from './apiClient';
 
 export const mockPaymentService = {
-  checkout: ({ eventId, ticketTypeId, quantity }) =>
+  checkout: ({ eventId, ticketTypeId, quantity, attemptId }) =>
     apiClient.post('/payments/mock/checkout', {
       eventId,
       ticketTypeId,
       quantity,
+      attemptId,
     }),
 
   confirm: (paymentId) =>

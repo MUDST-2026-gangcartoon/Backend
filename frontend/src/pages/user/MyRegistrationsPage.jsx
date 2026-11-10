@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import { registrationService } from '../../api/registrationService';
+import { guestService } from '../../api/guestService';
+import { useAuth } from '../../context/AuthContext';
 import './MyRegistrationsPage.css';
 import { EVENT_TIME_ZONE, parseEventDateTime } from './eventDisplay';
 import { getRegistrationItems, isCancelledRegistration } from './registrationDisplay';
@@ -68,6 +70,12 @@ const getCancelErrorMessage = (error) => {
 };
 
 export default function MyRegistrationsPage() {
+  const { user } = useAuth();
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [claimStep, setClaimStep] = useState('request');
+  const [claimCode, setClaimCode] = useState('');
+  const [claimBusy, setClaimBusy] = useState(false);
+  const [claimMessage, setClaimMessage] = useState('');
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
@@ -109,6 +117,27 @@ export default function MyRegistrationsPage() {
     load();
     return () => { isMounted = false; };
   }, []);
+
+  const requestClaimCode = async () => {
+    if (claimBusy) return;
+    setClaimBusy(true); setClaimMessage('');
+    try { await guestService.requestVerification(); setClaimStep('code'); setClaimMessage('ส่งรหัสแล้ว กรุณาตรวจสอบอีเมลของบัญชี'); }
+    catch (error) { setClaimMessage(error.status === 429 ? 'กรุณารอ 60 วินาทีก่อนขอรหัสใหม่' : 'ส่งรหัสไม่สำเร็จ กรุณาลองอีกครั้ง'); }
+    finally { setClaimBusy(false); }
+  };
+  const confirmClaim = async () => {
+    if (claimBusy || (claimStep !== 'verified' && !/^\d{6}$/.test(claimCode))) return;
+    setClaimBusy(true); setClaimMessage('');
+    try {
+      if (claimStep !== 'verified') { await guestService.confirmVerification(claimCode); setClaimStep('verified'); }
+      const result = await guestService.claim();
+      setClaimMessage(`รับรายการเข้าบัญชีแล้ว ${result.claimedRegistrations} รายการ`);
+      setClaimCode(''); setClaimStep('done'); await fetchRegistrations();
+    } catch (error) {
+      setClaimMessage(error.status === 400 ? 'รหัสไม่ถูกต้องหรือหมดอายุ กรุณาตรวจสอบหรือขอรหัสใหม่' : error.status === 403 ? 'ต้องยืนยันอีเมลอีกครั้งก่อนรับรายการ' : error.status === 409 ? 'รายการนี้ถูกรับเข้าบัญชีอื่นแล้ว' : 'ดำเนินการไม่สำเร็จ กรุณาลองอีกครั้ง');
+      if (error.status === 403) setClaimStep('request');
+    } finally { setClaimBusy(false); }
+  };
 
   const handleCancelRegistration = async (item) => {
     const block = getCancellationBlock(item, registrations);
@@ -154,6 +183,20 @@ export default function MyRegistrationsPage() {
           <p>รายการอีเวนต์ทั้งหมดที่คุณลงทะเบียนเข้าร่วมไว้</p>
         </header>
 
+        <section className="guest-claim" aria-labelledby="guest-claim-title">
+          <h2 id="guest-claim-title">รับรายการที่จองโดยไม่เข้าสู่ระบบ</h2>
+          <p>ยืนยันอีเมลบัญชี{user?.email ? ` ${user.email}` : ''} เพื่อรับรายการที่จองด้วยอีเมลเดียวกัน รวมถึงประวัติและบัตร</p>
+          {!claimOpen ? <button type="button" onClick={() => setClaimOpen(true)}>รับรายการเข้าบัญชี</button> : <>
+            {(claimStep === 'request' || claimStep === 'code') && <button type="button" disabled={claimBusy} onClick={requestClaimCode}>{claimStep === 'code' ? 'ส่งรหัสอีกครั้ง' : 'ส่งรหัสยืนยัน'}</button>}
+            {(claimStep === 'code' || claimStep === 'verified') && <div>
+              <label htmlFor="claim-code">รหัสยืนยัน 6 หลัก</label>{' '}
+              <input id="claim-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={claimCode} disabled={claimBusy || claimStep === 'verified'} onChange={(event) => setClaimCode(event.target.value.replace(/\D/g, ''))} />{' '}
+              <button type="button" disabled={claimBusy || (claimStep !== 'verified' && claimCode.length !== 6)} onClick={confirmClaim}>{claimBusy ? 'กำลังดำเนินการ...' : 'ยืนยันและรับรายการ'}</button>
+            </div>}
+            {claimStep === 'done' && <button type="button" onClick={() => { setClaimStep('request'); setClaimMessage(''); }}>เริ่มอีกครั้ง</button>}
+            {claimMessage && <p role="status">{claimMessage}</p>}
+          </>}
+        </section>
         {cancelError && (
           <div className="registration-alert registration-alert-error" role="alert">
             <span>{cancelError}</span>

@@ -81,3 +81,10 @@
   .reg-title { font-size: 16px; }
   .reg-meta { flex-direction: column; gap: 4px; }
 }
+
+.guest-claim { background: #f7faf5; border: 1px solid #d4e5cd; border-radius: 12px; padding: 20px; margin: 20px 0; }
+.guest-claim h2 { font-size: 1.15rem; margin: 0 0 8px; }
+.guest-claim p { margin: 8px 0; }
+.guest-claim button { cursor: pointer; padding: 8px 14px; border: 1px solid #4f7b3b; border-radius: 6px; background: white; margin: 4px 4px 4px 0; }
+.guest-claim button:disabled { opacity: .6; cursor: wait; }
+.guest-claim input { padding: 8px; border: 1px solid #aaa; border-radius: 6px; width: 9em; }
