@@ -135,7 +135,8 @@ public class SecurityConfig {
                         "Authorization",
                         "Content-Type",
                         "Accept",
-                        "X-CSRF-TOKEN"
+                        "X-CSRF-TOKEN",
+                        "Idempotency-Key"
                 )
         );
 
@@ -212,6 +213,27 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.POST,"/api/events/*/registrations").hasRole("USER")
                         .requestMatchers("/api/events/*/online-access","/api/events/*/online-join").hasRole("USER")
+                        // Guest routes use session ownership, and all writes still require CSRF.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/guest/events/*/registrations",
+                                "/api/guest/events/*/checkout",
+                                "/api/guest/bookings/*/cancel",
+                                "/api/guest/payments/*/confirm",
+                                "/api/guest/payments/*/cancel",
+                                "/api/analytics/registration-attempts"
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/guest/bookings/*",
+                                "/api/guest/payments/*"
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/auth/email-verification/request",
+                                "/api/auth/email-verification/confirm",
+                                "/api/registrations/claim-guest"
+                        ).hasRole("USER")
                         // Public Event browsing
                         .requestMatchers(
                                 HttpMethod.GET,
