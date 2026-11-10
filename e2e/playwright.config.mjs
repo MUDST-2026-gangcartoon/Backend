@@ -9,8 +9,8 @@ if (!/^http:\/\/(?:localhost|127\.0\.0\.1):\d+$/.test(baseURL)) {
 // Full suite is intentionally limited to 2 spec files: 1 original P0 + 9 complementary E2E cases.
 // The alternate P1 draft spec is preserved but not run automatically to avoid duplicate tests.
 const suite = process.env.E2E_SUITE || 'all';
-if (!['all', 'fast', 'core', 'extended', 'slow'].includes(suite)) {
-  throw new Error('E2E_SUITE must be all, fast, core, extended or slow');
+if (!['all', 'fast', 'core', 'extended', 'slow', 'guest'].includes(suite)) {
+  throw new Error('E2E_SUITE must be all, fast, core, extended, slow or guest');
 }
 const match = suite === 'core'
   ? ['**/paid-ticket-checkin.spec.mjs', '**/additional-critical-flows.spec.mjs']
@@ -20,7 +20,7 @@ const match = suite === 'core'
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: match,
+  testMatch: suite === 'guest' ? '**/guest-journey.spec.mjs' : match,
   grep: suite === 'slow' ? /@slow/ : undefined,
   grepInvert: suite === 'fast' || suite === 'core' || suite === 'extended' ? /@slow/ : undefined,
   timeout: 90_000,
