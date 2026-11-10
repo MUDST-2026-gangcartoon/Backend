@@ -383,12 +383,16 @@ function EventDetails({ eventId }) {
     !eventUnavailable &&
     !alreadyRegistered;
 
-  const handleRegisterClick = () => {
-    if (!canRegister || busy.current) return;
+  const ensureAttempt = () => {
     if (!attempt.current || Date.now() - attempt.current.created > 15 * 60 * 1000) {
       const attemptId = newId();
       attempt.current = { id: attemptId, created: Date.now(), started: guestService.startAttempt(eventId, attemptId).then(() => true).catch(() => false) };
     }
+    return attempt.current;
+  };
+  const handleRegisterClick = () => {
+    if ((!canRegister && !guestRetry) || busy.current) return;
+    if (!guestRetry) ensureAttempt();
 
     // ถ้ามีรายการชำระเงินที่ยังไม่หมดอายุ ให้เปิดกลับมาแทนการสร้างใหม่
     if (paymentOrder && remainingSeconds > 0) {
@@ -396,7 +400,7 @@ function EventDetails({ eventId }) {
       return;
     }
 
-    setQty(1);
+    if (!guestRetry) setQty(1);
     setRegisterError('');
     setRegistrationResult(null);
     setActiveModal('booking');
@@ -428,6 +432,7 @@ function EventDetails({ eventId }) {
 
   const showRegistration = (registration) => {
     setRegistrationResult(registration);
+    attempt.current = null;
     if (!isLoggedIn && registration?.registrationId) storeGuest(guestStorageKey, { type: 'receipt', id: registration.registrationId });
     pendingGuest.current = null; setGuestRetry(false);
     setPaymentOrder(null);
@@ -474,7 +479,7 @@ function EventDetails({ eventId }) {
           if (latest.status !== 'OPEN' || !ticket || !canBuyTicket(ticket) || qty > Math.min(10, Number(ticket.remaining), Number(latest.spotsLeft)) || Number(ticket.price) !== Number(selectedTicket.price)) {
             setRegisterError('ข้อมูลบัตรหรือจำนวนที่นั่งเปลี่ยนไป กรุณาตรวจสอบอีกครั้ง'); return;
           }
-          const currentAttempt = attempt.current;
+          const currentAttempt = ensureAttempt();
           const tracked = currentAttempt && await currentAttempt.started;
           pendingGuest.current = { key: newId(), paid: Number(selectedTicket.price) > 0,
             payload: { displayName: guestName.trim(), email: guestEmail.trim(), ticketTypeId: selectedTicket.id, quantity: qty, ...(tracked ? { attemptId: currentAttempt.id } : {}) } };
@@ -525,7 +530,7 @@ function EventDetails({ eventId }) {
         return;
       }
 
-      const currentAttempt = attempt.current;
+      const currentAttempt = ensureAttempt();
       const tracked = currentAttempt && await currentAttempt.started;
       const payload = { ticketTypeId: latestTicket.id, quantity: qty, ...(tracked ? { attemptId: currentAttempt.id } : {}) };
       if (paid) {
@@ -858,13 +863,13 @@ function EventDetails({ eventId }) {
               <button
                 className="btn-register theme-bg"
                 onClick={handleRegisterClick}
-                disabled={!canRegister}
+                disabled={!canRegister && !guestRetry}
                 style={{
-                  opacity: canRegister ? 1 : 0.55,
-                  cursor: canRegister ? 'pointer' : 'not-allowed',
+                  opacity: canRegister || guestRetry ? 1 : 0.55,
+                  cursor: canRegister || guestRetry ? 'pointer' : 'not-allowed',
                 }}
               >
-                {alreadyRegistered
+                {guestRetry ? 'ตรวจสอบรายการเดิม →' : alreadyRegistered
                   ? 'ลงทะเบียนแล้ว'
                   : eventUnavailable
                     ? EVENT_STATUS_LABELS[status] || 'ปิดรับลงทะเบียน'
@@ -874,6 +879,7 @@ function EventDetails({ eventId }) {
                         ? 'ไม่มีบัตรที่เปิดขาย'
                         : 'ลงทะเบียน →'}
               </button>
+              {!isLoggedIn && registrationResult && !activeModal && <button type="button" onClick={() => setActiveModal('success')}>ดูใบลงทะเบียน</button>}
               {!activeModal && registerError && <p role="alert">{registerError}</p>}
               {!activeModal && inventoryError && (
                 <p role="alert">
@@ -1230,7 +1236,7 @@ function EventDetails({ eventId }) {
               className="btn-modal-confirm theme-bg"
               onClick={() => {
                 setActiveModal(null);
-                setRegistrationResult(null);
+                if (isLoggedIn) setRegistrationResult(null);
               }}
               style={{
                 width: '100%',
