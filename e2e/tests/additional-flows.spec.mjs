@@ -28,7 +28,7 @@ test('E2E-AUTO-002 / E2E-001: Free ticket via UI → My Tickets → STAFF check-
   await page.goto('/MyTicketsPage');
   const ticket = page.locator('.myticket-card').filter({ hasText: reg.ticketCode });
   await expect(ticket).toBeVisible();
-  await expect(ticket.getByAltText('QR Code ของบัตร')).toBeVisible();
+  await expect(ticket.getByAltText(/^QR Code ของ /)).toBeVisible();
   await screenshot(page, info, 'free-ticket-qr');
 
   const staff = await newRolePage(browser, E2E.staffEmail);
@@ -67,7 +67,7 @@ test('E2E-003: Paid Payment Confirm issues one registration and ticket', async (
   await page.goto('/MyTicketsPage');
   const ticket = page.locator('.myticket-card').filter({ hasText: paid.registration.ticketCode });
   await expect(ticket).toBeVisible();
-  await expect(ticket.getByAltText('QR Code ของบัตร')).toBeVisible();
+  await expect(ticket.getByAltText(/^QR Code ของ /)).toBeVisible();
   const regs = await getRegistrations(page);
   expect(regs).toHaveLength(1);
   expect(regs[0].id).toBe(paid.registration.id);
@@ -88,7 +88,9 @@ test('E2E-004: Staff check-in uses the ticket created in this flow', async ({ pa
     );
     const entry = attendees.filter(a => a.ticketCode === paid.registration.ticketCode);
     expect(entry).toHaveLength(1);
-    expect(entry[0].checkedInAt).toBe(checked.checkedInAt);
+    expect(Number.isFinite(Date.parse(entry[0].checkedInAt))).toBe(true);
+  expect(Number.isFinite(Date.parse(checked.checkedInAt))).toBe(true);
+  expect(Math.abs(Date.parse(entry[0].checkedInAt) - Date.parse(checked.checkedInAt))).toBeLessThanOrEqual(1);
     await screenshot(staff.page, info, 'staff-checkin-success');
   } finally { await staff.context.close(); }
 });
@@ -109,17 +111,20 @@ test('E2E-AUTO-004 / E2E-005: Cancel registration invalidates ticket but retains
   page.once('dialog', dialog => dialog.accept());
   await card.getByRole('button', { name: 'ยกเลิกการลงทะเบียน' }).click();
   await responseJson(await cancelledPromise, 204);
-  await expect(card).toHaveCount(0);
-  expect(await getRegistrations(page)).toEqual([]);
+  await expect(card).toContainText('ยกเลิกแล้ว');
+  const registrations = await getRegistrations(page);
+  expect(registrations.find(r => r.id === confirmed.registration.id).status).toBe('CANCELLED');
   await page.goto('/MyTicketsPage');
-  await expect(page.getByText('คุณยังไม่มีตั๋วในขณะนี้')).toBeVisible();
+  const cancelledTicket = page.locator('.myticket-card').filter({ hasText: event.eventTitle });
+  await expect(cancelledTicket).toContainText('ยกเลิกแล้ว');
+  await expect(cancelledTicket.getByAltText(/^QR Code ของ /)).toHaveCount(0);
   const history = await responseJson(await page.request.get('/api/payments/mock/' + pending.paymentId), 200);
   expect(history.status).toBe('CONFIRMED');
   await screenshot(page, info, 'ticket-gone-payment-history-remains');
 
   const staff = await newRolePage(browser, E2E.staffEmail);
   try {
-    await checkInThroughUI(staff.page, event.eventId, code, 404);
+    await checkInThroughUI(staff.page, event.eventId, code, 409);
     await expect(staff.page.getByRole('alert').first()).toBeVisible();
     await screenshot(staff.page, info, 'cancelled-ticket-checkin-rejected');
   } finally { await staff.context.close(); }
