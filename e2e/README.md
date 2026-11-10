@@ -101,3 +101,22 @@ Workflow เตรียมไว้ที่ `../.github/workflows/browser-e2e.
 `.github/workflows/browser-e2e.yml` runs the nine fast Chromium scenarios on pull requests to `main` and pushes to `main` or `ci/**`. The real expiration case (`@slow`, about ten minutes) remains available with `E2E_SUITE=slow` and is not part of this job. The job builds the frontend and backend, serves the built frontend over loopback, and uses the `e2e` profile with disposable in-memory H2. It generates and masks a fresh test-only seed password for each run; it does not use repository or production credentials. The existing Maven test and Minikube jobs remain independent.
 
 The HTML and JUnit reports and failure traces, videos, screenshots and startup logs are retained for seven days. These artifacts can contain generated test account credentials, session cookies, CSRF tokens, and ticket codes. Treat them as sensitive test data and restrict access to the repository's Actions artifacts. Do not reuse real credentials or send actual email in this environment.
+
+## Guest browser journey with SMTP
+
+จาก root ของโปรเจกต์ ให้แพ็ก Backend และ build Frontend ก่อน ใช้ Java 21, Node.js 20 ขึ้นไป และ Python 3
+
+```sh
+mvn -f backend/pom.xml -DskipTests package
+npm --prefix frontend ci
+npm --prefix frontend run build
+npm --prefix e2e ci
+npm exec --prefix e2e -- playwright install chromium
+python e2e/run-guest.py
+```
+
+คำสั่งสุดท้ายเปิด Frontend, Backend โปรไฟล์ `e2e` และ SMTP รับอีเมลทดสอบบน loopback ด้วยพอร์ตที่ระบบเลือก ใช้ H2 ในหน่วยความจำและสร้างรหัสผ่านทดสอบใหม่ต่อรอบ ข้อความ OTP ส่งเข้าไฟล์ชั่วคราวของรอบทดสอบและถูกลบเมื่อจบ ใช้บัญชี `example.test` ได้โดยไม่ต้องมีบริการอีเมลภายนอก
+
+ชุดนี้ครอบคลุมการจองฟรีและยกเลิก, การเปิดและยกเลิกการชำระเงินที่ค้าง, และเส้นทางจ่ายเงิน → OTP → ย้ายรายการเข้าบัญชี → เช็กอินด้วยบัตรเดิม → ตรวจรายงาน Admin รวมถึงช่วงวันที่ไม่มีข้อมูล
+
+ตัวรันส่งต่ออาร์กิวเมนต์ให้ Playwright ได้ เช่น `python e2e/run-guest.py --grep "Guest pays"` ผลอยู่ที่ `e2e/artifacts/` ตามการตั้งค่าเดิม เก็บ trace และหลักฐานที่อาจมีข้อมูลบัญชีทดสอบหรือ OTP ไว้ในพื้นที่จำกัดสิทธิ์

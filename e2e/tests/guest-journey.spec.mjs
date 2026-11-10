@@ -118,7 +118,7 @@ async function readGuestOtp(mailbox, email) {
   return code;
 }
 
-test('Guest pays, verifies email and checks in with the original ticket after claim', async ({ page, browser }) => {
+test('Guest pays, claims the original ticket, and appears in Staff check-in and the Admin funnel', async ({ page, browser }) => {
   const mailbox = process.env.E2E_GUEST_MAILBOX;
   if (!mailbox) throw new Error('Run the isolated Guest suite with python e2e/run-guest.py.');
 
@@ -189,7 +189,44 @@ test('Guest pays, verifies email and checks in with the original ticket after cl
     const checkedInGuest = attendees.filter((row) => row.ticketCode === receipt.ticketCode);
     expect(checkedInGuest).toHaveLength(1);
     expect(checkedInGuest[0]).toMatchObject({ origin: 'GUEST', claimStatus: 'CLAIMED' });
+    await expect(staff.page.getByText('จองแบบ Guest · ผูกบัญชีแล้ว', { exact: true })).toBeVisible();
   } finally {
     await staff.context.close();
+  }
+
+  const admin = await newRolePage(browser, E2E.adminEmail);
+  try {
+    await admin.page.goto('/admin/dashboard');
+    await admin.page.getByRole('tab').filter({ hasText: event.eventTitle }).click();
+    const report = admin.page.getByRole('region', { name: 'รายงานขั้นตอนการลงทะเบียน' });
+    const cells = (name) => report.getByRole('row', { name }).getByRole('cell');
+    await expect(cells(/เริ่มลงทะเบียน/)).toHaveText(['1', '1', '0']);
+    await expect(cells(/ลงทะเบียนสำเร็จ/)).toHaveText(['1', '1', '0']);
+    await expect(cells(/ที่นั่งเช็กอิน/)).toHaveText(['1', '1', '0']);
+    await expect(cells(/Show rate/)).toHaveText(['100%', '100%', '—']);
+
+    const earlier = new Date(receipt.registeredAt.slice(0, 10) + 'T00:00:00Z');
+    earlier.setUTCDate(earlier.getUTCDate() - 2);
+    const day = earlier.toISOString().slice(0, 10);
+    earlier.setUTCDate(earlier.getUTCDate() + 1);
+    const exclusiveEnd = earlier.toISOString().slice(0, 10);
+    await report.getByLabel('ตั้งแต่วันที่').fill(day);
+    await report.getByLabel('ถึงวันที่ (รวมวันสิ้นสุด)').fill(day);
+    const filtered = admin.page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === '/api/admin/analytics/funnel' &&
+        url.searchParams.get('eventId') === String(event.eventId) &&
+        url.searchParams.get('from') === day;
+    });
+    await report.getByRole('button', { name: 'แสดงรายงาน', exact: true }).click();
+    const empty = await responseJson(await filtered, 200);
+    expect(empty).toMatchObject({
+      eventId: event.eventId, from: day, to: exclusiveEnd,
+      guest: { startedAttempts: 0, confirmedOrders: 0, checkedInSeats: 0 },
+    });
+    await expect(report.getByText('ไม่มีข้อมูลในช่วงวันที่เลือก')).toBeVisible();
+    await expect(cells(/Show rate/)).toHaveText(['—', '—', '—']);
+  } finally {
+    await admin.context.close();
   }
 });
