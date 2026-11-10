@@ -736,7 +736,7 @@ export default function AdminDashboardPage() {
               </div>
             </div>
             <p className="dashboard-events-empty" role="status">
-              ยังไม่มีข้อมูลการเริ่มจองและการจองที่ไม่สำเร็จสำหรับรายงานนี้
+              เลือกรายการกิจกรรมด้านล่างเพื่อดูรายงานขั้นตอนการลงทะเบียนแยก Guest และสมาชิก
             </p>
           </article>
         </section>
@@ -953,7 +953,7 @@ export default function AdminDashboardPage() {
                   refreshKey={attendeesReload}
                 />
               )}
-              {!isMockMode() && <FunnelReport key={selectedEventId} eventId={selectedEventId} />}
+              {!isMockMode() && <FunnelReport key={`funnel-${selectedEventId}`} eventId={selectedEventId} />}
               <BookingTools
                 key={`${selectedEventId}-${focusPerson}`}
                 initialSearch={focusPerson}

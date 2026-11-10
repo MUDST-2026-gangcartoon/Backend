@@ -23,6 +23,9 @@ export const SOURCE_LABEL = {
   unknown: 'ไม่ทราบที่มา',
 };
 
+export const ORIGIN_LABEL = { USER: 'จองด้วยบัญชีสมาชิก', GUEST: 'จองแบบ Guest' };
+export const CLAIM_LABEL = { CLAIMED: 'ผูกบัญชีแล้ว', UNCLAIMED: 'ยังไม่ผูกบัญชี' };
+
 export const STATUS_LABEL = {
   pending: 'ยังไม่มา',
   checkedin: 'เช็กอินแล้ว',

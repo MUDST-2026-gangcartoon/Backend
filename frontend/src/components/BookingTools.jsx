@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
+  ORIGIN_LABEL,
+  CLAIM_LABEL,
   SOURCE_FILTERS,
   SOURCE_LABEL,
   STATUS_FILTERS,
@@ -69,7 +71,7 @@ function BookingRow({ row, onPickCode }) {
         </div>
         {row.email && <div className="bt-sub">{row.email}</div>}
         {(row.origin || row.claimStatus) && (
-          <div className="bt-sub">{[row.origin, row.claimStatus].filter(Boolean).join(' · ')}</div>
+          <div className="bt-sub">{[ORIGIN_LABEL[row.origin], CLAIM_LABEL[row.claimStatus]].filter(Boolean).join(' · ')}</div>
         )}
         {row.ticketType && <div className="bt-sub">{row.ticketType}</div>}
 
