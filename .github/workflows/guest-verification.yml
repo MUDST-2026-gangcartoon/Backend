@@ -1,0 +1,58 @@
+name: Guest API and H2 migration verification
+
+on:
+  push:
+    branches: [main, 'ci/**']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guest-verification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guest-smtp-smoke:
+    name: Guest booking and SMTP claim smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Package backend
+        working-directory: backend
+        run: chmod +x mvnw && ./mvnw --batch-mode --no-transfer-progress -DskipTests package
+      - name: Exercise guest booking and real local SMTP delivery
+        run: python3 .github/scripts/ci-guest/verify.py smoke backend/target/eventhub-0.0.1-SNAPSHOT.jar
+
+  h2-migration:
+    name: Existing H2 migration and schema validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Checkout pre-Phase-2 baseline
+        uses: actions/checkout@v5
+        with:
+          ref: 9bb0ac8805de1fa5ff4b57fc33b30b38ebf88a64
+          path: baseline
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Package current and baseline backends
+        run: |
+          chmod +x backend/mvnw baseline/backend/mvnw
+          (cd backend && ./mvnw --batch-mode --no-transfer-progress -DskipTests package)
+          (cd baseline/backend && ./mvnw --batch-mode --no-transfer-progress -DskipTests package)
+      - name: Apply migration and validate current schema
+        run: python3 .github/scripts/ci-guest/verify.py migration backend/target/eventhub-0.0.1-SNAPSHOT.jar baseline/backend/target/eventhub-0.0.1-SNAPSHOT.jar
