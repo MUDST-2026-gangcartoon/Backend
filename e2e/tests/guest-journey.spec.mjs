@@ -1,8 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import {
+  checkInThroughUI,
   createEventViaAdmin,
+  E2E,
   ensureE2eBackend,
+  getRegistrations,
+  newRolePage,
   openBooking,
   requireIsolatedEnvironment,
   responseJson,
@@ -94,4 +99,97 @@ test('Guest reloads the same pending payment and can cancel without issuing a ti
   });
   await expect(page.getByRole('heading', { name: 'ชำระเงินสำหรับเดโม' })).toHaveCount(0);
   await expect(bookingQr(page)).toHaveCount(0);
+});
+
+async function readGuestOtp(mailbox, email) {
+  let code;
+  await expect.poll(async () => {
+    let messages;
+    try {
+      messages = await readFile(mailbox, 'utf8');
+    } catch (error) {
+      if (error.code === 'ENOENT') return false;
+      throw error;
+    }
+    code = messages.trim().split('\n').filter(Boolean).map(JSON.parse)
+      .findLast((message) => message.email === email)?.code;
+    return /^\d{6}$/.test(code ?? '');
+  }, { message: 'The local SMTP inbox should receive a six-digit code for the test account' }).toBe(true);
+  return code;
+}
+
+test('Guest pays, verifies email and checks in with the original ticket after claim', async ({ page, browser }) => {
+  const mailbox = process.env.E2E_GUEST_MAILBOX;
+  if (!mailbox) throw new Error('Run the isolated Guest suite with python e2e/run-guest.py.');
+
+  const email = guestEmail();
+  const event = await createEventViaAdmin(browser, { price: 100 });
+  const order = await startGuestCheckout(page, event, email);
+  const paymentConfirmed = waitForPost(page, `/api/guest/payments/${order.paymentId}/confirm`);
+  await page.getByRole('button', { name: 'ยืนยันการชำระเงิน (Demo)', exact: true }).click();
+  const payment = await responseJson(await paymentConfirmed, 200);
+  expect(payment).toMatchObject({ paymentId: order.paymentId, status: 'CONFIRMED' });
+  const receipt = payment.registration;
+  expect(receipt).toMatchObject({ eventId: event.eventId, quantity: 1, status: 'CONFIRMED' });
+  expect(receipt.registrationId).toBeTruthy();
+  expect(receipt.ticketCode).toMatch(/^GTH-[A-Z0-9]+$/);
+  await expect(bookingQr(page)).toBeVisible();
+  await expect(page.getByText(receipt.ticketCode, { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'เข้าสู่ระบบเพื่อรับรายการ', exact: true }).click();
+  const login = page.getByRole('dialog', { name: /เข้าสู่ระบบเพื่อลงทะเบียน/ });
+  await login.getByRole('link', { name: 'สร้างบัญชีใหม่' }).click();
+  const signup = page.getByRole('dialog', { name: 'สร้างบัญชีของคุณ' });
+  await signup.getByLabel('ชื่อที่แสดง').fill(guestName);
+  await signup.getByLabel('อีเมล').fill(email);
+  await signup.getByLabel('รหัสผ่าน').fill(requireIsolatedEnvironment());
+  await signup.getByRole('button', { name: 'สร้างบัญชีและเริ่มจอง' }).click();
+  await expect(page).toHaveURL(/\/MyRegistrationsPage$/);
+  expect(await getRegistrations(page)).toEqual([]);
+
+  await page.getByRole('button', { name: 'รับรายการเข้าบัญชี', exact: true }).click();
+  const requested = waitForPost(page, '/api/auth/email-verification/request');
+  await page.getByRole('button', { name: 'ส่งรหัสยืนยัน', exact: true }).click();
+  expect((await requested).status()).toBe(202);
+  const code = await readGuestOtp(mailbox, email);
+  const input = page.getByLabel('รหัสยืนยัน 6 หลัก');
+  const confirm = page.getByRole('button', { name: 'ยืนยันและรับรายการ', exact: true });
+
+  await input.fill(code === '000000' ? '000001' : '000000');
+  const invalid = waitForPost(page, '/api/auth/email-verification/confirm');
+  await confirm.click();
+  expect((await invalid).status()).toBe(400);
+  await expect(page.getByText(/รหัสไม่ถูกต้องหรือหมดอายุ/)).toBeVisible();
+  expect(await getRegistrations(page)).toEqual([]);
+
+  await input.fill(code);
+  const verified = waitForPost(page, '/api/auth/email-verification/confirm');
+  const claimed = waitForPost(page, '/api/registrations/claim-guest');
+  await confirm.click();
+  expect((await verified).status()).toBe(204);
+  expect(await responseJson(await claimed, 200)).toEqual({ claimedRegistrations: 1 });
+  await expect(page.getByText('รับรายการเข้าบัญชีแล้ว 1 รายการ')).toBeVisible();
+  const history = await getRegistrations(page);
+  expect(history).toHaveLength(1);
+  expect(history[0]).toMatchObject({
+    id: receipt.registrationId, ticketCode: receipt.ticketCode, quantity: receipt.quantity,
+  });
+  await page.goto('/MyTicketsPage');
+  const ticket = page.locator('.myticket-card').filter({ hasText: receipt.ticketCode });
+  await expect(ticket.getByAltText(/^QR Code ของ /)).toBeVisible();
+
+  const staff = await newRolePage(browser, E2E.staffEmail);
+  try {
+    const checkIn = await checkInThroughUI(staff.page, event.eventId, receipt.ticketCode);
+    expect(checkIn).toMatchObject({ result: 'CHECKED_IN', ticketCode: receipt.ticketCode });
+    await expect(staff.page.getByText('เช็กอินสำเร็จ', { exact: true })).toBeVisible();
+    const attendees = await responseJson(
+      await staff.page.request.get(`/api/staff/events/${event.eventId}/attendees`), 200,
+    );
+    const checkedInGuest = attendees.filter((row) => row.ticketCode === receipt.ticketCode);
+    expect(checkedInGuest).toHaveLength(1);
+    expect(checkedInGuest[0]).toMatchObject({ origin: 'GUEST', claimStatus: 'CLAIMED' });
+  } finally {
+    await staff.context.close();
+  }
 });
