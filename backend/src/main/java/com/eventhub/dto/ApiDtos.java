@@ -304,8 +304,12 @@ public final class ApiDtos {
                     value = 10,
                     message = "Quantity must not exceed 10"
             )
-            Integer quantity
+            Integer quantity,
+            java.util.UUID attemptId
     ) {
+        public PurchaseRequest(Long ticketTypeId, Integer quantity) {
+            this(ticketTypeId, quantity, null);
+        }
     }
 
     public record RegistrationDto(
@@ -342,8 +346,16 @@ public final class ApiDtos {
             int quantity,
             String ticketCode,
             LocalDateTime checkedInAt,
-            String status,String checkedInBy,String checkinSource
+            String status,String checkedInBy,String checkinSource,
+            Long registrationId, Long userId, String origin, String claimStatus
     ) {
+        public AttendeeDto(Long id, String name, String email, LocalDateTime registeredAt,
+                String ticketType, int quantity, String ticketCode, LocalDateTime checkedInAt,
+                String status, String checkedInBy, String checkinSource) {
+            this(id, name, email, registeredAt, ticketType, quantity, ticketCode, checkedInAt,
+                    status, checkedInBy, checkinSource, null, id, "USER", null);
+        }
+
         public AttendeeDto(Long id,String name,String email,LocalDateTime registeredAt,String ticketType,int quantity,String ticketCode,LocalDateTime checkedInAt,String status,String checkedInBy){this(id,name,email,registeredAt,ticketType,quantity,ticketCode,checkedInAt,status,checkedInBy,checkedInAt==null?null:"ผู้เข้าร่วมออนไลน์".equals(checkedInBy)?"ONLINE":checkedInBy==null||checkedInBy.isBlank()?"UNKNOWN":"STAFF");}
         public AttendeeDto(Long id,String name,String email,LocalDateTime registeredAt,String ticketType,int quantity,String ticketCode,LocalDateTime checkedInAt){this(id,name,email,registeredAt,ticketType,quantity,ticketCode,checkedInAt,"CONFIRMED",null);}
 
@@ -443,8 +455,12 @@ public record EventAnalyticsDto(
             @NotNull(message = "Quantity is required")
             @Min(value = 1, message = "Quantity must be at least 1")
             @Max(value = 10, message = "Quantity must not exceed 10")
-            Integer quantity
+            Integer quantity,
+            java.util.UUID attemptId
     ) {
+        public MockCheckoutRequest(Long eventId, Long ticketTypeId, Integer quantity) {
+            this(eventId, ticketTypeId, quantity, null);
+        }
     }
 
     public record MockCheckoutDto(

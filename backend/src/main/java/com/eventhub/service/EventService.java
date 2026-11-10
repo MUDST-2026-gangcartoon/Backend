@@ -39,11 +39,13 @@ public class EventService {
     private final UserRepository userRepository;
     @org.springframework.beans.factory.annotation.Autowired
     private com.eventhub.repository.MockPaymentRepository paymentRepository;
+    @org.springframework.beans.factory.annotation.Autowired
+    private RegistrationAttemptTracking attemptTracking;
     private boolean paymentHistory(Long eventId){return paymentRepository!=null && paymentRepository.existsByEventId(eventId);}
     private boolean paid(Registration r){return r.getPurchasedUnitPrice()!=null && r.getPurchasedUnitPrice().signum()>0 || paymentRepository!=null && paymentRepository.findFirstByRegistrationIdAndStatus(r.getId(),com.eventhub.model.MockPaymentStatus.CONFIRMED).isPresent();}
     private String deletionReason(Long id){return id!=null&&(registrationRepository.existsByEventId(id)||paymentHistory(id))?"กิจกรรมที่มีประวัติจองหรือชำระเงินไม่สามารถลบได้":null;}
     private String ticketRemovalReason(Long id){return id!=null&&(registrationRepository.existsByTicketTypeId(id)||(paymentRepository!=null&&paymentRepository.existsByTicketTypeId(id)))?"ประเภทบัตรมีประวัติจองหรือชำระเงิน จึงลบไม่ได้":null;}
-    private String cancellationReason(Registration r){
+    static String cancellationReason(Registration r){
       if(!r.isActive())return "รายการนี้ยกเลิกแล้ว";
       if(r.getCheckedInAt()!=null)return "เช็กอินแล้ว ไม่สามารถยกเลิกการจองได้";
       return null;
@@ -743,27 +745,9 @@ public class EventService {
         }
         int quantity = request.quantity();
 
-        long eventSeats =
-                registrationRepository
-                        .seatsReservedByEventId(event.getId());
-
-        if (eventSeats + quantity > event.getCapacity()) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Event capacity exceeded"
-            );
-        }
-
-        long ticketSeats =
-                registrationRepository
-                        .seatsReservedByTicketTypeId(ticket.getId());
-
-        if (ticketSeats + quantity > ticket.getCapacity()) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Ticket capacity exceeded"
-            );
-        }
+        BookingCapacity.requireAvailable(registrationRepository, event, ticket, quantity);
+        var attempt = request.attemptId() == null ? null
+                : attemptTracking.active(request.attemptId(), eventId, "u:" + user.getId());
 
         Registration registration =
                 new Registration(
@@ -776,6 +760,7 @@ public class EventService {
         Registration saved =
                 registrationRepository.save(registration);
 
+        if (attempt != null) attemptTracking.complete(attempt, saved);
         return registrationDto(saved);
     }
     private UserAccount currentUser(Principal principal) {
@@ -904,7 +889,26 @@ public class EventService {
     @Transactional
     public void cancel(Long eventId,Principal principal,String reason){
         UserAccount user=currentUser(principal);
-        var r=registrationRepository.activeForUpdate(user.getId(),eventId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Registration not found"));
+        var memberBooking = registrationRepository.activeForUpdate(user.getId(), eventId);
+        var claimedBookings = registrationRepository.activeClaimedForUpdate(user.getId(), eventId);
+        if (claimedBookings.size() + (memberBooking.isPresent() ? 1 : 0) > 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Specify the registration ID to cancel");
+        }
+        var r = memberBooking.or(() -> claimedBookings.stream().findFirst())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Registration not found"));
+        cancelOwnedRegistration(r, reason);
+    }
+
+    @Transactional
+    public void cancelByRegistrationId(Long registrationId, Principal principal) {
+        UserAccount user = currentUser(principal);
+        var registration = registrationRepository.findByIdForUpdate(registrationId)
+                .filter(row -> row.isOwnedBy(user.getId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Registration not found"));
+        cancelOwnedRegistration(registration, "ผู้เข้าร่วมยกเลิก");
+    }
+
+    private static void cancelOwnedRegistration(Registration r, String reason) {
         String blocked=cancellationReason(r);if(blocked!=null)throw new ResponseStatusException(HttpStatus.CONFLICT,blocked);
         if(reason==null||reason.isBlank()||reason.length()>1000)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"กรุณาระบุเหตุผลไม่เกิน 1000 ตัวอักษร");
         r.cancel(reason.trim());
@@ -951,21 +955,22 @@ public class EventService {
     private ApiDtos.AttendeeDto attendeeDto(
             Registration registration
     ) {
-        UserAccount user =
-                registration.getUser();
-
-        TicketType ticket =
-                registration.getTicketType();
+        var guest = registration.getGuest();
+        UserAccount user = registration.getUser();
+        Long userId = guest == null ? user.getId() : guest.getClaimedUserId();
+        String claimStatus = guest == null ? null : userId == null ? "UNCLAIMED" : "CLAIMED";
+        TicketType ticket = registration.getTicketType();
 
         return new ApiDtos.AttendeeDto(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
+                userId,
+                registration.attendeeName(),
+                registration.attendeeEmail(),
                 registration.getRegisteredAt(),
                 registration.getPurchasedTicketName() != null ? registration.getPurchasedTicketName() : ticket == null ? null : ticket.getName(),
                 registration.getQuantity(),
                 registration.getTicketCode(),
-                registration.getCheckedInAt(),registration.getStatus(),registration.getCheckedInBy(),registration.getCheckinSource()
+                registration.getCheckedInAt(),registration.getStatus(),registration.getCheckedInBy(),registration.getCheckinSource(),
+                registration.getId(), userId, guest == null ? "USER" : "GUEST", claimStatus
         );
     }
 
@@ -984,9 +989,6 @@ public class EventService {
     private ApiDtos.CheckInDto checkInDto(
             Registration registration
     ) {
-        UserAccount user =
-                registration.getUser();
-
         Event event =
                 registration.getEvent();
 
@@ -995,7 +997,7 @@ public class EventService {
 
         return new ApiDtos.CheckInDto(
                 registration.getTicketCode(),
-                user.getName(),
+                registration.attendeeName(),
                 event.getTitle(),
                 registration.getPurchasedTicketName() != null ? registration.getPurchasedTicketName() : ticket == null ? null : ticket.getName(),
                 registration.getQuantity(),

@@ -39,9 +39,13 @@ public final class EventRules {
     }
 
     public static void requireBookingOpen(Event event) {
+        requireBookingOpen(event, EventClock.now());
+    }
+
+    static void requireBookingOpen(Event event, LocalDateTime now) {
         if (
-            !com.eventhub.service.EventClock.now().isBefore(event.getRegistrationClosesAt()) ||
-            !com.eventhub.service.EventClock.now().isBefore(event.getStartsAt())
+            !now.isBefore(event.getRegistrationClosesAt()) ||
+            !now.isBefore(event.getStartsAt())
         ) throw new ResponseStatusException(
             HttpStatus.CONFLICT,
             "ปิดรับสมัครแล้ว"

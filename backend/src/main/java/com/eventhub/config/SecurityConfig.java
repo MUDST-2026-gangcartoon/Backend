@@ -212,6 +212,7 @@ public class SecurityConfig {
                         ).authenticated()
 
                         .requestMatchers(HttpMethod.POST,"/api/events/*/registrations").hasRole("USER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/registrations/*").hasRole("USER")
                         .requestMatchers("/api/events/*/online-access","/api/events/*/online-join").hasRole("USER")
                         // Guest routes use session ownership, and all writes still require CSRF.
                         .requestMatchers(

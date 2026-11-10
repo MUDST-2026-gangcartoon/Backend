@@ -82,6 +82,12 @@ public class EventController {
         );
     }
 
+    @DeleteMapping("/api/registrations/{registrationId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void cancelByRegistrationId(@PathVariable Long registrationId, Principal principal) {
+        eventService.cancelByRegistrationId(registrationId, principal);
+    }
+
     @GetMapping("/api/registrations/me")
     public List<ApiDtos.RegistrationDto> mine(
             Principal principal

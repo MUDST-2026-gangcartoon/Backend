@@ -125,6 +125,9 @@ public class BookingToolsService {
                     "ไม่พบรายการชำระเงิน"
                 )
             );
+        if (p.getUser() == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "ไม่พบรายการชำระเงิน");
+        }
         if (
             !p.getUser().getId().equals(user(principal).getId())
         ) throw new ResponseStatusException(

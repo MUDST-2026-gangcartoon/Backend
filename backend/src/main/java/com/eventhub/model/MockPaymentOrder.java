@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Table(
@@ -16,17 +17,37 @@ import java.util.Objects;
                         name = "idx_mock_payment_user_event_status",
                         columnList = "user_id,event_id,status"
                 )
-        }
+        },
+        uniqueConstraints = @UniqueConstraint(name = "uk_guest_payment_replay",
+                columnNames = {"guest_session_hash", "event_id", "guest_request_key"})
 )
+@org.hibernate.annotations.Check(name = "ck_mock_payment_owner", constraints =
+        "(user_id IS NOT NULL AND guest_id IS NULL) OR (user_id IS NULL AND guest_id IS NOT NULL)")
 public class MockPaymentOrder {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private UserAccount user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "guest_id")
+    private GuestIdentity guest;
+
+    @Column(name = "guest_display_name", length = 120)
+    private String guestDisplayName;
+
+    @Column(name = "guest_session_hash", length = 64)
+    private String guestSessionHash;
+
+    @Column(name = "guest_request_key", length = 128)
+    private String guestRequestKey;
+
+    @Column(name = "registration_attempt_id")
+    private UUID attemptId;
 
     @Column(name = "event_id", nullable = false)
     private Long eventId;
@@ -96,7 +117,12 @@ public class MockPaymentOrder {
             LocalDateTime createdAt,
             LocalDateTime expiresAt
     ) {
+        this(eventId, ticketTypeId, eventTitle, ticketTypeName, quantity, unitPrice, createdAt, expiresAt);
         this.user = Objects.requireNonNull(user);
+    }
+
+    private MockPaymentOrder(Long eventId, Long ticketTypeId, String eventTitle, String ticketTypeName,
+            int quantity, BigDecimal unitPrice, LocalDateTime createdAt, LocalDateTime expiresAt) {
         this.eventId = Objects.requireNonNull(eventId);
         this.ticketTypeId = Objects.requireNonNull(ticketTypeId);
         this.eventTitle = Objects.requireNonNull(eventTitle);
@@ -134,6 +160,26 @@ public class MockPaymentOrder {
 
         this.status = MockPaymentStatus.PENDING_PAYMENT;
     }
+
+    public static MockPaymentOrder forGuest(GuestIdentity guest, String displayName, String sessionHash,
+            String requestKey, UUID attemptId, Long eventId, Long ticketTypeId, String eventTitle,
+            String ticketTypeName, int quantity, BigDecimal unitPrice,
+            LocalDateTime createdAt, LocalDateTime expiresAt) {
+        var order = new MockPaymentOrder(eventId, ticketTypeId, eventTitle, ticketTypeName,
+                quantity, unitPrice, createdAt, expiresAt);
+        order.guest = Objects.requireNonNull(guest);
+        order.guestDisplayName = displayName;
+        order.guestSessionHash = sessionHash;
+        order.guestRequestKey = requestKey;
+        order.attemptId = attemptId;
+        return order;
+    }
+
+    public GuestIdentity getGuest() { return guest; }
+    public String getGuestDisplayName() { return guestDisplayName; }
+    public String getGuestSessionHash() { return guestSessionHash; }
+    public UUID getAttemptId() { return attemptId; }
+    public void setAttemptId(UUID attemptId) { this.attemptId = attemptId; }
 
     public void markConfirmed(
             Long registrationId,
