@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import { eventService } from '../../api/eventService';
 import { registrationService } from '../../api/registrationService';
+import { guestService } from '../../api/guestService';
 import '../../EventDetailPage.css';
 import QRCode from 'qrcode';
 import { mockPaymentService } from '../../api/mockPaymentService';
@@ -95,6 +96,15 @@ const getErrorMessage = (error) => {
   return message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
 };
 
+const newId = () => {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64; bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
+const storeGuest = (key, value) => { try { if (value) sessionStorage.setItem(key, JSON.stringify(value)); else sessionStorage.removeItem(key); } catch {} };
+
 const canBuyTicket = (ticket) => ticket.salesEnabled !== false && Number(ticket.remaining) > 0;
 
 const isUncertainResult = (error) =>
@@ -129,7 +139,7 @@ export default function EventDetailPage() {
 function EventDetails({ eventId }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isLoggedIn, openModal } = useAuth();
+  const { isLoggedIn, isAuthLoading, openModal } = useAuth();
 
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -153,6 +163,45 @@ function EventDetails({ eventId }) {
   const [paymentQr, setPaymentQr] = useState('');
   const [paymentError, setPaymentError] = useState('');
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [receiptQr, setReceiptQr] = useState('');
+  const [guestRetry, setGuestRetry] = useState(false);
+  const pendingGuest = useRef(null);
+  const attempt = useRef(null);
+  const guestStorageKey = `eventhub:guest:${eventId}`;
+  useEffect(() => { attempt.current = null; pendingGuest.current = null; setGuestRetry(false); setPaymentOrder(null); setRegistrationResult(null); setActiveModal(null); }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (isAuthLoading || isLoggedIn || !eventData) return;
+    let cancelled = false;
+    let saved;
+    try { saved = JSON.parse(sessionStorage.getItem(guestStorageKey)); } catch { return; }
+    if (!saved?.id || !['payment', 'receipt'].includes(saved.type)) return;
+    const load = saved.type === 'payment' ? guestService.payment(saved.id) : guestService.receipt(saved.id);
+    load.then((result) => {
+      if (cancelled) return;
+      if (saved.type === 'payment' && result.status === 'PENDING_PAYMENT') {
+        setPaymentOrder(result); setActiveModal('payment');
+      } else if (saved.type === 'payment' && result.registration) {
+        showRegistration(result.registration);
+      } else if (saved.type === 'receipt') {
+        setRegistrationResult(result); setActiveModal('success');
+      } else storeGuest(guestStorageKey, null);
+    }).catch((error) => { if (!cancelled) { if (error.status === 404) storeGuest(guestStorageKey, null); else setRegisterError('ไม่สามารถโหลดรายการเดิมได้ กรุณาโหลดหน้าใหม่เพื่อลองอีกครั้ง'); } });
+    return () => { cancelled = true; };
+  }, [eventId, isLoggedIn, isAuthLoading, Boolean(eventData)]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReceiptQr('');
+    if (registrationResult?.ticketCode && registrationResult.status !== 'CANCELLED' && !registrationResult.checkedInAt) {
+      QRCode.toDataURL(registrationResult.ticketCode, { width: 240, margin: 2 }).then((url) => {
+        if (!cancelled) setReceiptQr(url);
+      }).catch(() => {});
+    }
+    return () => { cancelled = true; };
+  }, [registrationResult]);
 
   // โหลดข้อมูลกิจกรรม
   useEffect(() => {
@@ -336,14 +385,9 @@ function EventDetails({ eventId }) {
 
   const handleRegisterClick = () => {
     if (!canRegister || busy.current) return;
-    if (!isLoggedIn) {
-      openModal('login', {
-        pathname: location.pathname,
-        search: location.search,
-        hash: location.hash,
-        state: { resumeBooking: { ticketId: selectedTicket?.id, quantity: qty } },
-      });
-      return;
+    if (!attempt.current || Date.now() - attempt.current.created > 15 * 60 * 1000) {
+      const attemptId = newId();
+      attempt.current = { id: attemptId, created: Date.now(), started: guestService.startAttempt(eventId, attemptId).then(() => true).catch(() => false) };
     }
 
     // ถ้ามีรายการชำระเงินที่ยังไม่หมดอายุ ให้เปิดกลับมาแทนการสร้างใหม่
@@ -384,6 +428,8 @@ function EventDetails({ eventId }) {
 
   const showRegistration = (registration) => {
     setRegistrationResult(registration);
+    if (!isLoggedIn && registration?.registrationId) storeGuest(guestStorageKey, { type: 'receipt', id: registration.registrationId });
+    pendingGuest.current = null; setGuestRetry(false);
     setPaymentOrder(null);
     setPaymentQr('');
     setPaymentNeedsReview(false);
@@ -414,8 +460,39 @@ function EventDetails({ eventId }) {
   };
 
   const handleConfirmBooking = () => withBookingLock(async () => {
-    if (!isLoggedIn || !selectedTicket) return;
+    if (!selectedTicket && !pendingGuest.current) return;
     setRegisterError('');
+    if (!isLoggedIn) {
+      if (!pendingGuest.current && (!guestName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim()))) {
+        setRegisterError('กรุณากรอกชื่อและอีเมลที่ถูกต้อง'); return;
+      }
+      try {
+        if (!pendingGuest.current) {
+          const latest = await refreshInventory();
+          if (!latest) return;
+          const ticket = (latest.ticketTypes ?? []).find((item) => String(item.id) === String(selectedTicket.id));
+          if (latest.status !== 'OPEN' || !ticket || !canBuyTicket(ticket) || qty > Math.min(10, Number(ticket.remaining), Number(latest.spotsLeft)) || Number(ticket.price) !== Number(selectedTicket.price)) {
+            setRegisterError('ข้อมูลบัตรหรือจำนวนที่นั่งเปลี่ยนไป กรุณาตรวจสอบอีกครั้ง'); return;
+          }
+          const currentAttempt = attempt.current;
+          const tracked = currentAttempt && await currentAttempt.started;
+          pendingGuest.current = { key: newId(), paid: Number(selectedTicket.price) > 0,
+            payload: { displayName: guestName.trim(), email: guestEmail.trim(), ticketTypeId: selectedTicket.id, quantity: qty, ...(tracked ? { attemptId: currentAttempt.id } : {}) } };
+        }
+        const pending = pendingGuest.current;
+        const result = await (pending.paid ? guestService.checkout(eventId, pending.payload, pending.key) : guestService.register(eventId, pending.payload, pending.key));
+        pendingGuest.current = null; setGuestRetry(false);
+        if (pending.paid) {
+          storeGuest(guestStorageKey, { type: 'payment', id: result.paymentId });
+          setPaymentOrder(result); setPaymentError(''); setPaymentNeedsReview(false); setActiveModal('payment');
+        } else showRegistration(result);
+        await refreshInventory();
+      } catch (error) {
+        if (isUncertainResult(error)) { setGuestRetry(true); setRegisterError('ยังยืนยันผลไม่ได้ กดลองอีกครั้งเพื่อตรวจสอบรายการเดิม'); }
+        else { pendingGuest.current = null; setGuestRetry(false); setRegisterError(getErrorMessage(error)); }
+      }
+      return;
+    }
 
     const latest = await refreshInventory();
     if (!latest) return;
@@ -448,7 +525,9 @@ function EventDetails({ eventId }) {
         return;
       }
 
-      const payload = { ticketTypeId: latestTicket.id, quantity: qty };
+      const currentAttempt = attempt.current;
+      const tracked = currentAttempt && await currentAttempt.started;
+      const payload = { ticketTypeId: latestTicket.id, quantity: qty, ...(tracked ? { attemptId: currentAttempt.id } : {}) };
       if (paid) {
         const order = await mockPaymentService.checkout({ eventId: Number(eventId), ...payload });
         setPaymentError('');
@@ -484,12 +563,13 @@ function EventDetails({ eventId }) {
   });
 
   const checkPaymentStatus = async (paymentId) => {
-    const result = await mockPaymentService.getStatus(paymentId);
+    const result = await (isLoggedIn ? mockPaymentService.getStatus(paymentId) : guestService.payment(paymentId));
     if (result.status === 'CONFIRMED') {
-      const registration = await findActiveRegistration(eventId, result.registrationId).catch(() => null);
+      const registration = isLoggedIn ? await findActiveRegistration(eventId, result.registrationId).catch(() => null) : result.registration;
       showRegistration(registration ?? { id: result.registrationId });
     } else if (result.status === 'CANCELLED' || result.status === 'EXPIRED') {
       setPaymentOrder(null);
+      if (!isLoggedIn) { storeGuest(guestStorageKey, null); attempt.current = null; }
       setPaymentQr('');
       setActiveModal('booking');
       setRegisterError(result.status === 'CANCELLED' ? 'รายการชำระเงินถูกยกเลิกแล้ว' : 'รายการชำระเงินหมดอายุแล้ว');
@@ -509,8 +589,8 @@ function EventDetails({ eventId }) {
         await checkPaymentStatus(paymentOrder.paymentId);
         return;
       }
-      const result = await mockPaymentService.confirm(paymentOrder.paymentId);
-      if (result.paymentStatus !== 'CONFIRMED') {
+      const result = await (isLoggedIn ? mockPaymentService.confirm(paymentOrder.paymentId) : guestService.confirmPayment(paymentOrder.paymentId));
+      if ((isLoggedIn ? result.paymentStatus : result.status) !== 'CONFIRMED') {
         throw new Error('ยังไม่ได้รับการยืนยันการชำระเงิน');
       }
       showRegistration(result.registration);
@@ -524,8 +604,9 @@ function EventDetails({ eventId }) {
     if (!paymentOrder?.paymentId) return;
     setPaymentError('');
     try {
-      await mockPaymentService.cancel(paymentOrder.paymentId);
+      await (isLoggedIn ? mockPaymentService.cancel(paymentOrder.paymentId) : guestService.cancelPayment(paymentOrder.paymentId));
       setPaymentOrder(null);
+      if (!isLoggedIn) { storeGuest(guestStorageKey, null); attempt.current = null; }
       setPaymentQr('');
       setActiveModal('booking');
       setPaymentNeedsReview(false);
@@ -791,7 +872,7 @@ function EventDetails({ eventId }) {
                       ? 'ไม่มีประเภทบัตร'
                       : !canChooseTicket
                         ? 'ไม่มีบัตรที่เปิดขาย'
-                        : isLoggedIn ? 'ลงทะเบียน →' : 'เข้าสู่ระบบเพื่อลงทะเบียน'}
+                        : 'ลงทะเบียน →'}
               </button>
               {!activeModal && registerError && <p role="alert">{registerError}</p>}
               {!activeModal && inventoryError && (
@@ -801,7 +882,7 @@ function EventDetails({ eventId }) {
                 </p>
               )}
               {!isLoggedIn && canRegister && (
-                <p className="ticket-reg">ขณะนี้การลงทะเบียนรองรับบัญชีสมาชิก</p>
+                <p className="ticket-reg">ลงทะเบียนโดยไม่ต้องมีบัญชี หรือเข้าสู่ระบบเพื่อเก็บรายการไว้ในบัญชี</p>
               )}
             </div>
           </div>
@@ -829,6 +910,13 @@ function EventDetails({ eventId }) {
             </div>
 
             <div className="modal-body">
+              {!isLoggedIn && <div style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
+                <label htmlFor="guest-name">ชื่อผู้เข้าร่วม</label>
+                <input id="guest-name" maxLength={120} value={guestName} disabled={submitting || guestRetry} onChange={(e) => setGuestName(e.target.value)} />
+                <label htmlFor="guest-email">อีเมล</label>
+                <input id="guest-email" type="email" maxLength={254} value={guestEmail} disabled={submitting || guestRetry} onChange={(e) => setGuestEmail(e.target.value)} />
+                <small>ใช้อีเมลเดียวกันกับบัญชีสมาชิกเพื่อรับรายการในภายหลัง</small>
+              </div>}
               <label className="section-label">เลือกประเภทบัตร</label>
 
               <div className="ticket-options">
@@ -846,7 +934,7 @@ function EventDetails({ eventId }) {
                       className={`modal-ticket-card ${
                         isSelected ? 'active' : ''
                       }`}
-                      disabled={!available || submitting}
+                      disabled={!available || submitting || guestRetry}
                       onClick={() => {
                         setSelectedTicketId(ticket.id);
                         setQty(1);
@@ -886,7 +974,7 @@ function EventDetails({ eventId }) {
                   <button
                     type="button"
                     onClick={() => handleQtyChange(-1)}
-                    disabled={qty <= 1 || submitting}
+                    disabled={qty <= 1 || submitting || guestRetry}
                   >
                     −
                   </button>
@@ -896,7 +984,7 @@ function EventDetails({ eventId }) {
                   <button
                     type="button"
                     onClick={() => handleQtyChange(1)}
-                    disabled={qty >= maxQty || submitting}
+                    disabled={qty >= maxQty || submitting || guestRetry}
                   >
                     +
                   </button>
@@ -946,11 +1034,11 @@ function EventDetails({ eventId }) {
                 onClick={handleConfirmBooking}
                 disabled={
                   submitting ||
-                  !selectedTicket ||
-                  !canBuyTicket(selectedTicket) ||
+                  (!selectedTicket && !guestRetry) ||
+                  (!guestRetry && (!canBuyTicket(selectedTicket) ||
                   alreadyRegistered ||
                   qty > maxQty ||
-                  eventUnavailable
+                  eventUnavailable))
                 }
               >
                 {submitting
@@ -1095,12 +1183,22 @@ function EventDetails({ eventId }) {
               ✅
             </div>
 
-            <h2 className="modal-title">ลงทะเบียนสำเร็จ!</h2>
+            <h2 className="modal-title">{registrationResult?.status === 'CANCELLED' ? 'ยกเลิกการลงทะเบียนแล้ว' : 'ลงทะเบียนสำเร็จ!'}</h2>
 
             <p style={{ marginTop: '8px', color: '#666' }}>
               ระบบบันทึกการลงทะเบียนของคุณเรียบร้อยแล้ว
             </p>
 
+            {receiptQr && <img src={receiptQr} alt="QR Code สำหรับบัตร" width={200} height={200} />}
+            {!isLoggedIn && registrationResult?.status !== 'CANCELLED' && <>
+              <p>บันทึกหน้านี้ไว้ในเบราว์เซอร์นี้ หรือเข้าสู่ระบบด้วยอีเมลเดียวกันเพื่อรับรายการเข้าบัญชี</p>
+              <button type="button" disabled={submitting} onClick={() => withBookingLock(async () => {
+                try { setRegistrationResult(await guestService.cancelBooking(registrationResult.registrationId)); await refreshInventory(); }
+                catch (error) { setRegisterError(getErrorMessage(error)); try { setRegistrationResult(await guestService.receipt(registrationResult.registrationId)); } catch {} }
+              })}>ยกเลิกการลงทะเบียน</button>
+              <button type="button" onClick={() => openModal('login', { pathname: '/MyRegistrationsPage' })}>เข้าสู่ระบบเพื่อรับรายการ</button>
+            </>}
+            {registerError && <p role="alert">{registerError}</p>}
             {ticketCode && (
               <div
                 style={{

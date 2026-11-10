@@ -129,7 +129,7 @@ const getCsrfToken = async () => {
   }
 };
 
-const request = async (method, endpoint, data) => {
+const request = async (method, endpoint, data, extraHeaders = {}) => {
   const normalizedMethod = method.toUpperCase();
 
   const path = endpoint.startsWith('/')
@@ -150,6 +150,7 @@ const request = async (method, endpoint, data) => {
 
   const headers = {
     Accept: 'application/json',
+    ...extraHeaders,
   };
 
   const options = {
@@ -216,8 +217,8 @@ const request = async (method, endpoint, data) => {
 const apiClient = {
   get: (endpoint) => request('GET', endpoint),
 
-  post: (endpoint, data) =>
-    request('POST', endpoint, data),
+  post: (endpoint, data, headers) =>
+    request('POST', endpoint, data, headers),
 
   // สำหรับอัปโหลดไฟล์ด้วย FormData
   postForm: (endpoint, formData) => {
