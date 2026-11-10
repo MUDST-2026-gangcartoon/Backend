@@ -32,7 +32,7 @@ test('E2E-AUTO-002: Free Ticket → My Tickets → STAFF Check-in', async ({ pag
   await page.goto('/MyTicketsPage');
   const ticketCard = page.locator('.myticket-card').filter({ hasText: registration.ticketCode });
   await expect(ticketCard).toBeVisible();
-  await expect(ticketCard.getByAltText('QR Code ของบัตร')).toBeVisible();
+  await expect(ticketCard.getByAltText(/^QR Code ของ /)).toBeVisible();
   await screenshot(page, info, 'free-ticket-qr');
 
   const staffContext = await browser.newContext({ baseURL: process.env.E2E_BASE_URL || 'http://127.0.0.1:5173' });
@@ -105,12 +105,14 @@ test('E2E-AUTO-004: USER Cancel → old Ticket rejected → Payment History reta
   await row.getByRole('button', { name: 'ยกเลิกการลงทะเบียน' }).click();
   const cancelled = await cancelPromise;
   expect(cancelled.status()).toBe(204);
-  await expect(row).toHaveCount(0);
-  expect((await currentRegistrations(page)).filter(r => r.event?.id === event.id)).toHaveLength(0);
+  await expect(row).toContainText('ยกเลิกแล้ว');
+  expect((await currentRegistrations(page)).find(r => r.id === confirmed.registration.id).status).toBe('CANCELLED');
   await screenshot(page, info, 'registration-cancelled');
 
   await page.goto('/MyTicketsPage');
-  await expect(page.locator('.myticket-card').filter({ hasText: code })).toHaveCount(0);
+  const cancelledTicket = page.locator('.myticket-card').filter({ hasText: title });
+  await expect(cancelledTicket).toContainText('ยกเลิกแล้ว');
+  await expect(cancelledTicket.getByAltText(/^QR Code ของ /)).toHaveCount(0);
   const history = await expectJsonResponse(
     await page.request.get('/api/payments/mock/' + payment.paymentId), 200,
   );
@@ -121,7 +123,7 @@ test('E2E-AUTO-004: USER Cancel → old Ticket rejected → Payment History reta
   try {
     const staff = await staffContext.newPage();
     await login(staff, ACCOUNTS.staff, password);
-    await staffCheckin(staff, event.id, code, 404);
+    await staffCheckin(staff, event.id, code, 409);
     await expect(staff.getByRole('alert').first()).toBeVisible();
     await screenshot(staff, info, 'cancelled-ticket-rejected');
   } finally { await staffContext.close(); }

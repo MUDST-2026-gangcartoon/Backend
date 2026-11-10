@@ -51,7 +51,8 @@ export async function login(page, email, password) {
 export async function logoutUser(page) {
   await page.goto('/');
   await page.locator('.user-profile-container .user-profile').first().click();
-  await page.getByRole('button', { name: /ออกจากระบบ/ }).click();
+  await page.getByRole('menuitem', { name: /ออกจากระบบ/ }).click();
+  await page.getByRole('alertdialog', { name: 'ออกจากระบบ' }).getByRole('button', { name: 'ออกจากระบบ' }).click();
   await expect(page.getByRole('link', { name: 'เข้าสู่ระบบ', exact: true })).toBeVisible();
 }
 
@@ -131,7 +132,8 @@ export async function seedEventViaAdmin(browser, password, name, price = 0, capa
     await verifyE2ESeed(page);
     await login(page, ACCOUNTS.admin, password);
     const csrf = await expectJsonResponse(await page.request.get('/api/auth/csrf'), 200);
-    const date = new Date(Date.now() + 35 * 86400_000).toISOString().slice(0, 19);
+    // Event API expects Bangkok local time without a timezone suffix.
+    const date = new Date(Date.now() + 30 * 60_000).toLocaleString('sv-SE', { timeZone: 'Asia/Bangkok' }).replace(' ', 'T');
     const payload = {
       title: name,
       description: 'กิจกรรมสำหรับทดสอบ Playwright โดยเฉพาะ',

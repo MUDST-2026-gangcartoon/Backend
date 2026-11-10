@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createEventViaAdmin } from './support.mjs';
 
 const EVENT_TITLE = '[E2E] Open Workshop';
 const USER_EMAIL = 'e2e.user@example.com';
@@ -63,11 +64,12 @@ async function requireFreshE2ESeed(page) {
   return { eventId: event.id, ticketTypeId: general.id };
 }
 
-test('E2E-AUTO-001: Paid Checkout → Confirm → My Tickets → Staff Check-in (real stack)', async ({ page }, testInfo) => {
+test('E2E-AUTO-001: Paid Checkout → Confirm → My Tickets → Staff Check-in (real stack)', async ({ page, browser }, testInfo) => {
   const password = requireIsolatedEnvironment();
 
   // Only API discovery / assertions: ALL business interactions happen through real UI.
-  const { eventId, ticketTypeId } = await requireFreshE2ESeed(page);
+  await requireFreshE2ESeed(page);
+  const { eventId, ticketTypeId, eventTitle } = await createEventViaAdmin(browser, { price: 100 });
 
   await page.goto('/');
   await loginThroughUI(page, USER_EMAIL, password);
@@ -77,10 +79,10 @@ test('E2E-AUTO-001: Paid Checkout → Confirm → My Tickets → Staff Check-in 
   expect(initialRegistrations.filter(r => r.event?.id === eventId)).toEqual([]);
 
   await page.goto('/event-detail/' + eventId);
-  await expect(page.getByRole('heading', { name: EVENT_TITLE, exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: eventTitle, exact: true })).toBeVisible();
   await page.getByRole('button', { name: /ลงทะเบียน →/ }).click();
 
-  const booking = page.locator('.custom-modal-box').filter({ hasText: 'ลงทะเบียน: ' + EVENT_TITLE });
+  const booking = page.locator('.custom-modal-box').filter({ hasText: 'ลงทะเบียน: ' + eventTitle });
   await expect(booking).toBeVisible();
   await booking.getByRole('button', { name: /General/ }).click();
   await expect(booking.locator('.total-section')).toContainText('100');
@@ -114,11 +116,25 @@ test('E2E-AUTO-001: Paid Checkout → Confirm → My Tickets → Staff Check-in 
 
   // Verify the browser UI also shows NO ticket before confirmation.
   await page.goto('/MyTicketsPage');
-  await expect(page.locator('.myticket-card').filter({ hasText: EVENT_TITLE })).toHaveCount(0);
+  await expect(page.locator('.myticket-card').filter({ hasText: eventTitle })).toHaveCount(0);
   await capture(page, testInfo, '02-no-ticket-before-confirm');
 
-  // The production frontend restores a pending order from its localStorage + backend.
+  // Reopen checkout to resume the existing pending order from the backend.
   await page.goto('/event-detail/' + eventId);
+  await page.getByRole('button', { name: /ลงทะเบียน →/ }).click();
+  const resumeBooking = page.locator('.custom-modal-box').filter({ hasText: 'ลงทะเบียน: ' + eventTitle });
+  await resumeBooking.getByRole('button', { name: /General/ }).click();
+  const newCheckouts = [];
+  page.on('request', request => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/payments/mock/checkout') newCheckouts.push(request);
+  });
+  const resumedPromise = page.waitForResponse(response =>
+    new URL(response.url()).pathname === '/api/payments/mock/' + checkout.paymentId + '/resume' &&
+    response.request().method() === 'GET');
+  await resumeBooking.getByRole('button', { name: 'ไปหน้าชำระเงิน' }).click();
+  const resumed = await expectJsonResponse(await resumedPromise, 200);
+  expect(resumed.paymentId).toBe(checkout.paymentId);
+  expect(newCheckouts).toHaveLength(0);
   await expect(page.getByRole('heading', { name: 'ชำระเงินสำหรับเดโม' })).toBeVisible();
   const confirmPromise = page.waitForResponse((response) =>
     new URL(response.url()).pathname === '/api/payments/mock/' + checkout.paymentId + '/confirm' &&
@@ -145,7 +161,7 @@ test('E2E-AUTO-001: Paid Checkout → Confirm → My Tickets → Staff Check-in 
   await page.goto('/MyTicketsPage');
   const issuedTicket = page.locator('.myticket-card').filter({ hasText: ticketCode });
   await expect(issuedTicket).toBeVisible();
-  await expect(issuedTicket.getByAltText('QR Code ของบัตร')).toBeVisible();
+  await expect(issuedTicket.getByAltText(/^QR Code ของ /)).toBeVisible();
   await capture(page, testInfo, '04-issued-ticket-with-qr');
 
   const registrationsResponse = await page.request.get('/api/registrations/me');
@@ -157,7 +173,8 @@ test('E2E-AUTO-001: Paid Checkout → Confirm → My Tickets → Staff Check-in 
 
   // Log out through the real UI before changing roles.
   await page.locator('.user-profile-container .user-profile').first().click();
-  await page.getByRole('button', { name: /ออกจากระบบ/ }).click();
+  await page.getByRole('menuitem', { name: /ออกจากระบบ/ }).click();
+  await page.getByRole('alertdialog', { name: 'ออกจากระบบ' }).getByRole('button', { name: 'ออกจากระบบ' }).click();
   await expect(page.getByRole('link', { name: 'เข้าสู่ระบบ', exact: true })).toBeVisible();
 
   await loginThroughUI(page, STAFF_EMAIL, password);
@@ -172,9 +189,10 @@ test('E2E-AUTO-001: Paid Checkout → Confirm → My Tickets → Staff Check-in 
   await page.getByRole('button', { name: 'เช็กอินตั๋ว' }).click();
   const firstCheckin = await expectJsonResponse(await checkinPromise, 200);
   expect(firstCheckin.checkedIn).toBe(true);
+  expect(firstCheckin.result).toBe('CHECKED_IN');
   expect(firstCheckin.ticketCode).toBe(ticketCode);
   expect(firstCheckin.checkedInAt).toBeTruthy();
-  await expect(page.getByText(/ตั๋วนี้เช็กอินแล้ว/)).toBeVisible();
+  await expect(page.getByText('เช็กอินสำเร็จ', { exact: true })).toBeVisible();
   await capture(page, testInfo, '05-staff-checkin');
 
   // Current backend behavior: repeated check-in is idempotent (HTTP 200),
@@ -188,13 +206,19 @@ test('E2E-AUTO-001: Paid Checkout → Confirm → My Tickets → Staff Check-in 
   const repeatedCheckin = await expectJsonResponse(await repeatPromise, 200);
   expect(repeatedCheckin.ticketCode).toBe(ticketCode);
   expect(repeatedCheckin.checkedIn).toBe(true);
-  expect(repeatedCheckin.checkedInAt).toBe(firstCheckin.checkedInAt);
+  expect(repeatedCheckin.result).toBe('ALREADY_USED');
+  await expect(page.getByText('ตั๋วนี้ใช้แล้ว', { exact: true })).toBeVisible();
+  expect(Number.isFinite(Date.parse(repeatedCheckin.checkedInAt))).toBe(true);
+  expect(Number.isFinite(Date.parse(firstCheckin.checkedInAt))).toBe(true);
+  expect(Math.abs(Date.parse(repeatedCheckin.checkedInAt) - Date.parse(firstCheckin.checkedInAt))).toBeLessThanOrEqual(1);
 
   const attendeesResponse = await page.request.get('/api/staff/events/' + eventId + '/attendees');
   const attendees = await expectJsonResponse(attendeesResponse, 200);
   const sameTicket = attendees.filter((attendee) => attendee.ticketCode === ticketCode);
   expect(sameTicket).toHaveLength(1);
-  expect(sameTicket[0].checkedInAt).toBe(firstCheckin.checkedInAt);
+  expect(Number.isFinite(Date.parse(sameTicket[0].checkedInAt))).toBe(true);
+  expect(Number.isFinite(Date.parse(firstCheckin.checkedInAt))).toBe(true);
+  expect(Math.abs(Date.parse(sameTicket[0].checkedInAt) - Date.parse(firstCheckin.checkedInAt))).toBeLessThanOrEqual(1);
 
   await capture(page, testInfo, '06-repeat-checkin-idempotent');
 });

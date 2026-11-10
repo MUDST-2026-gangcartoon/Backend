@@ -72,7 +72,8 @@ export async function signup(page) {
 
 export async function logout(page) {
   await page.locator('.user-profile-container .user-profile').first().click();
-  await page.getByRole('button', { name: /ออกจากระบบ/ }).click();
+  await page.getByRole('menuitem', { name: /ออกจากระบบ/ }).click();
+  await page.getByRole('alertdialog', { name: 'ออกจากระบบ' }).getByRole('button', { name: 'ออกจากระบบ' }).click();
   await expect(page.getByRole('link', { name: 'เข้าสู่ระบบ', exact: true })).toBeVisible();
 }
 
@@ -120,12 +121,8 @@ export async function createEventViaAdmin(browser, options = {}) {
     await dialog.locator('#ev-desc').fill('Automated browser E2E isolated test event.');
     await dialog.locator('#ev-place').fill('E2E Automation Hall');
     await dialog.locator('#ev-cat').selectOption('TECH');
-    const startsAt = new Date(Date.now() + 32 * 24 * 60 * 60 * 1000);
-    const dateLocal = [
-      startsAt.getFullYear(),
-      String(startsAt.getMonth() + 1).padStart(2, '0'),
-      String(startsAt.getDate()).padStart(2, '0'),
-    ].join('-') + 'T10:00';
+    const startsAt = new Date(Date.now() + 30 * 60 * 1000);
+    const dateLocal = startsAt.toLocaleString('sv-SE', { timeZone: 'Asia/Bangkok' }).replace(' ', 'T').slice(0, 16);
     await dialog.locator('#ev-date').fill(dateLocal);
     await dialog.locator('#ev-max').fill('5');
     await dialog.locator('#ticket-name-0').fill(free ? 'Free Admission' : 'General');

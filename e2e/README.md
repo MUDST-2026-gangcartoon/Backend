@@ -95,3 +95,9 @@ Workflow เตรียมไว้ที่ `../.github/workflows/browser-e2e.
 - หากมีการแก้ UI/Business Rules ต้องปรับ Assertions ตาม Requirements ที่อนุมัติ ห้ามปิดหรือ Skip Test เพื่อทำให้ Green
 
 อ่านรายละเอียดฉบับส่งอาจารย์ได้ที่ [รายงาน Automated Browser E2E](../docs/testing/automated-browser-e2e.md) และ [รายงาน Audit Manual Evidence](../docs/testing/e2e-existing-evidence-audit.md)
+
+## CI browser regression
+
+`.github/workflows/browser-e2e.yml` runs the nine fast Chromium scenarios on pull requests to `main` and pushes to `main` or `ci/**`. The real expiration case (`@slow`, about ten minutes) remains available with `E2E_SUITE=slow` and is not part of this job. The job builds the frontend and backend, serves the built frontend over loopback, and uses the `e2e` profile with disposable in-memory H2. It generates and masks a fresh test-only seed password for each run; it does not use repository or production credentials. The existing Maven test and Minikube jobs remain independent.
+
+The HTML and JUnit reports and failure traces, videos, screenshots and startup logs are retained for seven days. These artifacts can contain generated test account credentials, session cookies, CSRF tokens, and ticket codes. Treat them as sensitive test data and restrict access to the repository's Actions artifacts. Do not reuse real credentials or send actual email in this environment.

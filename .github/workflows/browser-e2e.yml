@@ -1,0 +1,93 @@
+name: Browser E2E
+
+on:
+  push:
+    branches: [main, 'ci/**']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  browser-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TZ: Asia/Bangkok
+      E2E_CONFIRM_ISOLATED: 'yes'
+      E2E_BASE_URL: http://127.0.0.1:15173
+      E2E_BACKEND_PORT: 18080
+      E2E_FRONTEND_PORT: 15173
+      E2E_SUITE: fast
+      PLAYWRIGHT_SKIP_BROWSER_GC: '1'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            e2e/package-lock.json
+      - name: Build backend without repeating CI tests
+        working-directory: backend
+        run: |
+          chmod +x mvnw
+          ./mvnw --batch-mode --no-transfer-progress package -DskipTests
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      - name: Install browser dependencies
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run browser regression suite against isolated H2
+        shell: bash
+        run: |
+          set -euo pipefail
+          seed_password="$(openssl rand -hex 24)"
+          echo "::add-mask::$seed_password"
+          export APP_E2E_SEED_PASSWORD="$seed_password" E2E_SEED_PASSWORD="$seed_password"
+          export SPRING_PROFILES_ACTIVE=e2e SERVER_ADDRESS=127.0.0.1 SERVER_PORT="$E2E_BACKEND_PORT"
+          java -jar backend/target/*.jar > "$RUNNER_TEMP/browser-backend.log" 2>&1 &
+          backend_pid=$!
+          node e2e/serve-built.mjs frontend/dist > "$RUNNER_TEMP/browser-frontend.log" 2>&1 &
+          frontend_pid=$!
+          trap 'kill "$backend_pid" "$frontend_pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 90); do
+            if curl --max-time 5 --silent --fail "$E2E_BASE_URL/api/events?page=0&size=20" > "$RUNNER_TEMP/browser-events.json" &&
+              python3 -c 'import json,sys; titles={e["title"] for e in json.load(open(sys.argv[1]))["items"]}; sys.exit(not {"[E2E] Open Workshop", "[E2E] Full Workshop"} <= titles)' "$RUNNER_TEMP/browser-events.json" 2>/dev/null; then break; fi
+            if ! kill -0 "$backend_pid" 2>/dev/null; then echo 'Backend exited during startup'; exit 1; fi
+            sleep 2
+          done
+          python3 -c 'import json,sys; titles={e["title"] for e in json.load(open(sys.argv[1]))["items"]}; assert {"[E2E] Open Workshop", "[E2E] Full Workshop"} <= titles, "E2E seed not ready"' "$RUNNER_TEMP/browser-events.json"
+          cd e2e
+          npm test
+      - name: Upload browser reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: browser-e2e-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: e2e/artifacts/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Upload startup diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: browser-e2e-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/browser-backend.log
+            ${{ runner.temp }}/browser-frontend.log
+          if-no-files-found: ignore
+          retention-days: 7
