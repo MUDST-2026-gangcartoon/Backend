@@ -38,14 +38,17 @@ coalesce(
     ),
     0
 ),
-case when count(vr.id) > 0 then true else false end, e.endsAt,e.registrationClosesAt,e.checkinOpensAt,e.checkinClosesAt,e.eventFormat
+case when exists (
+    select 1 from Registration vr
+    where vr.event = e
+      and (vr.user.id = :userId
+           or vr.guest.id in (select g.id from GuestIdentity g where g.claimedUserId = :userId))
+      and (vr.status is null or vr.status = 'CONFIRMED')
+) then true else false end, e.endsAt,e.registrationClosesAt,e.checkinOpensAt,e.checkinClosesAt,e.eventFormat
                     )
                     from Event e
                     left join Registration r
                         on r.event = e and (r.status is null or r.status='CONFIRMED')
-                    left join Registration vr
-                        on vr.event = e
-                        and vr.user.id = :userId and (vr.status is null or vr.status='CONFIRMED')
                     where (
                         :search is null
                         or :search = ''
@@ -103,7 +106,13 @@ and coalesce(
                             :status = 'CLOSED' and e.startsAt > :now and coalesce(e.registrationClosesAt,e.startsAt) <= :now
                         ) or ( :status = 'ONGOING' and e.startsAt <= :now and coalesce(e.endsAt,timestampadd(hour,4,e.startsAt)) > :now
                         ) or ( :status = 'REGISTERED'
-                            and count(vr.id) > 0
+                            and exists (
+    select 1 from Registration vr
+    where vr.event = e
+      and (vr.user.id = :userId
+           or vr.guest.id in (select g.id from GuestIdentity g where g.claimedUserId = :userId))
+      and (vr.status is null or vr.status = 'CONFIRMED')
+)
                         )
                     )
                     order by e.startsAt asc, e.id asc
@@ -160,7 +169,8 @@ and coalesce(
                                 select 1
                                 from Registration rr
                                 where rr.event = e
-                                and rr.user.id = :userId and (rr.status is null or rr.status='CONFIRMED')
+                                and (rr.user.id = :userId or rr.guest.id in (select g.id from GuestIdentity g where g.claimedUserId = :userId))
+                                and (rr.status is null or rr.status='CONFIRMED')
                             )
                         )
                     )

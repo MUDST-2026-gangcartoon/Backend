@@ -120,6 +120,7 @@ public class OnlineEventService {
     // Use the same registration row lock as cancellation and staff check-in.
     var registration = registrations
       .activeForUpdate(user.getId(), id)
+      .or(() -> registrations.activeClaimedForUpdate(user.getId(), id).stream().findFirst())
       .orElseThrow(() ->
         new ResponseStatusException(
           HttpStatus.FORBIDDEN,

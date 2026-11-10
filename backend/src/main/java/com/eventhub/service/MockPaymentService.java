@@ -30,13 +30,15 @@ import java.util.Objects;
 public class MockPaymentService {
 
     private static final String CURRENCY = "THB";
-    private static final int EXPIRATION_MINUTES = 10;
+    static final int EXPIRATION_MINUTES = 10;
 
     private final EventRepository eventRepository;
     private final TicketTypeRepository ticketTypeRepository;
     private final RegistrationRepository registrationRepository;
     private final UserRepository userRepository;
     private final MockPaymentRepository mockPaymentRepository;
+    @org.springframework.beans.factory.annotation.Autowired
+    private RegistrationAttemptTracking attemptTracking;
 
     // Keep the existing constructor contract used by QA Tests.
     public MockPaymentService(
@@ -139,6 +141,10 @@ public class MockPaymentService {
                 now.plusMinutes(EXPIRATION_MINUTES)
         );
 
+        if (request.attemptId() != null) {
+            attemptTracking.active(request.attemptId(), event.getId(), "u:" + user.getId());
+            order.setAttemptId(request.attemptId());
+        }
         MockPaymentOrder saved = mockPaymentRepository.save(order);
 
         return new ApiDtos.MockCheckoutDto(
@@ -253,6 +259,8 @@ public class MockPaymentService {
 
         ensureCapacity(event, ticket, order.getQuantity());
 
+        var attempt = order.getAttemptId() == null ? null
+                : attemptTracking.active(order.getAttemptId(), event.getId(), "u:" + user.getId());
         Registration registration = new Registration(
                 user,
                 event,
@@ -271,6 +279,7 @@ public class MockPaymentService {
                 saved.getTicketCode(),
                 com.eventhub.service.EventClock.now()
         );
+        if (attempt != null) attemptTracking.complete(attempt, saved);
 
         return new ApiDtos.MockConfirmDto(
                 order.getId(),
@@ -361,7 +370,7 @@ public class MockPaymentService {
                         "Payment not found"
                 ));
 
-        ensureOwner(order, user);
+        if (!ownsClaimedPayment(order, user)) ensureOwner(order, user);
         return order;
     }
 
@@ -385,16 +394,18 @@ public class MockPaymentService {
             MockPaymentOrder order,
             UserAccount user
     ) {
-        if (!Objects.equals(
-                order.getUser().getId(),
-                user.getId()
-        )) {
+        if (order.getUser() == null || !Objects.equals(order.getUser().getId(), user.getId())) {
             // Do not reveal another user's payment existence.
             throw error(
                     HttpStatus.NOT_FOUND,
                     "Payment not found"
             );
         }
+    }
+
+    private boolean ownsClaimedPayment(MockPaymentOrder order, UserAccount user) {
+        return order.getStatus() == MockPaymentStatus.CONFIRMED && order.getGuest() != null
+                && user.getId().equals(order.getGuest().getClaimedUserId());
     }
 
     // =========================================================
@@ -452,25 +463,7 @@ public class MockPaymentService {
             TicketType ticket,
             int quantity
     ) {
-        long eventSold = registrationRepository
-                .seatsReservedByEventId(event.getId());
-
-        if (eventSold + quantity > event.getCapacity()) {
-            throw error(
-                    HttpStatus.CONFLICT,
-                    "Event capacity exceeded"
-            );
-        }
-
-        long ticketSold = registrationRepository
-                .seatsReservedByTicketTypeId(ticket.getId());
-
-        if (ticketSold + quantity > ticket.getCapacity()) {
-            throw error(
-                    HttpStatus.CONFLICT,
-                    "Ticket capacity exceeded"
-            );
-        }
+        BookingCapacity.requireAvailable(registrationRepository, event, ticket, quantity);
     }
 
     // =========================================================
