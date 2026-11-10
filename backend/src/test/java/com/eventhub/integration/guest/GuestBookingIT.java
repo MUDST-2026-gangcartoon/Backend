@@ -170,9 +170,9 @@ class GuestBookingIT extends GuestPhase2TestSupport {
         var repeated = checkIn(event, ticketCode, "ALREADY_USED");
         assertEquals(2, id(first, "$.quantity"));
         assertEquals("Guest Participant", string(first, "$.attendeeName"));
-        var firstAt = LocalDateTime.parse(string(first, "$.checkedInAt")).truncatedTo(ChronoUnit.MILLIS);
-        var repeatedAt = LocalDateTime.parse(string(repeated, "$.checkedInAt")).truncatedTo(ChronoUnit.MILLIS);
-        assertEquals(firstAt, repeatedAt);
+        var firstAt = LocalDateTime.parse(string(first, "$.checkedInAt"));
+        var repeatedAt = LocalDateTime.parse(string(repeated, "$.checkedInAt"));
+        assertTrue(Math.abs(ChronoUnit.NANOS.between(firstAt, repeatedAt)) <= 1_000);
         mvc.perform(get("/api/staff/events/{id}/attendees", event.id())
                         .with(user("staff@example.test").roles("STAFF")))
                 .andExpect(status().isOk())
