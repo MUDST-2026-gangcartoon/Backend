@@ -1,6 +1,9 @@
 """Exercise real network paths through the Grafana datasource proxy."""
 import base64
 import json
+import importlib.util
+from datetime import datetime, timedelta
+from pathlib import Path
 import re
 import time
 import urllib.parse
@@ -68,6 +71,34 @@ for metric in ("eventhub_registration_orders", "eventhub_registration_attempts_m
                "eventhub_registration_seats_checked_in"):
     eventually("Business metric " + metric, lambda metric=metric: bool(query(
         "prometheus", "/api/v1/query", {"query": metric}).get("data", {}).get("result")))
+# Drive the same public booking flow used by the guest API CI test.
+def order_count():
+    result = query("prometheus", "/api/v1/query", {
+        "query": "sum(eventhub_registration_orders)"})["data"]["result"]
+    return float(result[0]["value"][1]) if result else None
+
+baseline = order_count()
+assert baseline is not None
+fixture = Path(__file__).resolve().parents[2] / ".github/scripts/ci-guest/verify.py"
+spec = importlib.util.spec_from_file_location("guest_verify", fixture)
+guest_verify = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(guest_verify)
+guest_verify.BASE = "http://127.0.0.1:8080"
+admin = guest_verify.Client()
+admin.post("/api/auth/login", 200, {"email": "e2e.admin@example.com", "password": "local-demo-only-password"})
+event = admin.post("/api/admin/events", 200, {
+    "title": "Observability smoke", "description": "Disposable booking fixture",
+    "location": "CI", "category": "TECH", "capacity": 5,
+    "startsAt": (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%S"),
+    "imageUrl": "", "detailImages": [], "ticketTypes": [
+        {"name": "Free", "description": "CI", "price": 0, "capacity": 5}]})
+guest = guest_verify.Client()
+receipt = guest.post(f"/api/guest/events/{event['id']}/registrations", 201,
+    {"displayName": "Smoke Guest", "email": "smoke@example.com",
+     "ticketTypeId": event["ticketTypes"][0]["id"], "quantity": 1},
+    {"Idempotency-Key": "observability-smoke-booking"})
+assert receipt["status"] == "CONFIRMED"
+eventually("Booking increases business orders", lambda: order_count() >= baseline + 1)
 eventually("Trace in Tempo", lambda: bool(grafana(
     "/api/datasources/proxy/uid/tempo/api/traces/" + TRACE).get("batches")))
 eventually("Matching request log in Loki", lambda: bool(query("loki", "/loki/api/v1/query_range", {
