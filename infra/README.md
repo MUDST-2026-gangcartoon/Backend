@@ -64,6 +64,18 @@ Expected baseline:
 - 3 registrations
 - 1 checked-in registration
 
+## Guest OTP demo
+
+The Minikube E2E deployment includes [Mailpit](https://mailpit.axllent.org/docs/) as an SMTP inbox for test messages. The backend sends to the in-cluster SMTP service on port 1025. To open the inbox on your machine, run:
+
+    kubectl -n eventhub-e2e port-forward --address 127.0.0.1 service/eventhub-mailpit 8025:8025
+
+Keep the command running and open http://127.0.0.1:8025. In EventHub, book as a Guest with a test address such as guest@example.test, create or sign into a member account with the same address, and request a verification code from registration history. Read the code in Mailpit, verify it in EventHub, and check that the original ticket appears in the member account.
+
+Mailpit's inbox is disposable. The service is ClusterIP and is accessed locally through port-forwarding. For a cloud deployment, configure the deployment's SMTP sender separately with secrets and TLS as described in the [backend deployment notes](../backend/migrations/README.md).
+
+The Minikube workflow also runs the Guest OTP smoke against the frontend's API proxy and Mailpit. It verifies that the account receives its original registration and ticket code after claiming.
+
 ## Reset E2E data
 
 The Backend uses an in-memory H2 database. Restarting the Backend process recreates the database and runs the E2E data seeder.

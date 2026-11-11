@@ -36,6 +36,8 @@ if ! kubectl get secret eventhub-local-tls -n "$NAMESPACE" >/dev/null 2>&1; then
     -n "$NAMESPACE" || true
 fi
 
+kubectl apply -f "$MANIFEST_DIR/eventhub-mailpit.yaml"
+kubectl rollout status deployment/eventhub-mailpit -n "$NAMESPACE" --timeout=180s
 kubectl apply -f "$MANIFEST_DIR/eventhub-backend-deployment.yaml"
 kubectl apply -f "$MANIFEST_DIR/eventhub-backend-service.yaml"
 kubectl apply -f "$MANIFEST_DIR/eventhub-frontend-deployment.yaml"
