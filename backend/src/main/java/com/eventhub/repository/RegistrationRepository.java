@@ -26,6 +26,13 @@ public interface RegistrationRepository
             """)
     List<Registration> findByUserIdOrderByEventStartsAtAsc(@Param("userId") Long userId);
 
+    @Query("""
+            select r from Registration r join fetch r.event join r.guest g
+            where r.guestSessionHash = :sessionHash and g.claimedUserId is null
+            order by r.registeredAt desc, r.id desc
+            """)
+    List<Registration> findGuestReceipts(@Param("sessionHash") String sessionHash);
+
     Optional<Registration> findByGuestSessionHashAndEventIdAndGuestRequestKey(
             String sessionHash, Long eventId, String requestKey);
 

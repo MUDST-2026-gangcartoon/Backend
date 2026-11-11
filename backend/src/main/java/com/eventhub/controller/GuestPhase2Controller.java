@@ -2,6 +2,7 @@ package com.eventhub.controller;
 
 import java.security.Principal;
 import java.time.LocalDate;
+import java.util.List;
 
 import com.eventhub.dto.GuestApiDtos;
 import com.eventhub.service.GuestPhase2Service;
@@ -30,7 +31,7 @@ public class GuestPhase2Controller {
             @Valid @RequestBody GuestApiDtos.BookingRequest booking, HttpServletRequest request,
             HttpServletResponse response) {
         noStore(response);
-        return service.register(eventId, requireKey(key), booking, request);
+        return service.register(eventId, requireKey(key), booking, request, response);
     }
 
     @PostMapping("/guest/events/{eventId}/checkout")
@@ -40,7 +41,13 @@ public class GuestPhase2Controller {
             @Valid @RequestBody GuestApiDtos.BookingRequest booking, HttpServletRequest request,
             HttpServletResponse response) {
         noStore(response);
-        return service.checkout(eventId, requireKey(key), booking, request);
+        return service.checkout(eventId, requireKey(key), booking, request, response);
+    }
+
+    @GetMapping("/guest/bookings")
+    public List<GuestApiDtos.Receipt> receipts(HttpServletRequest request, HttpServletResponse response) {
+        noStore(response);
+        return service.receipts(request, response);
     }
 
     @GetMapping("/guest/bookings/{registrationId}")
@@ -99,8 +106,8 @@ public class GuestPhase2Controller {
     @PostMapping("/analytics/registration-attempts")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void startAttempt(@Valid @RequestBody GuestApiDtos.StartAttempt attempt,
-            Principal principal, HttpServletRequest request) {
-        service.startAttempt(attempt, principal, request);
+            Principal principal, HttpServletRequest request, HttpServletResponse response) {
+        service.startAttempt(attempt, principal, request, response);
     }
 
     @GetMapping("/admin/analytics/funnel")

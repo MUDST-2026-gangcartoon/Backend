@@ -3,6 +3,7 @@ package com.eventhub.service;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -17,6 +18,7 @@ import com.eventhub.model.Role;
 import com.eventhub.model.TicketType;
 import com.eventhub.repository.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -36,11 +38,12 @@ public class GuestPhase2Service {
     private final GuestPhase2Clock clock;
     private final GuestClaimService claims;
     private final RegistrationFunnelService funnel;
+    private final GuestSession guestSession;
 
     public GuestPhase2Service(EventRepository events, UserRepository users, TicketTypeRepository tickets,
             RegistrationRepository registrations, MockPaymentRepository payments, GuestIdentityRepository guests,
             RegistrationAttemptRepository attempts, RegistrationAttemptTracking tracking, GuestPhase2Clock clock,
-            GuestClaimService claims, RegistrationFunnelService funnel) {
+            GuestClaimService claims, RegistrationFunnelService funnel, GuestSession guestSession) {
         this.events = events;
         this.users = users;
         this.tickets = tickets;
@@ -52,12 +55,14 @@ public class GuestPhase2Service {
         this.clock = clock;
         this.claims = claims;
         this.funnel = funnel;
+        this.guestSession = guestSession;
     }
 
     @Transactional
     public GuestApiDtos.Receipt register(
-            Long eventId, String key, GuestApiDtos.BookingRequest booking, HttpServletRequest request) {
-        String session = GuestSession.credential(request, true);
+            Long eventId, String key, GuestApiDtos.BookingRequest booking, HttpServletRequest request,
+            HttpServletResponse response) {
+        String session = guestSession.credential(request, response, true);
         GuestIdentity guest = lockedGuest(booking.email());
         Event event = lockedEvent(eventId);
         var previous = registrations.findByGuestSessionHashAndEventIdAndGuestRequestKey(session, eventId, key);
@@ -84,8 +89,9 @@ public class GuestPhase2Service {
 
     @Transactional
     public GuestApiDtos.Payment checkout(
-            Long eventId, String key, GuestApiDtos.BookingRequest booking, HttpServletRequest request) {
-        String session = GuestSession.credential(request, true);
+            Long eventId, String key, GuestApiDtos.BookingRequest booking, HttpServletRequest request,
+            HttpServletResponse response) {
+        String session = guestSession.credential(request, response, true);
         GuestIdentity guest = lockedGuest(booking.email());
         Event event = lockedEvent(eventId);
         var previous = payments.findByGuestSessionHashAndEventIdAndGuestRequestKey(session, eventId, key);
@@ -108,6 +114,13 @@ public class GuestPhase2Service {
                 session, key, booking.attemptId(), eventId, ticket.getId(), event.getTitle(), ticket.getName(),
                 booking.quantity(), ticket.getPrice(), now, now.plusMinutes(MockPaymentService.EXPIRATION_MINUTES)));
         return payment(order);
+    }
+
+    @Transactional(readOnly = true)
+    public List<GuestApiDtos.Receipt> receipts(HttpServletRequest request, HttpServletResponse response) {
+        String session = guestSession.credential(request, response, false);
+        if (session == null) return List.of();
+        return registrations.findGuestReceipts(session).stream().map(GuestPhase2Service::receipt).toList();
     }
 
     @Transactional(readOnly = true)
@@ -189,8 +202,9 @@ public class GuestPhase2Service {
     }
 
     @Transactional
-    public void startAttempt(GuestApiDtos.StartAttempt attempt, Principal principal, HttpServletRequest request) {
-        String ownerKey = attemptOwner(principal, request);
+    public void startAttempt(GuestApiDtos.StartAttempt attempt, Principal principal, HttpServletRequest request,
+            HttpServletResponse response) {
+        String ownerKey = attemptOwner(principal, request, response);
         lockedEvent(attempt.eventId());
         var existing = attempts.findById(attempt.attemptId());
         if (existing.isPresent()) {
@@ -209,8 +223,8 @@ public class GuestPhase2Service {
         return funnel.report(eventId, from, to);
     }
 
-    private String attemptOwner(Principal principal, HttpServletRequest request) {
-        if (principal == null) return "g:" + GuestSession.credential(request, true);
+    private String attemptOwner(Principal principal, HttpServletRequest request, HttpServletResponse response) {
+        if (principal == null) return "g:" + guestSession.credential(request, response, true);
         var user = users.findByEmail(normalizeEmail(principal.getName()))
                 .filter(account -> account.getRole() == Role.USER)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied"));
@@ -302,8 +316,8 @@ public class GuestPhase2Service {
                 ? MockPaymentStatus.EXPIRED : order.getStatus();
     }
 
-    private static String requireSession(HttpServletRequest request, String resource) {
-        String session = GuestSession.credential(request, false);
+    private String requireSession(HttpServletRequest request, String resource) {
+        String session = guestSession.credential(request);
         if (session == null) throw missing(resource);
         return session;
     }

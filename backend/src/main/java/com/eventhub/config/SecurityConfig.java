@@ -205,6 +205,7 @@ public class SecurityConfig {
                                 "/api/auth/logout",
                                 "/api/auth/csrf"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/session").permitAll()
                         .requestMatchers("/api/auth/recovery/**").permitAll()
 
                         .requestMatchers(
@@ -226,6 +227,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(
                                 HttpMethod.GET,
+                                "/api/guest/bookings",
                                 "/api/guest/bookings/*",
                                 "/api/guest/payments/*"
                         ).permitAll()
