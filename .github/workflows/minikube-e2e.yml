@@ -1,6 +1,8 @@
 name: Minikube - Deploy and Smoke Test
 
 on:
+  push:
+    branches: ['feat/infra-minikube-guest-otp']
   pull_request:
     branches:
       - main
@@ -11,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: minikube-e2e
+  group: minikube-e2e-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -140,6 +142,23 @@ jobs:
 
           print("E2E Event API smoke test passed")
           PY
+
+      - name: Verify Guest OTP delivery through Mailpit
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl -n eventhub-e2e port-forward service/eventhub-frontend 18080:80 > "$RUNNER_TEMP/otp-frontend-forward.log" 2>&1 &
+          frontend_pid=$!
+          kubectl -n eventhub-e2e port-forward service/eventhub-mailpit 18025:8025 > "$RUNNER_TEMP/mailpit-forward.log" 2>&1 &
+          mailpit_pid=$!
+          trap 'kill "$frontend_pid" "$mailpit_pid" 2>/dev/null || true' EXIT
+
+          curl -fsS --retry 12 --retry-delay 2 --retry-connrefused --max-time 5 http://127.0.0.1:18080/api/events > /dev/null
+          curl -fsS --retry 12 --retry-delay 2 --retry-connrefused --max-time 5 http://127.0.0.1:18025/api/v1/messages > /dev/null
+          E2E_SEED_PASSWORD="$(kubectl -n eventhub-e2e get secret eventhub-backend-secret -o jsonpath='{.data.APP_E2E_SEED_PASSWORD}' | base64 --decode)"
+          echo "::add-mask::$E2E_SEED_PASSWORD"
+          export E2E_SEED_PASSWORD
+          python3 infra/minikube/scripts/guest-otp-smoke.py
 
       - name: Show cluster diagnostics on failure
         if: failure()
