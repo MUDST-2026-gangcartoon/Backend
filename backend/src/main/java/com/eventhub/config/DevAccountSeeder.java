@@ -7,17 +7,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Seeds local-only demo accounts, without modifying existing accounts. */
 @Component
+@Order(10)
 @Profile("dev & !prod")
 public class DevAccountSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DevAccountSeeder.class);
-    private static final String DEV_PASSWORD = "11111111";
+    static final String DEV_PASSWORD = "11111111";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;

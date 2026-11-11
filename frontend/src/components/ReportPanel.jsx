@@ -48,28 +48,36 @@ export default function ReportPanel({ eventId, eventEnded = false, refreshKey = 
 
   const { activeOrders, activeSeats, checkedInSeats, notCheckedInSeats, showRate, noShowRate } = getAttendanceMetrics(report);
 
+  const cancelled = reportCount(report.cancelledOrders);
+  const capacity = reportCount(report.capacity);
+  const number = new Intl.NumberFormat('th-TH');
   const tiles = [
-    { key: 'orders', label: 'รายการทั้งหมด', value: reportCount(report.orders), sub: 'รวมที่ยกเลิก' },
-    { key: 'active', label: 'การจอง (ไม่รวมที่ยกเลิก)', value: activeOrders, tone: 'accent' },
-    { key: 'cancelled', label: 'รายการยกเลิก', value: reportCount(report.cancelledOrders) },
-    { key: 'participants', label: 'ที่นั่งที่จองไว้ (ไม่รวมที่ยกเลิก)', value: activeSeats },
-    { key: 'in', label: 'ที่นั่งที่เช็กอินแล้ว', value: checkedInSeats },
-    { key: 'not', label: 'ที่นั่งที่ยังไม่เช็กอิน', value: notCheckedInSeats },
-    { key: 'cap', label: 'ความจุ', value: reportCount(report.capacity) },
-    { key: 'avail', label: 'ที่นั่งว่าง', value: reportCount(report.available) },
-    { key: 'show', label: 'เปอร์เซ็นต์เช็กอิน', value: showRate, sub: showRate == null ? null : `เช็กอิน ${checkedInSeats} จาก ${activeSeats} ที่นั่ง` },
-    { key: 'noshow', label: 'เปอร์เซ็นต์ไม่มางาน', value: eventEnded ? noShowRate : null, sub: !eventEnded ? 'แสดงหลังจบงาน' : noShowRate == null ? null : `ไม่มา ${notCheckedInSeats} จาก ${activeSeats} ที่นั่ง` },
+    {
+      key: 'booked', label: 'ที่นั่งที่จองแล้ว', value: activeSeats, tone: 'accent',
+      sub: activeOrders == null ? null : `จาก ${number.format(activeOrders)} รายการจอง · ไม่นับที่ยกเลิก`,
+      detail: cancelled ? `ยกเลิก ${number.format(cancelled)} รายการ` : null,
+    },
+    {
+      key: 'show', label: 'อัตราเช็กอิน', value: showRate,
+      sub: showRate == null ? null : `เช็กอินแล้ว ${number.format(checkedInSeats)} จาก ${number.format(activeSeats)} ที่นั่ง`,
+      detail: eventEnded && noShowRate != null ? `ไม่มา ${number.format(notCheckedInSeats)} ที่นั่ง (${noShowRate})` : null,
+    },
+    {
+      key: 'avail', label: 'ที่นั่งว่าง', value: reportCount(report.available),
+      sub: capacity == null ? null : `จากทั้งหมด ${number.format(capacity)} ที่นั่ง`,
+    },
   ];
 
   return (
     <div className="bt-summary-wrap" aria-label="รายงานจากระบบ">
-      <h3>สรุปการจองและเช็กอินของอีเวนต์</h3>
+      <p className="bt-report-note">ยอดสะสมของอีเวนต์นี้</p>
       <div className="bt-summary">
         {tiles.map((tile) => (
           <div key={tile.key} className={`bt-tile${tile.tone ? ` ${tile.tone}` : ''}`}>
             <span>{tile.label}</span>
-            <strong>{tile.value ?? '—'}</strong>
+            <strong>{typeof tile.value === 'number' ? number.format(tile.value) : tile.value ?? '—'}</strong>
             {tile.sub && <small>{tile.sub}</small>}
+            {tile.detail && <small>{tile.detail}</small>}
           </div>
         ))}
       </div>
