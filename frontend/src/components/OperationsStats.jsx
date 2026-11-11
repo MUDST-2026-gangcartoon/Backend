@@ -45,7 +45,7 @@ export default function OperationsStats() {
 
   const { activeOrders, activeSeats, checkedInSeats, notCheckedInSeats, showRate } = getAttendanceMetrics(stats);
   const tiles = [
-    { key: 'orders', label: 'การจองที่ยังใช้ได้', value: activeOrders },
+    { key: 'orders', label: 'การจอง (ไม่รวมที่ยกเลิก)', value: activeOrders },
     { key: 'people', label: 'ที่นั่งที่จองไว้ (ไม่รวมที่ยกเลิก)', value: activeSeats, tone: 'accent' },
     { key: 'in', label: 'ที่นั่งที่เช็กอินแล้ว', value: checkedInSeats },
     { key: 'not', label: 'ที่นั่งที่ยังไม่เช็กอิน', value: notCheckedInSeats },

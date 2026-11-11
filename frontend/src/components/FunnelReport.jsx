@@ -22,10 +22,10 @@ const sections = [
   ['ขั้นตอนการจอง', [
     ['startedAttempts', 'เริ่มจอง'],
     ['completedAttempts', 'จองสำเร็จ'],
-    ['pendingAttempts', 'เพิ่งเริ่มจอง'],
-    ['maturedAttempts', 'เริ่มจองมาแล้วตามเวลาที่กำหนด'],
-    ['droppedOffAttempts', 'เริ่มแล้วไม่ได้จอง'],
-    ['dropOffRate', 'เปอร์เซ็นต์ที่เริ่มแล้วไม่ได้จอง'],
+    ['pendingAttempts', 'กำลังจอง (ยังไม่ครบเวลา)'],
+    ['maturedAttempts', 'เริ่มจองมาครบเวลาแล้ว'],
+    ['droppedOffAttempts', 'จองไม่ทันเวลา'],
+    ['dropOffRate', 'เปอร์เซ็นต์ที่จองไม่ทัน'],
   ]],
   ['รายการจองและเช็กอิน', [
     ['confirmedOrders', 'รายการจองทั้งหมด'],
@@ -45,7 +45,7 @@ function FunnelOverview({ counts, minutes }) {
   const steps = [
     { label: 'เริ่มจอง', value: counts.startedAttempts },
     { label: 'จองสำเร็จ', value: counts.completedAttempts },
-    { label: 'เริ่มแล้วไม่ได้จอง', value: counts.droppedOffAttempts },
+    { label: 'จองไม่ทันเวลา', value: counts.droppedOffAttempts },
   ];
   const max = Math.max(...steps.map(({ value }) => value), 1);
 
@@ -63,9 +63,9 @@ function FunnelOverview({ counts, minutes }) {
       </ul>
       <dl className="funnel-highlights">
         <div>
-          <dt>เริ่มแล้วไม่ได้จอง</dt>
+          <dt>จองไม่ทันเวลา</dt>
           <dd>{formatValue('dropOffRate', counts.dropOffRate)}</dd>
-          <small>นับจากรายการที่เริ่มจองมาแล้วอย่างน้อย {minutes} นาที</small>
+          <small>จองไม่เสร็จใน {minutes} นาที {formatter.format(counts.droppedOffAttempts)} จาก {formatter.format(counts.maturedAttempts)} ครั้งที่เริ่มจองมาครบเวลา</small>
         </div>
         <div>
           <dt>เปอร์เซ็นต์เช็กอิน</dt>

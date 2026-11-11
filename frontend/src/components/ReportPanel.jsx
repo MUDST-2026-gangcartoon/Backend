@@ -50,7 +50,7 @@ export default function ReportPanel({ eventId, eventEnded = false, refreshKey = 
 
   const tiles = [
     { key: 'orders', label: 'รายการทั้งหมด', value: reportCount(report.orders), sub: 'รวมที่ยกเลิก' },
-    { key: 'active', label: 'การจองที่ยังใช้ได้', value: activeOrders, tone: 'accent' },
+    { key: 'active', label: 'การจอง (ไม่รวมที่ยกเลิก)', value: activeOrders, tone: 'accent' },
     { key: 'cancelled', label: 'รายการยกเลิก', value: reportCount(report.cancelledOrders) },
     { key: 'participants', label: 'ที่นั่งที่จองไว้ (ไม่รวมที่ยกเลิก)', value: activeSeats },
     { key: 'in', label: 'ที่นั่งที่เช็กอินแล้ว', value: checkedInSeats },
