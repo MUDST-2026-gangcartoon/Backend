@@ -1,0 +1,14 @@
+spring:
+  config:
+    activate:
+      on-profile: "(dev | e2e) & !prod"
+  mail:
+    host: ${SPRING_MAIL_HOST:127.0.0.1}
+    port: ${SPRING_MAIL_PORT:1025}
+    properties:
+      "[mail.smtp.auth]": ${APP_GUEST_SMTP_AUTH:false}
+      "[mail.smtp.starttls.enable]": ${APP_GUEST_SMTP_STARTTLS_ENABLE:false}
+      "[mail.smtp.starttls.required]": ${APP_GUEST_SMTP_STARTTLS_REQUIRED:false}
+app:
+  guest-verification:
+    from: ${APP_GUEST_VERIFICATION_FROM:no-reply@eventhub.test}
