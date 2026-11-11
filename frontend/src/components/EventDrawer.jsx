@@ -122,13 +122,13 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
 
     if (!form.name.trim()) nextErrors.name = 'กรุณากรอกชื่ออีเวนต์';
     if (!isOnline && !form.place.trim()) nextErrors.place = 'กรุณากรอกสถานที่';
-    if (!form.date) nextErrors.date = 'กรุณาเลือกวันและเวลา';
+    if (!form.date) nextErrors.date = 'กรุณาเลือกเวลาเริ่มงาน';
     if (!Object.hasOwn(CATEGORY_META, form.category)) nextErrors.category = 'กรุณาเลือกหมวดหมู่ที่รองรับ';
 
     if (isOnline) {
       if (!form.onlineUrl.trim()) nextErrors.onlineUrl = 'กรุณากรอกลิงก์ห้องออนไลน์';
       else if (!isHttpUrl(form.onlineUrl.trim())) {
-        nextErrors.onlineUrl = 'ลิงก์ต้องขึ้นต้นด้วย https:// และมีชื่อโฮสต์';
+        nextErrors.onlineUrl = 'กรุณาใส่ลิงก์ให้ครบ เช่น https://meet.example.com/room';
       }
     }
 
@@ -159,7 +159,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
 
     const max = Number(form.max);
     if (!Number.isInteger(max) || max <= 0) {
-      nextErrors.max = 'ต้องเป็นจำนวนเต็มบวก';
+      nextErrors.max = 'กรุณากรอกตัวเลขตั้งแต่ 1 ขึ้นไป';
     } else if (isEdit && max < Number(initialEvent?.seats ?? 0)) {
       nextErrors.max = `ต้องไม่น้อยกว่าจำนวนผู้ลงทะเบียนปัจจุบัน (${initialEvent.seats})`;
     }
@@ -267,11 +267,10 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
   return (
     <div className="drawer-overlay-wrap">
       <div className="bg-dimmed" onClick={onClose} />
-      <aside className="drawer" role="dialog" aria-modal="true">
+      <aside className="drawer" role="dialog" aria-modal="true" aria-labelledby="event-drawer-title">
         <div className="drawer-head">
           <div>
-            <div className="eyebrow">{isEdit ? 'แก้ไขอีเวนต์' : 'อีเวนต์ใหม่'}</div>
-            <h2 className="drawer-title">{isEdit ? 'แก้ไขรายละเอียด' : 'สร้างอีเวนต์'}</h2>
+            <h2 id="event-drawer-title" className="drawer-title">{isEdit ? 'แก้ไขอีเวนต์' : 'สร้างอีเวนต์'}</h2>
           </div>
           <button type="button" className="close-btn" onClick={onClose} title="ปิด">
             <Icon name="close" size="1.2em" strokeWidth={2} />
@@ -297,7 +296,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
             <textarea
               id="ev-desc"
               rows={3}
-              placeholder="ระบุสิ่งที่ผู้เข้าร่วมจะได้รับ"
+              placeholder="เช่น งานนี้เกี่ยวกับอะไร เหมาะกับใคร และต้องเตรียมอะไรบ้าง"
               value={form.desc}
               onChange={set('desc')}
             />
@@ -305,7 +304,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
 
           <div className="field">
             <label>รูปปกอีเวนต์</label>
-            <span className="hint">อัปโหลดรูป หรือวาง URL ของรูปภาพ</span>
+            <span className="hint">เลือกรูปจากเครื่อง หรือวางลิงก์รูปภาพ</span>
             {form.coverUrl && (
               <div className="cover-grid single">
                 <div
@@ -327,7 +326,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
             </label>
 
             <div className="field" style={{ marginTop: 10 }}>
-              <label htmlFor="ev-cover-url">URL รูปปก</label>
+              <label htmlFor="ev-cover-url">ลิงก์รูปปก</label>
               <input
                 id="ev-cover-url"
                 type="url"
@@ -343,7 +342,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
             <label>รูปแบบการจัดงาน</label>
             <div className="segmented" role="group" aria-label="รูปแบบการจัดงาน">
               {[
-                { value: 'ONSITE', label: 'ออนไซต์' },
+                { value: 'ONSITE', label: 'จัดที่สถานที่จริง' },
                 { value: 'ONLINE', label: 'ออนไลน์' },
               ].map((option) => (
                 <button
@@ -393,7 +392,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
               <input
                 type="text"
                 id="ev-place"
-                placeholder="อาคาร / ชั้น / ห้อง"
+                placeholder="เช่น อาคาร A ชั้น 2 ห้องประชุมใหญ่"
                 value={form.place}
                 onChange={set('place')}
                 aria-invalid={Boolean(errors.place)}
@@ -414,7 +413,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
 
           <div className="field-row">
             <div className="field">
-              <label htmlFor="ev-date">วันและเวลา</label>
+              <label htmlFor="ev-date">วันและเวลาเริ่มงาน</label>
               <input type="datetime-local" id="ev-date" value={form.date} onChange={set('date')} aria-invalid={Boolean(errors.date)} />
               {errors.date && <small className="helper-text err">{errors.date}</small>}
             </div>
@@ -426,12 +425,12 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
           </div>
           <div className="field-row">
             <div className="field">
-              <label htmlFor="ev-ends">วันและเวลาสิ้นสุด</label>
+              <label htmlFor="ev-ends">วันและเวลาจบงาน</label>
               <input type="datetime-local" id="ev-ends" value={form.endsAt} min={form.date || undefined} onChange={set('endsAt')} aria-invalid={Boolean(errors.endsAt)} />
               {errors.endsAt && <small className="helper-text err">{errors.endsAt}</small>}
             </div>
             <div className="field">
-              <label htmlFor="ev-close">ปิดรับสมัครเมื่อ</label>
+              <label htmlFor="ev-close">วันและเวลาปิดรับสมัคร</label>
               <input type="datetime-local" id="ev-close" value={form.registrationClosesAt} onChange={set('registrationClosesAt')} aria-invalid={Boolean(errors.registrationClosesAt)} />
               {errors.registrationClosesAt && <small className="helper-text err">{errors.registrationClosesAt}</small>}
             </div>
@@ -439,7 +438,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
 
           <div className="field-row">
             <div className="field">
-              <label htmlFor="ev-checkin-opens">เปิดเช็กอิน</label>
+              <label htmlFor="ev-checkin-opens">เวลาเริ่มเช็กอิน</label>
               <input
                 type="datetime-local"
                 id="ev-checkin-opens"
@@ -450,7 +449,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
               {errors.checkinOpensAt && <small className="helper-text err">{errors.checkinOpensAt}</small>}
             </div>
             <div className="field">
-              <label htmlFor="ev-checkin-closes">ปิดเช็กอิน</label>
+              <label htmlFor="ev-checkin-closes">เวลาหยุดเช็กอิน</label>
               <input
                 type="datetime-local"
                 id="ev-checkin-closes"
@@ -461,7 +460,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
               {errors.checkinClosesAt && <small className="helper-text err">{errors.checkinClosesAt}</small>}
             </div>
           </div>
-          <p className="hint">ไม่กรอก = ใช้ช่วงเวลาเริ่ม–สิ้นสุดของกิจกรรมตามกติกาหลังบ้าน</p>
+          <p className="hint">ถ้าเว้นว่าง จะเริ่มเช็กอินได้ก่อนงาน 1 ชั่วโมง และปิดเมื่อจบงาน อีเวนต์ออนไลน์เช็กอินได้ระหว่างงาน</p>
 
           <div className="field-row">
             <div className="field">
@@ -480,7 +479,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
             <div className="ticket-types-heading">
               <div>
                 <h3>ประเภทบัตร</h3>
-                <p className="hint">กำหนดชื่อ ราคา และจำนวนบัตรแต่ละประเภท</p>
+                <p className="hint">ตั้งชื่อบัตรและจำนวนที่เปิดให้จอง ถ้าเป็นบัตรฟรีให้ใส่ราคา 0 บาท</p>
               </div>
               <button
                 type="button"
@@ -522,7 +521,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
                       maxLength={80}
                       value={ticket.name ?? ''}
                       onChange={(e) => updateTicketType(index, 'name', e.target.value)}
-                      placeholder="เช่น General Admission, VIP"
+                      placeholder="เช่น บัตรทั่วไป หรือบัตร VIP"
                       aria-invalid={Boolean(te.name)}
                     />
                     {te.name && <small className="helper-text err">{te.name}</small>}
@@ -572,7 +571,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
                   <label className="toggle-row" htmlFor={`ticket-sale-${index}`}>
                     <span className="toggle-text">
                       <strong>เปิดขายบัตรประเภทนี้</strong>
-                      <span className="hint">ปิดขายแล้วผู้ใช้จะซื้อประเภทนี้ไม่ได้ แต่บัตรที่ขายไปแล้วยังใช้ได้</span>
+                      <span className="hint">ปิดเพื่อหยุดรับจองบัตรประเภทนี้ บัตรที่จองแล้วใช้เข้างานได้ตามปกติ</span>
                     </span>
                     <input
                       id={`ticket-sale-${index}`}
@@ -582,7 +581,7 @@ export default function EventDrawer({ open, mode, initialEvent, onClose, onSubmi
                     />
                   </label>
 
-                  <p className="hint">ขายแล้ว: {Number(ticket.sold ?? 0)} ใบ</p>
+                  <p className="hint">จองแล้ว {Number(ticket.sold ?? 0)} ใบ</p>
                 </div>
               );
             })}
