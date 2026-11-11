@@ -31,6 +31,11 @@
     <jacoco.version>0.8.15</jacoco.version>
     </properties>
 	<dependencies>
+		<!-- OTLP tracing is enabled only in the tracing profile. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-opentelemetry</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-h2console</artifactId>

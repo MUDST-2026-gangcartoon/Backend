@@ -1,0 +1,28 @@
+name: Observability smoke
+
+on:
+  push:
+    branches: [main, 'feat/observability-logs-traces']
+    paths:
+      - 'backend/**'
+      - 'infra/observability/**'
+      - '.github/workflows/observability-smoke.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'infra/observability/**'
+      - '.github/workflows/observability-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  observability-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - name: Verify Grafana metrics, logs and traces
+        run: bash infra/observability/smoke.sh

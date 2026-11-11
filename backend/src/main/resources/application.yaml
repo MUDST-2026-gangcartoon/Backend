@@ -32,3 +32,14 @@ management:
       show-details: never
       probes:
         enabled: true
+  tracing:
+    export:
+      enabled: false
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false
