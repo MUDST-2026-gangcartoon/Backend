@@ -1,0 +1,18 @@
+discovery.docker "local" {
+  host = "unix:///var/run/docker.sock"
+  filter {
+    name = "label"
+    values = ["eventhub.logs=true"]
+  }
+}
+loki.source.docker "eventhub" {
+  host = "unix:///var/run/docker.sock"
+  targets = discovery.docker.local.targets
+  labels = {service_name = "eventhub"}
+  forward_to = [loki.write.local.receiver]
+}
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

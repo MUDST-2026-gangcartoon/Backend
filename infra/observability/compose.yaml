@@ -1,0 +1,50 @@
+name: eventhub-observability
+services:
+  backend:
+    build:
+      context: ../../backend
+    environment:
+      SPRING_PROFILES_ACTIVE: e2e,metrics,tracing
+      APP_E2E_SEED_PASSWORD: local-demo-only-password
+    ports:
+      - "127.0.0.1:8080:8080"
+    labels:
+      eventhub.logs: "true"
+    depends_on:
+      - tempo
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  loki:
+    image: grafana/loki:3.5.5
+    command: -config.file=/etc/loki/local-config.yaml
+  tempo:
+    image: grafana/tempo:2.8.2
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yml:/etc/tempo.yaml:ro
+  alloy:
+    image: grafana/alloy:v1.10.2
+    command: ["run", "/etc/alloy/config.alloy", "--storage.path=/tmp/alloy"]
+    volumes:
+      - ./config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+  grafana:
+    image: grafana/grafana:12.1.1
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: local-demo-only
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning:ro
+      - ./dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
