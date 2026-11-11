@@ -9,10 +9,10 @@ import React, {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar.jsx';
 import BookingTools from '../components/BookingTools.jsx';
-import OperationsStats from '../components/OperationsStats.jsx';
+import DashboardOverview from '../components/DashboardOverview.jsx';
 import ReportPanel from '../components/ReportPanel.jsx';
 import FunnelReport from '../components/FunnelReport.jsx';
-import { bookingsToCsv, getAttendeeContact, normalizeBookings } from '../utils/bookingModel.js';
+import { getAttendeeContact } from '../utils/bookingModel.js';
 import { MOCK_BOOKINGS, MOCK_CAPACITY, isMockMode } from '../data/mockBookings.js';
 import EventFilterBar, { Highlight } from '../components/EventFilterBar.jsx';
 import { useEventFilters } from '../hooks/useEventFilters.js';
@@ -24,9 +24,7 @@ import {
 } from '../utils/eventFilters.js';
 import {
   copyText,
-  downloadTextFile,
   getUniqueEmails,
-  safeFileName,
 } from '../utils/attendeeExport.js';
 import Icon from '../components/Icon.jsx';
 import { eventService } from '../api/eventService.js';
@@ -92,10 +90,6 @@ function formatEventDate(value) {
   })} น.`;
 }
 
-function getStatusLabel(status) {
-  return String(status ?? '').trim().toUpperCase();
-}
-
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
 
@@ -105,6 +99,28 @@ export default function AdminDashboardPage() {
   const [analyticsLoadState, setAnalyticsLoadState] = useState('loading');
   const [retryCount, setRetryCount] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
+  const mock = isMockMode();
+  const requestedEventId = searchParams.get('event');
+  const requestedView = searchParams.get('view');
+  const view = ['overview', 'events', 'analytics'].includes(requestedView)
+    ? requestedView : requestedEventId ? 'events' : 'overview';
+  const showAnalytics = view === 'analytics';
+  const showEvents = view === 'events';
+  const reportView = searchParams.get('eventView');
+  const eventView = !mock && ['summary', 'comparison'].includes(reportView) ? reportView : 'attendees';
+  const showAttendees = showEvents && eventView === 'attendees';
+
+  const selectView = (value) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('view', value);
+    setSearchParams(next);
+  };
+
+  const selectEventView = (value) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('eventView', value);
+    setSearchParams(next, { replace: true });
+  };
   const [attendees, setAttendees] = useState([]);
   const [attendeesLoading, setAttendeesLoading] = useState(false);
   const [attendeesError, setAttendeesError] = useState('');
@@ -148,6 +164,7 @@ export default function AdminDashboardPage() {
   }, [retryCount]);
 
   useEffect(() => {
+    if (!showAnalytics) return undefined;
     let cancelled = false;
 
     async function loadAnalytics() {
@@ -180,78 +197,7 @@ export default function AdminDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [retryCount]);
-
-  const stats = useMemo(() => {
-    const bookingValues = events
-      .map((event) => toNumber(event.registeredCount))
-      .filter((value) => value !== null);
-
-    const hasBookingData = bookingValues.length > 0;
-    const totalBookings = bookingValues.reduce(
-      (total, value) => total + value,
-      0,
-    );
-
-    const openEvents = events.filter(
-      (event) => getStatusLabel(event.status) === 'OPEN',
-    ).length;
-
-    const eventsWithCapacityData = events.filter((event) => {
-      const capacity = toNumber(event.capacity);
-      const spotsLeft = toNumber(event.spotsLeft);
-
-      return (
-        capacity !== null &&
-        capacity >= 0 &&
-        spotsLeft !== null &&
-        spotsLeft >= 0
-      );
-    });
-
-    const totalCapacity = eventsWithCapacityData.reduce(
-      (total, event) => total + toNumber(event.capacity),
-      0,
-    );
-
-    const bookedSeats = eventsWithCapacityData.reduce((total, event) => {
-      const capacity = toNumber(event.capacity);
-      const spotsLeft = toNumber(event.spotsLeft);
-
-      return total + Math.max(0, Math.min(capacity, capacity - spotsLeft));
-    }, 0);
-
-    const utilization =
-      totalCapacity > 0
-        ? Math.round((bookedSeats / totalCapacity) * 100)
-        : null;
-
-    return {
-      hasBookingData,
-      totalBookings,
-      openEvents,
-      totalCapacity,
-      bookedSeats,
-      utilization,
-      hasCapacityData: eventsWithCapacityData.length > 0,
-    };
-  }, [events]);
-
-  const analyticsStats = useMemo(() => {
-    const totalRegistrations = toNumber(analytics?.totalRegistrations);
-    const totalOpenEvents = toNumber(analytics?.totalOpenEvents);
-    const uniqueVisitors = toNumber(analytics?.uniqueVisitors);
-    const siteViews = toNumber(analytics?.siteViews);
-    const eventDetailViews = toNumber(analytics?.eventDetailViews);
-
-    return {
-      totalRegistrations,
-      totalOpenEvents,
-      uniqueVisitors,
-      siteViews,
-      eventDetailViews,
-    };
-  }, [analytics]);
+  }, [retryCount, showAnalytics]);
 
   // ---- ค้นหา/กรอง ----
   const { filters, setFilter, clear, activeCount } = useEventFilters();
@@ -262,7 +208,7 @@ export default function AdminDashboardPage() {
   const [focusPerson, setFocusPerson] = useState('');
   const indexStarted = useRef(false);
 
-  const needsPersonIndex = filters.q.trim().length >= 2;
+  const needsPersonIndex = showEvents && filters.q.trim().length >= 2;
 
   // โหลดรายชื่อผู้ลงทะเบียนของทุกอีเวนต์ "ครั้งเดียว" เมื่อเริ่มพิมพ์ค้นหา
   // เพื่อให้ค้นหาชื่อคนข้ามอีเวนต์ได้ (ไม่โหลดถ้าไม่มีการค้นหา)
@@ -340,7 +286,6 @@ export default function AdminDashboardPage() {
   }, [allAttendees, events, filters.q, needsPersonIndex]);
 
   // อีเวนต์ที่เลือกดูรายละเอียด (อ่านจาก ?event= ได้ เพื่อให้ลิงก์จากหน้าจัดการอีเวนต์เปิดตรงอีเวนต์นั้น)
-  const requestedEventId = searchParams.get('event');
   const selectedEvent =
     filteredEvents.find((event) => String(event.id) === requestedEventId) ??
     filteredEvents[0] ??
@@ -348,7 +293,7 @@ export default function AdminDashboardPage() {
   const selectedEventId = selectedEvent?.id ?? null;
 
   useEffect(() => {
-    if (selectedEventId === null) {
+    if (!showAttendees || mock || selectedEventId === null) {
       setAttendees([]);
       return undefined;
     }
@@ -377,11 +322,12 @@ export default function AdminDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedEventId, attendeesReload]);
+  }, [showAttendees, mock, selectedEventId, attendeesReload]);
 
   const selectEvent = (id, person = '') => {
     const next = new URLSearchParams(searchParams);
     next.set('event', String(id));
+    if (person) next.set('eventView', 'attendees');
     setSearchParams(next, { replace: true });
     setFocusPerson(person);
   };
@@ -396,19 +342,6 @@ export default function AdminDashboardPage() {
   const showNote = (text) => {
     setToolbarNote(text);
     window.setTimeout(() => setToolbarNote(''), 3500);
-  };
-
-  const handleExportCsv = () => {
-    if (!selectedEvent || !hasAttendees) return;
-
-    const title = selectedEvent.title || selectedEvent.name || 'event';
-    const date = new Date().toISOString().slice(0, 10);
-
-    downloadTextFile(
-      `ผู้ลงทะเบียน-${safeFileName(title)}-${date}.csv`,
-      bookingsToCsv(normalizeBookings(attendees)),
-    );
-    showNote(`ส่งออกรายชื่อ ${attendees.length} รายการแล้ว`);
   };
 
   const handleCopyEmails = async () => {
@@ -427,13 +360,13 @@ export default function AdminDashboardPage() {
 
   const isLoading = loadState === 'loading';
   const hasError = loadState === 'error';
-  const hasNoEvents = loadState === 'success' && events.length === 0;
 
   const isAnalyticsLoading = analyticsLoadState === 'loading';
   const hasAnalyticsError = analyticsLoadState === 'error';
 
-  const siteViews = analyticsStats.siteViews;
-  const eventDetailViews = analyticsStats.eventDetailViews;
+  const uniqueVisitors = toNumber(analytics?.uniqueVisitors);
+  const siteViews = toNumber(analytics?.siteViews);
+  const eventDetailViews = toNumber(analytics?.eventDetailViews);
   const maxViews = Math.max(siteViews ?? 0, eventDetailViews ?? 0, 1);
 
   return (
@@ -443,12 +376,7 @@ export default function AdminDashboardPage() {
       <main className="dashboard-page">
         <section className="dashboard-header">
           <div className="dashboard-header-left">
-            <div className="dashboard-eyebrow">ภาพรวมผู้จัดงาน</div>
-            <h1>ภาพรวมที่ช่วยให้งานของคุณเดินต่อ</h1>
-            <p className="dashboard-subtitle">
-              ดูข้อมูลอีเวนต์และการลงทะเบียนจากระบบ
-              แล้วเลือกสิ่งที่ควรจัดการต่อ
-            </p>
+            <h1>แดชบอร์ดอีเวนต์</h1>
           </div>
 
           <button
@@ -481,399 +409,249 @@ export default function AdminDashboardPage() {
           </button>
         </section>
 
-        <div className="dashboard-divider" />
+        <nav className="dashboard-view-switch" aria-label="มุมมองแดชบอร์ด">
+          <button type="button" aria-pressed={view === 'overview'} onClick={() => selectView('overview')}>ภาพรวม</button>
+          <button type="button" aria-pressed={showEvents} onClick={() => selectView('events')}>รายอีเวนต์</button>
+          <button type="button" aria-pressed={showAnalytics} onClick={() => selectView('analytics')}>สถิติเชิงลึก</button>
+        </nav>
 
-        {hasError && (
-          <div
-            role="alert"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 16,
-              padding: '14px 16px',
-              marginBottom: 20,
-              border: '1px solid #FECACA',
-              borderRadius: 12,
-              background: '#FEF2F2',
-              color: '#991B1B',
-            }}
-          >
-            <span>
-              โหลดข้อมูลอีเวนต์ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง
-            </span>
-            <button
-              type="button"
-              onClick={() => setRetryCount((count) => count + 1)}
-            >
-              ลองอีกครั้ง
-            </button>
+        {view === 'overview' && (
+          <DashboardOverview events={events} loading={isLoading} error={hasError} onRefresh={() => setRetryCount((count) => count + 1)} />
+        )}
+
+        {showAnalytics && (
+          <div className="dashboard-overview">
+            <section className="dashboard-charts">
+              <article className="dashboard-chart-card dashboard-bar-card">
+                <h2>การเข้าชมเว็บ</h2>
+                {uniqueVisitors !== null && <p className="dashboard-visitor-count"><strong>{formatNumber(uniqueVisitors)}</strong> ผู้เข้าชมไม่ซ้ำ</p>}
+                {isAnalyticsLoading ? (
+                  <p className="bt-report-note" role="status">กำลังโหลดสถิติการเข้าชม…</p>
+                ) : hasAnalyticsError ? (
+                  <p className="bt-report-note" role="alert">
+                    โหลดสถิติการเข้าชมไม่สำเร็จ{' '}
+                    <button type="button" className="bt-btn" onClick={() => setRetryCount((count) => count + 1)}>ลองอีกครั้ง</button>
+                  </p>
+                ) : siteViews === null && eventDetailViews === null ? (
+                  <p className="bt-report-note">ยังไม่มีข้อมูลการเข้าชม</p>
+                ) : (
+                  <ul className="funnel-bars" aria-label="กราฟจำนวนครั้งที่เข้าชม">
+                    {[
+                      ['หน้าเว็บทั้งหมด', siteViews],
+                      ['หน้ารายละเอียดอีเวนต์', eventDetailViews],
+                    ].map(([label, views]) => (
+                      <li key={label}>
+                        <div><span>{label}</span><strong>{views == null ? '—' : `${formatNumber(views)} ครั้ง`}</strong></div>
+                        <div className="funnel-track" aria-hidden="true">
+                          <span style={{ width: `${(views ?? 0) / maxViews * 100}%` }} />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </article>
+              {!isMockMode() && (
+                <article className="dashboard-chart-card">
+                  <FunnelReport />
+                </article>
+              )}
+            </section>
           </div>
         )}
 
-        {hasAnalyticsError && (
-          <div
-            role="status"
-            style={{
-              padding: '12px 16px',
-              marginBottom: 20,
-              border: '1px solid #FDE68A',
-              borderRadius: 12,
-              background: '#FFFBEB',
-              color: '#92400E',
-            }}
-          >
-            โหลดข้อมูล Analytics ไม่สำเร็จ
-            กรุณาตรวจสอบ API และสิทธิ์การเข้าถึง
-            <button
-              type="button"
-              style={{ marginLeft: 12 }}
-              onClick={() => setRetryCount((count) => count + 1)}
-            >
-              ลองอีกครั้ง
-            </button>
-          </div>
-        )}
+        {showEvents && (
+          <section className="dashboard-events" aria-busy={isLoading}>
+            <div className="dashboard-chart-header">
+              <div>
+                <h2>เลือกอีเวนต์</h2>
+              </div>
+            </div>
 
-        {hasNoEvents && (
-          <div
-            role="status"
-            style={{
-              padding: '14px 16px',
-              marginBottom: 20,
-              border: '1px solid #BAE6FD',
-              borderRadius: 12,
-              background: '#F0F9FF',
-              color: '#075985',
-            }}
-          >
-            ยังไม่มีอีเวนต์ที่ API ส่งกลับมา
-          </div>
-        )}
-
-        <section className="dashboard-stats" aria-busy={isLoading}>
-          <article className="dashboard-stat-card dashboard-stat-highlight">
-            <div className="dashboard-stat-label">
-              การจอง/ลงทะเบียนรวม
-            </div>
-            <div className="dashboard-stat-number">
-              {isAnalyticsLoading
-                ? '…'
-                : analyticsStats.totalRegistrations !== null
-                  ? formatNumber(analyticsStats.totalRegistrations)
-                  : isLoading
-                    ? '…'
-                    : hasError || !stats.hasBookingData
-                      ? '—'
-                      : formatNumber(stats.totalBookings)}
-            </div>
-            <div className="dashboard-stat-description">
-              {analyticsStats.totalRegistrations !== null
-                ? 'นับผู้เข้าชมที่ระบบบันทึกได้'
-                : 'แสดงข้อมูลจาก Event API เมื่อไม่มีสถิติจาก Analytics'}
-            </div>
-          </article>
-
-          <article className="dashboard-stat-card">
-            <div className="dashboard-stat-label">อีเวนต์ที่เปิดรับ</div>
-            <div className="dashboard-stat-number">
-              {isAnalyticsLoading
-                ? '…'
-                : analyticsStats.totalOpenEvents !== null
-                  ? formatNumber(analyticsStats.totalOpenEvents)
-                  : isLoading
-                    ? '…'
-                    : hasError
-                      ? '—'
-                      : formatNumber(stats.openEvents)}
-            </div>
-            <div className="dashboard-stat-description">
-              จำนวนอีเวนต์ที่เปิดรับลงทะเบียน
-            </div>
-          </article>
-
-          <article className="dashboard-stat-card">
-            <div className="dashboard-stat-label">ผู้เข้าชมไม่ซ้ำ</div>
-            <div className="dashboard-stat-number">
-              {isAnalyticsLoading
-                ? '…'
-                : analyticsStats.uniqueVisitors === null
-                  ? '—'
-                  : formatNumber(analyticsStats.uniqueVisitors)}
-            </div>
-            <div className="dashboard-stat-description">
-              {hasAnalyticsError
-                ? 'ไม่สามารถโหลดสถิติผู้เข้าชมได้'
-                : 'นับผู้เข้าชมที่ระบบบันทึกได้'}
-            </div>
-          </article>
-        </section>
-
-        {!isMockMode() && <OperationsStats />}
-
-        <section className="dashboard-charts">
-          <article className="dashboard-chart-card dashboard-bar-card">
-            <h2>การเข้าชมเว็บ</h2>
-            {isAnalyticsLoading ? (
-              <p className="bt-report-note" role="status">กำลังโหลดสถิติการเข้าชม…</p>
-            ) : hasAnalyticsError ? (
-              <p className="bt-report-note">โหลดสถิติการเข้าชมไม่สำเร็จ</p>
-            ) : siteViews === null && eventDetailViews === null ? (
-              <p className="bt-report-note">ยังไม่มีข้อมูลการเข้าชม</p>
+            {isLoading ? (
+              <p role="status" className="dashboard-events-empty">
+                กำลังโหลดข้อมูล…
+              </p>
+            ) : hasError ? (
+              <p role="status" className="dashboard-events-empty">
+                โหลดรายการอีเวนต์ไม่สำเร็จ{' '}
+                <button type="button" className="bt-btn" onClick={() => setRetryCount((count) => count + 1)}>ลองอีกครั้ง</button>
+              </p>
+            ) : events.length === 0 ? (
+              <p role="status" className="dashboard-events-empty">
+                ยังไม่มีอีเวนต์ในระบบ
+              </p>
             ) : (
-              <ul className="funnel-bars" aria-label="กราฟจำนวนครั้งที่เข้าชม">
-                {[
-                  ['หน้าเว็บทั้งหมด', siteViews],
-                  ['หน้ารายละเอียดอีเวนต์', eventDetailViews],
-                ].map(([label, views]) => (
-                  <li key={label}>
-                    <div><span>{label}</span><strong>{views == null ? '—' : `${formatNumber(views)} ครั้ง`}</strong></div>
-                    <div className="funnel-track" aria-hidden="true">
-                      <span style={{ width: `${(views ?? 0) / maxViews * 100}%` }} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </article>
-          {!isMockMode() && (
-            <article className="dashboard-chart-card">
-              <FunnelReport />
-            </article>
-          )}
-        </section>
+              <>
+                <EventFilterBar
+                  filters={filters}
+                  setFilter={setFilter}
+                  clear={clear}
+                  activeCount={activeCount}
+                  counts={facetCounts}
+                  total={events.length}
+                  shown={filteredEvents.length}
+                  searchPlaceholder="ค้นหาอีเวนต์หรือชื่อผู้ลงทะเบียน"
+                />
 
-        <section className="dashboard-events" aria-busy={isLoading}>
-          <div className="dashboard-chart-header">
-            <div>
-              <div className="dashboard-chart-label">รายละเอียดรายอีเวนต์</div>
-              <h2>ผู้ลงทะเบียนของแต่ละอีเวนต์</h2>
-            </div>
-            <div className="dashboard-chart-tag">เลือกอีเวนต์เพื่อดูรายชื่อ</div>
-          </div>
-
-          {isLoading ? (
-            <p role="status" className="dashboard-events-empty">
-              กำลังโหลดข้อมูล…
-            </p>
-          ) : hasError ? (
-            <p role="status" className="dashboard-events-empty">
-              โหลดรายการอีเวนต์ไม่สำเร็จ
-            </p>
-          ) : events.length === 0 ? (
-            <p role="status" className="dashboard-events-empty">
-              ยังไม่มีอีเวนต์ในระบบ
-            </p>
-          ) : (
-            <>
-              <EventFilterBar
-                filters={filters}
-                setFilter={setFilter}
-                clear={clear}
-                activeCount={activeCount}
-                counts={facetCounts}
-                total={events.length}
-                shown={filteredEvents.length}
-                searchPlaceholder="ค้นหาอีเวนต์หรือชื่อผู้ลงทะเบียน"
-              >
-                <div
-                  className="dashboard-toolbar"
-                  role="toolbar"
-                  aria-label="เครื่องมือรายชื่อผู้ลงทะเบียน"
-                >
-                  <div className="dashboard-toolbar-head">
-                    <span className="dashboard-toolbar-title">
-                      เครื่องมือรายชื่อผู้ลงทะเบียน
-                    </span>
-                    <span className="dashboard-toolbar-target">
-                      {selectedEvent
-                        ? selectedEvent.title || selectedEvent.name
-                        : 'ยังไม่ได้เลือกอีเวนต์'}
-                    </span>
-                    <span
-                      className="dashboard-toolbar-note"
-                      role="status"
-                      aria-live="polite"
-                    >
-                      {toolbarNote}
-                    </span>
-                  </div>
-
-                  <div className="dashboard-toolbar-actions">
-                    <button
-                      type="button"
-                      onClick={handleExportCsv}
-                      disabled={!hasAttendees}
-                    >
-                      <Icon name="download" /> ส่งออก CSV ทั้งกิจกรรม
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCopyEmails}
-                      disabled={!hasAttendees || attendeeEmails.length === 0}
-                    >
-                      <Icon name="copy" /> คัดลอกอีเมล
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      disabled={!selectedEvent}
-                    >
-                      <Icon name="print" /> พิมพ์รายชื่อ
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleRefresh}
-                      disabled={!selectedEvent || attendeesLoading}
-                    >
-                      <Icon name="refresh" /> รีเฟรช
-                    </button>
-                  </div>
-                </div>
-              </EventFilterBar>
-
-              {needsPersonIndex && (indexLoading || personMatches.length > 0) && (
-                <div className="dashboard-people" aria-live="polite">
-                  {indexLoading ? (
-                    <p>กำลังค้นหาในรายชื่อผู้ลงทะเบียนทุกอีเวนต์…</p>
-                  ) : personMatches.length > 0 ? (
-                    <>
-                      <div className="dashboard-people-title">
-                        พบในรายชื่อผู้ลงทะเบียน {personMatches.length} รายการ
-                      </div>
-                      <ul>
-                        {personMatches.slice(0, 6).map((person) => (
-                          <li key={person.key}>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                selectEvent(
-                                  person.eventId,
-                                  person.email || person.name,
-                                )
-                              }
-                            >
-                              <span className="dashboard-people-name">
-                                <Highlight
-                                  text={person.name}
-                                  query={filters.q}
-                                />
-                              </span>
-                              <span className="dashboard-people-meta">
-                                {person.email && (
+                {needsPersonIndex && (indexLoading || personMatches.length > 0) && (
+                  <div className="dashboard-people" aria-live="polite">
+                    {indexLoading ? (
+                      <p>กำลังค้นหาในรายชื่อผู้ลงทะเบียนทุกอีเวนต์…</p>
+                    ) : personMatches.length > 0 ? (
+                      <>
+                        <div className="dashboard-people-title">
+                          พบในรายชื่อผู้ลงทะเบียน {personMatches.length} รายการ
+                        </div>
+                        <ul>
+                          {personMatches.slice(0, 6).map((person) => (
+                            <li key={person.key}>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  selectEvent(
+                                    person.eventId,
+                                    person.email || person.name,
+                                  )
+                                }
+                              >
+                                <span className="dashboard-people-name">
                                   <Highlight
-                                    text={`${person.email} · `}
+                                    text={person.name}
                                     query={filters.q}
                                   />
-                                )}
-                                {person.eventName}
-                              </span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                      {personMatches.length > 6 && (
-                        <p className="dashboard-people-more">
-                          และอีก {personMatches.length - 6} รายการ
-                          ลองพิมพ์ให้เจาะจงขึ้น
-                        </p>
-                      )}
-                    </>
-                  ) : null}
-                </div>
-              )}
-
-              {!selectedEvent ? (
-                <div className="ef-empty">
-                  <strong>
-                    {indexLoading
-                      ? 'กำลังค้นหา…'
-                      : 'ไม่พบอีเวนต์ที่ตรงกับเงื่อนไข'}
-                  </strong>
-                  ลองลดคำค้นหา หรือเอาตัวกรองบางอย่างออก
-                  <div>
-                    <button type="button" className="ef-clear" onClick={clear}>
-                      ล้างตัวกรองทั้งหมด
-                    </button>
+                                </span>
+                                <span className="dashboard-people-meta">
+                                  {person.email && (
+                                    <Highlight
+                                      text={`${person.email} · `}
+                                      query={filters.q}
+                                    />
+                                  )}
+                                  {person.eventName}
+                                </span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                        {personMatches.length > 6 && (
+                          <p className="dashboard-people-more">
+                            และอีก {personMatches.length - 6} รายการ
+                            ลองพิมพ์ให้เจาะจงขึ้น
+                          </p>
+                        )}
+                      </>
+                    ) : null}
                   </div>
-                </div>
-              ) : (
-            <>
-              <div
-                className="dashboard-event-picker"
-                role="tablist"
-                aria-label="เลือกอีเวนต์"
-              >
-                {filteredEvents.map((event) => {
-                  const isSelected = event.id === selectedEventId;
+                )}
 
-                  return (
-                    <button
-                      key={event.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={isSelected}
-                      className={`dashboard-event-chip${
-                        isSelected ? ' is-active' : ''
-                      }`}
-                      onClick={() => selectEvent(event.id)}
+                {!selectedEvent ? (
+                  <div className="ef-empty">
+                    <strong>
+                      {indexLoading
+                        ? 'กำลังค้นหา…'
+                        : 'ไม่พบอีเวนต์ที่ตรงกับเงื่อนไข'}
+                    </strong>
+                    ลองลดคำค้นหา หรือเอาตัวกรองบางอย่างออก
+                    <div>
+                      <button type="button" className="ef-clear" onClick={clear}>
+                        ล้างตัวกรองทั้งหมด
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className="dashboard-event-picker"
+                      role="tablist"
+                      aria-label="เลือกอีเวนต์"
                     >
-                      <span className="dashboard-event-chip-name">
-                        <Highlight
-                          text={event.title || event.name || 'ไม่มีชื่ออีเวนต์'}
-                          query={filters.q}
-                        />
-                      </span>
-                      <span className="dashboard-event-chip-count">
-                        {formatNumber(toNumber(event.registeredCount) ?? 0)}
-                        {toNumber(event.capacity) !== null
-                          ? ` / ${formatNumber(toNumber(event.capacity))}`
+                      {filteredEvents.map((event) => {
+                        const isSelected = event.id === selectedEventId;
+
+                        return (
+                          <button
+                            key={event.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={isSelected}
+                            className={`dashboard-event-chip${
+                              isSelected ? ' is-active' : ''
+                            }`}
+                            onClick={() => selectEvent(event.id)}
+                          >
+                            <span className="dashboard-event-chip-name">
+                              <Highlight
+                                text={event.title || event.name || 'ไม่มีชื่ออีเวนต์'}
+                                query={filters.q}
+                              />
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="dashboard-event-info">
+                      <h3>{selectedEvent.title || selectedEvent.name}</h3>
+                      <p>
+                        {formatEventDate(selectedEvent.startsAt)}
+                        {selectedEvent.location
+                          ? ` · ${selectedEvent.location}`
                           : ''}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+                      </p>
+                    </div>
 
-              <div className="dashboard-event-info">
-                <h3>{selectedEvent.title || selectedEvent.name}</h3>
-                <p>
-                  {formatEventDate(selectedEvent.startsAt)}
-                  {selectedEvent.location
-                    ? ` · ${selectedEvent.location}`
-                    : ''}
-                </p>
-              </div>
+                    {!mock && (
+                      <nav className="dashboard-view-switch dashboard-event-views" aria-label="ข้อมูลอีเวนต์">
+                        <button type="button" aria-pressed={eventView === 'attendees'} onClick={() => selectEventView('attendees')}>รายชื่อผู้จอง</button>
+                        <button type="button" aria-pressed={eventView === 'summary'} onClick={() => selectEventView('summary')}>สรุปอีเวนต์</button>
+                        <button type="button" aria-pressed={eventView === 'comparison'} onClick={() => selectEventView('comparison')}>เปรียบเทียบการจอง</button>
+                      </nav>
+                    )}
 
-              {isMockMode() ? (
-                <p className="bt-mock-note">กำลังแสดงข้อมูลตัวอย่าง</p>
-              ) : (
-                <ReportPanel
-                  key={selectedEventId}
-                  eventId={selectedEventId}
-                  eventEnded={selectedEvent.status === 'ENDED'}
-                  refreshKey={attendeesReload}
-                />
-              )}
-              {!isMockMode() && <FunnelReport key={`funnel-${selectedEventId}`} eventId={selectedEventId} />}
-              <BookingTools
-                key={`${selectedEventId}-${focusPerson}`}
-                initialSearch={focusPerson}
-                eventName={selectedEvent.title || selectedEvent.name || 'event'}
-                capacity={
-                  isMockMode() ? MOCK_CAPACITY : toNumber(selectedEvent.capacity)
-                }
-                showSummary={isMockMode()}
-                bookings={isMockMode() ? MOCK_BOOKINGS : attendees}
-                loading={isMockMode() ? false : attendeesLoading}
-                error={isMockMode() ? '' : attendeesError}
-                onRetry={() => setAttendeesReload((count) => count + 1)}
-              />
-            </>
-              )}
-            </>
-          )}
-        </section>
+                    {eventView === 'summary' && (
+                      <ReportPanel key={selectedEventId} eventId={selectedEventId} eventEnded={selectedEvent.status === 'ENDED'} />
+                    )}
+                    {eventView === 'comparison' && (
+                      <FunnelReport key={selectedEventId} eventId={selectedEventId} />
+                    )}
+                    {showAttendees && (
+                      <>
+                        {mock && <p className="bt-mock-note">กำลังแสดงข้อมูลตัวอย่าง</p>}
+                        {!mock && (
+                          <div className="dashboard-attendee-tools">
+                            <div className="dashboard-toolbar-actions" role="group" aria-label="เครื่องมือรายชื่อผู้จอง">
+                              <button type="button" onClick={handleCopyEmails} disabled={!hasAttendees || attendeeEmails.length === 0}>
+                                <Icon name="copy" /> คัดลอกอีเมล
+                              </button>
+                              <button type="button" onClick={() => window.print()} disabled={!hasAttendees}>
+                                <Icon name="print" /> พิมพ์รายชื่อ
+                              </button>
+                              <button type="button" onClick={handleRefresh} disabled={attendeesLoading}>
+                                <Icon name="refresh" /> รีเฟรช
+                              </button>
+                            </div>
+                            <span className="dashboard-toolbar-note" role="status">{toolbarNote}</span>
+                          </div>
+                        )}
+                        <BookingTools
+                          key={`${selectedEventId}-${focusPerson}`}
+                          initialSearch={focusPerson}
+                          eventName={selectedEvent.title || selectedEvent.name || 'event'}
+                          capacity={mock ? MOCK_CAPACITY : toNumber(selectedEvent.capacity)}
+                          showSummary={mock}
+                          bookings={mock ? MOCK_BOOKINGS : attendees}
+                          loading={!mock && attendeesLoading}
+                          error={mock ? '' : attendeesError}
+                          onRetry={() => setAttendeesReload((count) => count + 1)}
+                        />
+                      </>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+          </section>
+        )}
       </main>
     </>
   );

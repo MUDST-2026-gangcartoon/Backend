@@ -45,6 +45,10 @@ export default function AdminNavbar() {
     const next = new URLSearchParams(searchParams);
     if (value) {
       next.set('q', value);
+      if (isDashboard) {
+        next.set('view', 'events');
+        next.set('eventView', 'attendees');
+      }
     } else {
       next.delete('q');
     }
