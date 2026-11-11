@@ -171,7 +171,15 @@ export function AuthProvider({ children }) {
 
     const verifySession = async () => {
       try {
-        const response = await authService.getProfile();
+        const response = await authService.getSession();
+        if (!active) return;
+        if (response === null) {
+          clearStoredAuth();
+          setUser(null);
+          setIsLoggedIn(false);
+          setAuthError(null);
+          return;
+        }
         const currentUser = normalizeUser(extractUser(response));
 
         if (!currentUser) {
