@@ -18,7 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 class RegistrationFunnelService {
-    private static final int MATURITY_MINUTES = 30;
+    static final int MATURITY_MINUTES = 30;
 
     private final RegistrationAttemptRepository attempts;
     private final RegistrationRepository registrations;
