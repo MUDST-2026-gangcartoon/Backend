@@ -41,8 +41,7 @@ export function CheckInSources({ staff, online, unknown }) {
 
 export function BookingSummary({ summary }) {
   const tiles = [
-    { key: 'bookings', label: 'การจอง (ไม่รวมที่ยกเลิก)', value: summary.bookings, tone: 'accent' },
-    { key: 'people', label: 'ที่นั่งที่จองไว้ (ไม่รวมที่ยกเลิก)', value: summary.people },
+    { key: 'people', label: 'ที่นั่งที่จองแล้ว', value: summary.people, sub: `จาก ${summary.bookings} รายการจอง · ไม่นับที่ยกเลิก`, tone: 'accent' },
     { key: 'in', label: 'ที่นั่งที่เช็กอินแล้ว', value: summary.checkedInPeople },
     { key: 'pending', label: 'ที่นั่งที่ยังไม่เช็กอิน', value: summary.pendingPeople },
     {
