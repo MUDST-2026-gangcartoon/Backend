@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eventhub-mailpit
+  namespace: eventhub-e2e
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eventhub-mailpit
+  template:
+    metadata:
+      labels:
+        app: eventhub-mailpit
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: mailpit
+          image: ghcr.io/axllent/mailpit:v1.33.1@sha256:21c32021234ac920c23bf27d8f09eac562348e681d3644fa33a4bd3e06e26cca
+          env:
+            - name: MP_MAX_MESSAGES
+              value: "50"
+          ports:
+            - name: smtp
+              containerPort: 1025
+            - name: web
+              containerPort: 8025
+          readinessProbe:
+            tcpSocket:
+              port: smtp
+          livenessProbe:
+            tcpSocket:
+              port: web
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eventhub-mailpit
+  namespace: eventhub-e2e
+spec:
+  type: ClusterIP
+  selector:
+    app: eventhub-mailpit
+  ports:
+    - name: smtp
+      port: 1025
+      targetPort: smtp
+    - name: web
+      port: 8025
+      targetPort: web
