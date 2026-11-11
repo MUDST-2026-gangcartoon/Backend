@@ -22,3 +22,10 @@ datasources:
     type: tempo
     access: proxy
     url: http://tempo:3200
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: '-1m'
+        spanEndTimeShift: '1m'
+        customQuery: true
+        query: '{service_name="eventhub"} |= "$${__trace.traceId}"'
