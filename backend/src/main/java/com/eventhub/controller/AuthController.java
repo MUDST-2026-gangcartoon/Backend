@@ -136,6 +136,17 @@ public class AuthController {
         return toUserDto(user);
     }
 
+    @GetMapping("/session")
+    public ResponseEntity<ApiDtos.UserDto> session(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.noContent().build();
+        }
+        return userRepository.findByEmail(authentication.getName())
+                .map(this::toUserDto)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
     @GetMapping("/me")
     public ApiDtos.UserDto me(
             Authentication authentication

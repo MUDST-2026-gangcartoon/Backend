@@ -67,6 +67,27 @@ class GuestBookingIT extends GuestPhase2TestSupport {
     }
 
     @Test
+    void guestBrowserCanListItsTicketsAfterTheLoginSessionEnds() throws Exception {
+        var event = event(3);
+        var booking = bookFree(event, new MockHttpSession(), guestEmail(), 1, "browser-ticket", null);
+        var cookie = booking.getResponse().getCookie("EVENTHUB_GUEST");
+        assertTrue(cookie.isHttpOnly());
+        assertTrue(cookie.getMaxAge() > 0);
+
+        mvc.perform(get("/api/guest/bookings"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/api/guest/bookings").cookie(cookie))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].registrationId").value(id(booking, "$.registrationId")))
+                .andExpect(jsonPath("$[0].ticketCode").value(string(booking, "$.ticketCode")));
+        mvc.perform(get("/api/auth/session")).andExpect(status().isNoContent());
+        mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void competingGuestSessionsCannotReserveTheSameLastSeat() throws Exception {
         var event = event(1);
         var first = guestBooking(event, event.freeTicketId(), "registrations", new MockHttpSession(),
