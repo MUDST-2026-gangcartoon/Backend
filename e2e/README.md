@@ -85,7 +85,7 @@ Workflow เตรียมไว้ที่ `../.github/workflows/browser-e2e.
 - รัน Browser จริงและตรวจ Assertions
 - ไม่ใช้ `continue-on-error`
 - Upload Artifacts แม้ Test Fail
-- ยังไม่มีผล CI E2E ผ่านจริง จนกว่าจะได้รับอนุญาตให้นำไฟล์ขึ้น GitHub และมี Run URL
+- ตรวจผลและ SHA ของแต่ละรอบจาก GitHub Actions ก่อนรายงานว่าผ่าน
 
 ## Known Issues
 
@@ -99,6 +99,8 @@ Workflow เตรียมไว้ที่ `../.github/workflows/browser-e2e.
 ## CI browser regression
 
 `.github/workflows/browser-e2e.yml` runs the nine fast Chromium scenarios on pull requests to `main` and pushes to `main` or `ci/**`. The real expiration case (`@slow`, about ten minutes) remains available with `E2E_SUITE=slow` and is not part of this job. The job builds the frontend and backend, serves the built frontend over loopback, and uses the `e2e` profile with disposable in-memory H2. It generates and masks a fresh test-only seed password for each run; it does not use repository or production credentials. The existing Maven test and Minikube jobs remain independent.
+
+The same workflow runs the guest journey in the separate `guest-browser-e2e` job. It builds both applications and invokes `python3 e2e/run-guest.py`, which starts its own disposable H2 database, loopback SMTP server and frontend. The fast and guest jobs have independent results and upload separately named artifacts, including on test failure. Check both jobs for the commit under review; a successful fast run alone does not establish that the guest journey passed.
 
 The HTML and JUnit reports and failure traces, videos, screenshots and startup logs are retained for seven days. These artifacts can contain generated test account credentials, session cookies, CSRF tokens, and ticket codes. Treat them as sensitive test data and restrict access to the repository's Actions artifacts. Do not reuse real credentials or send actual email in this environment.
 
