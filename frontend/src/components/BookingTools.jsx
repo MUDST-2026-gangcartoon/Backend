@@ -17,12 +17,34 @@ import { downloadTextFile, safeFileName } from '../utils/attendeeExport.js';
 import './booking-tools.css';
 
 // การ์ดสรุป: แยกจำนวน "รายการจอง" กับ "จำนวนคน"
+export function CheckInSources({ staff, online, unknown }) {
+  const channels = [
+    { key: 'staff', label: 'เช็กอินกับเจ้าหน้าที่', count: staff },
+    { key: 'online', label: 'เช็กอินผ่านเว็บ', count: online },
+    { key: 'unknown', label: 'ไม่ได้บันทึกช่องทาง', count: unknown },
+  ];
+
+  return (
+    <div className="bt-sources">
+      <h4>เช็กอินผ่านช่องทางไหน</h4>
+      <dl>
+        {channels.map(({ key, label, count }) => (
+          <div className={`bt-src ${key}`} key={key}>
+            <dt>{label}</dt>
+            <dd>{count ?? '—'} {count != null && <small>ที่นั่ง</small>}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 export function BookingSummary({ summary }) {
   const tiles = [
-    { key: 'bookings', label: 'รายการถือสิทธิ์', value: summary.bookings, tone: 'accent' },
-    { key: 'people', label: 'ที่นั่งที่ถือสิทธิ์', value: summary.people },
-    { key: 'in', label: 'เช็กอินแล้ว (ที่นั่ง)', value: summary.checkedInPeople },
-    { key: 'pending', label: 'ยังไม่เช็กอิน (ที่นั่ง)', value: summary.pendingPeople },
+    { key: 'bookings', label: 'การจอง (ไม่รวมที่ยกเลิก)', value: summary.bookings, tone: 'accent' },
+    { key: 'people', label: 'ที่นั่งที่จองไว้ (ไม่รวมที่ยกเลิก)', value: summary.people },
+    { key: 'in', label: 'ที่นั่งที่เช็กอินแล้ว', value: summary.checkedInPeople },
+    { key: 'pending', label: 'ที่นั่งที่ยังไม่เช็กอิน', value: summary.pendingPeople },
     {
       key: 'cancel',
       label: 'ยกเลิก',
@@ -46,12 +68,7 @@ export function BookingSummary({ summary }) {
         ))}
       </div>
 
-      <div className="bt-sources" aria-label="ช่องทางเช็กอิน">
-        <span className="bt-sources-title">ช่องทางเช็กอิน (คน)</span>
-        <span className="bt-src staff">เจ้าหน้าที่ <b>{staff}</b></span>
-        <span className="bt-src online">ออนไลน์ผ่านเว็บ <b>{online}</b></span>
-        <span className="bt-src unknown">ไม่ทราบที่มา <b>{unknown}</b></span>
-      </div>
+      <CheckInSources staff={staff} online={online} unknown={unknown} />
     </div>
   );
 }
