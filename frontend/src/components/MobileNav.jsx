@@ -33,7 +33,7 @@ export default function MobileNav() {
           { to: '/profile', label: 'จัดการโปรไฟล์', icon: 'user' },
           { to: '/payment-history', label: 'ประวัติการชำระเงิน', icon: 'history' },
         ]
-      : []),
+      : [{ to: '/guest-tickets', label: 'บัตรที่จองไว้', icon: 'ticket' }]),
   ];
 
   // เปลี่ยนหน้าแล้วปิดเมนู

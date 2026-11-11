@@ -88,3 +88,14 @@
 .guest-claim button { cursor: pointer; padding: 8px 14px; border: 1px solid #4f7b3b; border-radius: 6px; background: white; margin: 4px 4px 4px 0; }
 .guest-claim button:disabled { opacity: .6; cursor: wait; }
 .guest-claim input { padding: 8px; border: 1px solid #aaa; border-radius: 6px; width: 9em; }
+
+
+.guest-ticket .status-pill { align-self: flex-start; }
+.guest-ticket-code { display: grid; justify-items: center; gap: 3px; color: #334155; }
+.guest-ticket-code img { max-width: 100%; height: auto; }
+.guest-ticket-code strong { font: 700 1rem/1.5 ui-monospace, monospace; overflow-wrap: anywhere; }
+.guest-claim-actions, .guest-claim-form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.guest-claim-form { margin: 8px 0; }
+.guest-claim-form label { display: grid; gap: 4px; }
+.guest-claim-form button { margin: 0; min-height: 38px; }
+.guest-claim p { overflow-wrap: anywhere; }

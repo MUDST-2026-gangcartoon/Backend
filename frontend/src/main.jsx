@@ -30,6 +30,7 @@ import CheckinAttendeesPage from './pages/CheckinAttendeesPage.jsx';
 import EventDetailPage from './pages/user/EventDetailPage.jsx';
 import MyRegistrationsPage from './pages/user/MyRegistrationsPage';
 import MyTicketsPage from './pages/user/MyTicketsPage';
+import GuestTicketsPage from './pages/user/GuestTicketsPage.jsx';
 import UpcomingEventsPage from './pages/user/UpcomingEventsPage';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import PaymentHistoryPage from './pages/user/PaymentHistoryPage.jsx';
@@ -112,6 +113,7 @@ function AppRoutes() {
       <Route path="/" element={<UserRoute><UpcomingEventsPage /></UserRoute>} />
       <Route path="/event-detail" element={<UserRoute><EventDetailPage /></UserRoute>} />
       <Route path="/event-detail/:eventId" element={<UserRoute><EventDetailPage /></UserRoute>} />
+      <Route path="/guest-tickets" element={<UserRoute><GuestTicketsPage /></UserRoute>} />
       <Route path="/MyRegistrationsPage" element={<UserOnlyRoute><MyRegistrationsPage /></UserOnlyRoute>} />
       <Route path="/MyTicketsPage" element={<UserOnlyRoute><MyTicketsPage /></UserOnlyRoute>} />
       <Route path="/payment-history" element={<UserOnlyRoute><PaymentHistoryPage /></UserOnlyRoute>} />
