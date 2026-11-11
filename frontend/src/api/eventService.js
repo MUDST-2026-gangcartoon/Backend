@@ -102,6 +102,12 @@ getAllEventsAcrossPages: async (params = {}) => {
       `/admin/events/${encodeURIComponent(eventId)}/online-settings`
     ),
 
+  getOnlineAccess: (eventId) =>
+    apiClient.get(`/events/${encodeURIComponent(eventId)}/online-access`),
+
+  joinOnlineEvent: (eventId) =>
+    apiClient.post(`/events/${encodeURIComponent(eventId)}/online-join`),
+
   // รายงานต่อกิจกรรม (orders, activeOrders, cancelledOrders, participants, checkedIn, ...)
   getEventReport: (eventId) =>
     apiClient.get(`/admin/events/${encodeURIComponent(eventId)}/report`),
