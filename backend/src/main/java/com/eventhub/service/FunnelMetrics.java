@@ -37,11 +37,11 @@ class FunnelMetrics {
     @Scheduled(fixedDelayString = "${app.metrics.refresh-ms:30000}")
     @Transactional(readOnly = true)
     public void refresh() {
-        LocalDateTime cutoff = clock.now().minusMinutes(30);
+        LocalDateTime cutoff = clock.now().minusMinutes(RegistrationFunnelService.MATURITY_MINUTES);
         Object[] attemptCounts = entityManager.createQuery("""
-                select count(a), sum(case when a.confirmedAt is null or a.confirmedAt >= a.startedAt + 30 minute then 1 else 0 end)
+                select count(a), sum(case when a.confirmedAt is null or a.confirmedAt >= a.startedAt + %d minute then 1 else 0 end)
                 from RegistrationAttempt a where a.startedAt <= :cutoff
-                """, Object[].class).setParameter("cutoff", cutoff).getSingleResult();
+                """.formatted(RegistrationFunnelService.MATURITY_MINUTES), Object[].class).setParameter("cutoff", cutoff).getSingleResult();
         Object[] registrationCounts = entityManager.createQuery("""
                 select count(r),
                   sum(case when r.status is null or r.status = 'CONFIRMED' then coalesce(r.quantity, 1) else 0 end),
