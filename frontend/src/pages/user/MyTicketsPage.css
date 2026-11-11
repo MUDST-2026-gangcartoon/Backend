@@ -372,3 +372,36 @@
   max-width: 180px;
   line-height: 1.6;
 }
+
+.myticket-online-action,
+.myticket-online-action:hover {
+  gap: 10px;
+  background: #f8fafc;
+  text-align: center;
+  cursor: default;
+}
+
+.myticket-online-action p { margin: 0; font-size: .875rem; color: #475569; }
+.myticket-online-action .myticket-online-error { color: #b91c1c; }
+
+.myticket-online-action button,
+.myticket-online-action a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: #fff;
+  font: inherit;
+  font-size: .875rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.myticket-online-action button:disabled { opacity: .65; cursor: wait; }
+.myticket-online-action button:focus-visible,
+.myticket-online-action a:focus-visible { outline: 2px solid #0284c7; outline-offset: 3px; }

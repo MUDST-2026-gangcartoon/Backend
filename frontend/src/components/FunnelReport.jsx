@@ -22,22 +22,19 @@ const sections = [
   ['ขั้นตอนการจอง', [
     ['startedAttempts', 'เริ่มจอง'],
     ['completedAttempts', 'จองสำเร็จ'],
-    ['pendingAttempts', 'กำลังจอง (ยังไม่ครบเวลา)'],
-    ['maturedAttempts', 'เริ่มจองมาครบเวลาแล้ว'],
     ['droppedOffAttempts', 'จองไม่ทันเวลา'],
     ['dropOffRate', 'เปอร์เซ็นต์ที่จองไม่ทัน'],
   ]],
   ['รายการจองและเช็กอิน', [
-    ['confirmedOrders', 'รายการจองทั้งหมด'],
-    ['confirmedSeats', 'ที่นั่งที่เคยจอง'],
+    ['confirmedOrders', 'รายการจองทั้งหมด (รวมที่ยกเลิก)'],
     ['cancelledOrders', 'รายการที่ยกเลิก'],
     ['cancelledSeats', 'ที่นั่งที่ยกเลิก'],
-    ['activeSeats', 'ที่นั่งที่จองไว้ (ไม่รวมที่ยกเลิก)'],
+    ['activeSeats', 'ที่นั่งที่จองแล้ว'],
     ['checkedInSeats', 'ที่นั่งที่เช็กอินแล้ว'],
     ['showRate', 'เปอร์เซ็นต์เช็กอิน'],
   ]],
 ];
-const reportDate = new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeZone: 'UTC' });
+const reportDate = new Intl.DateTimeFormat('th-TH-u-ca-gregory', { dateStyle: 'medium', timeZone: 'UTC' });
 const formatDate = (value) => reportDate.format(new Date(`${value}T00:00:00Z`));
 const formatValue = (key, value) => value == null ? '—' : `${formatter.format(value)}${key.endsWith('Rate') ? '%' : ''}`;
 
@@ -45,7 +42,6 @@ function FunnelOverview({ counts, minutes }) {
   const steps = [
     { label: 'เริ่มจอง', value: counts.startedAttempts },
     { label: 'จองสำเร็จ', value: counts.completedAttempts },
-    { label: 'จองไม่ทันเวลา', value: counts.droppedOffAttempts },
   ];
   const max = Math.max(...steps.map(({ value }) => value), 1);
 
@@ -61,18 +57,12 @@ function FunnelOverview({ counts, minutes }) {
           </li>
         ))}
       </ul>
-      <dl className="funnel-highlights">
-        <div>
-          <dt>จองไม่ทันเวลา</dt>
-          <dd>{formatValue('dropOffRate', counts.dropOffRate)}</dd>
-          <small>จองไม่เสร็จใน {minutes} นาที {formatter.format(counts.droppedOffAttempts)} จาก {formatter.format(counts.maturedAttempts)} ครั้งที่เริ่มจองมาครบเวลา</small>
-        </div>
-        <div>
-          <dt>เปอร์เซ็นต์เช็กอิน</dt>
-          <dd>{formatValue('showRate', counts.showRate)}</dd>
-          <small>เช็กอิน {formatter.format(counts.checkedInSeats)} จาก {formatter.format(counts.activeSeats)} ที่นั่ง</small>
-        </div>
-      </dl>
+      {counts.dropOffRate != null && (
+        <p className="dashboard-funnel-rate">
+          <strong>{formatValue('dropOffRate', counts.dropOffRate)}</strong> จองไม่เสร็จใน {minutes} นาที
+          <small>{formatter.format(counts.droppedOffAttempts)} จาก {formatter.format(counts.maturedAttempts)} ครั้งที่เริ่มจองมาครบเวลา</small>
+        </p>
+      )}
     </div>
   );
 }
@@ -88,6 +78,11 @@ export default function FunnelReport({ eventId }) {
   const [state, setState] = useState({ loading: true });
   const [retry, setRetry] = useState(0);
   const [validation, setValidation] = useState('');
+  const appliedThrough = shiftDate(range.to, -1);
+  const hasDateChange = from !== range.from || through !== appliedThrough;
+  const displayedDates = range.from === appliedThrough
+    ? `วันที่ ${formatDate(range.from)}`
+    : `${formatDate(range.from)} ถึง ${formatDate(appliedThrough)}`;
 
   useEffect(() => {
     let current = true;
@@ -103,6 +98,7 @@ export default function FunnelReport({ eventId }) {
 
   function submit(e) {
     e.preventDefault();
+    if (!hasDateChange || state.loading) return;
     if (!from || !through || from > through) { setValidation('เลือกวันเริ่มต้นและวันสิ้นสุดให้ถูกต้อง'); return; }
     const to = shiftDate(through, 1);
     const [year, month, day] = from.split('-').map(Number);
@@ -111,46 +107,64 @@ export default function FunnelReport({ eventId }) {
     if (month === 2 && day === 29 && max.getUTCMonth() !== 1) max.setUTCDate(0);
     if (to > dateText(max)) { setValidation('ช่วงรายงานต้องไม่เกินหนึ่งปี'); return; }
     setValidation('');
+    setState({ loading: true });
     setRange({ from, to });
   }
 
-  const title = eventId == null ? 'เส้นทางการจองทุกอีเวนต์' : 'รายงานขั้นตอนการลงทะเบียน';
+  const allEvents = eventId == null;
+  const title = allEvents ? 'เส้นทางการจองทุกอีเวนต์' : 'รายงานขั้นตอนการลงทะเบียน';
 
   return (
     <section className="funnel-report" aria-label={title}>
-      <h3>{title}</h3>
+      {allEvents && <h2>ขั้นตอนการจองผ่านเว็บ</h2>}
       <form onSubmit={submit} className="funnel-filters">
         <label>
           ตั้งแต่วันที่
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} required />
+          <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setValidation(''); }} required />
         </label>
         <label>
           ถึงวันที่
-          <input type="date" value={through} onChange={(e) => setThrough(e.target.value)} required />
+          <input type="date" value={through} onChange={(e) => { setThrough(e.target.value); setValidation(''); }} required />
         </label>
-        <button className="bt-btn" type="submit">แสดงรายงาน</button>
+        <button className="bt-btn" type="submit" disabled={!hasDateChange || state.loading}>
+          {state.loading ? 'กำลังโหลด…' : 'ใช้ช่วงวันที่'}
+        </button>
       </form>
       {validation && <p className="bt-report-note" role="alert">{validation}</p>}
       {state.loading ? (
-        <p className="bt-report-note" role="status">กำลังโหลดรายงาน…</p>
+        <p className="bt-report-note" role="status">กำลังโหลดข้อมูล {displayedDates}</p>
       ) : state.error ? (
         <p className="bt-report-note" role="alert">
-          โหลดรายงานไม่สำเร็จ{' '}
-          <button className="bt-btn" type="button" onClick={() => setRetry((n) => n + 1)}>ลองอีกครั้ง</button>
+          โหลดข้อมูล {displayedDates} ไม่สำเร็จ{' '}
+          <button className="bt-btn" type="button" onClick={() => {
+            setState({ loading: true });
+            setRetry((n) => n + 1);
+          }}>ลองอีกครั้ง</button>
         </p>
       ) : (
         <>
-          <p className="bt-report-note">
-            {formatDate(range.from)} ถึง {formatDate(shiftDate(range.to, -1))} (รวมวันสุดท้าย · เวลาไทย)
-          </p>
-          {state.data.total.startedAttempts === 0 && state.data.total.confirmedOrders === 0 && (
-            <p className="bt-report-note" role="status">ไม่มีข้อมูลในช่วงวันที่เลือก</p>
+          <p className="bt-report-note funnel-applied-range" role="status">กำลังแสดงข้อมูล {displayedDates}</p>
+          {allEvents && state.data.total.startedAttempts === 0 && (
+            <div className="funnel-empty">
+              <strong>ไม่พบการเริ่มจองผ่านเว็บในช่วงนี้</strong>
+              <p>
+                {state.data.total.confirmedOrders > 0
+                  ? `มีรายการจอง ${formatter.format(state.data.total.confirmedOrders)} รายการในช่วงนี้ กราฟนี้ใช้ข้อมูลจากการกดเริ่มจองบนเว็บ`
+                  : 'ลองเลือกช่วงวันที่อื่นเพื่อดูข้อมูลการจอง'}
+              </p>
+            </div>
           )}
-          <FunnelOverview counts={state.data.total} minutes={state.data.maturityMinutes} />
-          {eventId != null && (
+          {allEvents && state.data.total.startedAttempts > 0 && (
+            <FunnelOverview counts={state.data.total} minutes={state.data.maturityMinutes} />
+          )}
+          {!allEvents && (
             <div className="funnel-table-wrap">
+              {state.data.total.startedAttempts === 0 && state.data.total.confirmedOrders === 0 && (
+                <p className="bt-report-note" role="status">ไม่มีข้อมูลในช่วงวันที่เลือก</p>
+              )}
+              <p className="bt-report-note">หนึ่งรายการจองอาจมีหลายที่นั่ง ยอดที่นั่งและอัตราเช็กอินไม่นับรายการที่ยกเลิก</p>
               <table className="funnel-table">
-                <caption>เปรียบเทียบการจองของสมาชิกและผู้ที่จองโดยไม่เข้าสู่ระบบ</caption>
+                <caption>สมาชิกและผู้ที่จองโดยไม่เข้าสู่ระบบ</caption>
                 <thead>
                   <tr>
                     <th scope="col">รายการ</th>

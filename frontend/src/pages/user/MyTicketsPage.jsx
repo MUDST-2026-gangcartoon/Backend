@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import Navbar from '../../components/Navbar';
 import { registrationService } from '../../api/registrationService';
 import './MyTicketsPage.css';
+import OnlineTicketAccess from './OnlineTicketAccess.jsx';
 import { EVENT_CATEGORY_LABELS, EVENT_TIME_ZONE, parseEventDateTime } from './eventDisplay';
 import { getRegistrationItems, isCancelledRegistration } from './registrationDisplay';
 
@@ -67,6 +68,8 @@ const normalizeRegistration = (registration) => {
 
   return {
     registrationId: registration.id ?? registration.registrationId,
+    eventId: event.id,
+    online: event.eventFormat === 'ONLINE',
     ticketId: ticketCode || String(registration.id ?? ''),
     ticketCode,
     ticketIdLabel: ticketCode ? 'รหัสบัตร' : 'รหัสลงทะเบียน',
@@ -96,6 +99,7 @@ export default function MyTicketsPage() {
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
+  const [statusNotice, setStatusNotice] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -115,7 +119,7 @@ export default function MyTicketsPage() {
         const qrEntries = await Promise.all(
           normalizedTickets
             .filter(
-              (ticket) => ticket.ticketCode && !ticket.cancelled && !ticket.isCheckedIn
+              (ticket) => ticket.ticketCode && !ticket.online && !ticket.cancelled && !ticket.isCheckedIn
             )
             .map(async (ticket) => {
               try {
@@ -178,6 +182,22 @@ export default function MyTicketsPage() {
       )
     : ticketsWithQr;
 
+  const refreshCheckInStatus = async () => {
+    setStatusNotice('');
+    try {
+      const response = await registrationService.getMyRegistrations();
+      const latest = new Map(getRegistrationItems(response).map((registration) => [
+        registration.id ?? registration.registrationId, registration.checkedInAt,
+      ]));
+      setTickets((current) => current.map((ticket) => {
+        const checkedInAt = latest.get(ticket.registrationId);
+        return checkedInAt && !ticket.cancelled ? { ...ticket, checkedInAt, isCheckedIn: true } : ticket;
+      }));
+    } catch {
+      setStatusNotice('เปิดลิงก์ห้องได้แล้ว กรุณาโหลดหน้าใหม่เพื่อดูสถานะบัตรล่าสุด');
+    }
+  };
+
   const openTicketQr = (ticket) => {
     if (!ticket.cancelled && !ticket.isCheckedIn && ticket.qrCode) {
       setSelectedTicket(ticket);
@@ -210,11 +230,11 @@ export default function MyTicketsPage() {
           <div className="text-blue-tag">บัตรของฉัน</div>
           <h1>ตั๋วของฉัน</h1>
           <p>
-            ดูข้อมูลการลงทะเบียนและแสดง QR Code
-            ให้เจ้าหน้าที่ตรวจสอบเมื่อเข้าร่วมอีเวนต์
+            เปิด QR ให้เจ้าหน้าที่สแกนที่หน้างาน หรือเช็กอินเพื่อเข้าห้องสำหรับอีเวนต์ออนไลน์
           </p>
         </div>
 
+        {statusNotice && <p role="status">{statusNotice}</p>}
         <div className="tickets-list">
           {loading ? (
             <div className="empty-state" role="status">
@@ -265,9 +285,9 @@ export default function MyTicketsPage() {
                   </div>
 
                   <div className="info-group">
-                    <label>สถานที่</label>
+                    <label>{ticket.online ? 'รูปแบบ' : 'สถานที่'}</label>
                     <div className="info-value">
-                      {ticket.location}
+                      {ticket.online ? 'ออนไลน์' : ticket.location}
                     </div>
                   </div>
 
@@ -289,79 +309,87 @@ export default function MyTicketsPage() {
                   )}
                 </div>
 
-                <div
-                  className={`myticket-right ${
-                    ticket.isCheckedIn || !ticket.qrCode
-                      ? 'myticket-right-disabled'
-                      : ''
-                  }`}
-                  role={ticket.qrCode ? 'button' : undefined}
-                  tabIndex={ticket.qrCode ? 0 : undefined}
-                  aria-label={
-                    ticket.qrCode
-                      ? `ขยาย QR Code ของ ${ticket.eventName}`
-                      : undefined
-                  }
-                  onClick={() => openTicketQr(ticket)}
-                  onKeyDown={(event) => {
-                    if (
-                      ticket.qrCode &&
-                      (event.key === 'Enter' || event.key === ' ')
-                    ) {
-                      event.preventDefault();
-                      openTicketQr(ticket);
+                {ticket.online && !ticket.cancelled && ticket.eventId != null ? (
+                  <OnlineTicketAccess
+                    eventId={ticket.eventId}
+                    checkedIn={ticket.isCheckedIn}
+                    onCheckedIn={refreshCheckInStatus}
+                  />
+                ) : (
+                  <div
+                    className={`myticket-right ${
+                      ticket.isCheckedIn || !ticket.qrCode
+                        ? 'myticket-right-disabled'
+                        : ''
+                    }`}
+                    role={ticket.qrCode ? 'button' : undefined}
+                    tabIndex={ticket.qrCode ? 0 : undefined}
+                    aria-label={
+                      ticket.qrCode
+                        ? `ขยาย QR Code ของ ${ticket.eventName}`
+                        : undefined
                     }
-                  }}
-                >
-                  {ticket.cancelled ? (
-                    <div className="ticket-qr-unavailable">
-                      {ticket.cancelReason || 'บัตรนี้ถูกยกเลิกแล้ว'}
-                    </div>
-                  ) : ticket.isCheckedIn ? (
-                    <div className="ticket-qr-unavailable">
-                      <div
-                        className="ticket-checked-in-icon"
-                        aria-hidden="true"
-                      >
-                        ✓
+                    onClick={() => openTicketQr(ticket)}
+                    onKeyDown={(event) => {
+                      if (
+                        ticket.qrCode &&
+                        (event.key === 'Enter' || event.key === ' ')
+                      ) {
+                        event.preventDefault();
+                        openTicketQr(ticket);
+                      }
+                    }}
+                  >
+                    {ticket.cancelled ? (
+                      <div className="ticket-qr-unavailable">
+                        {ticket.cancelReason || 'บัตรนี้ถูกยกเลิกแล้ว'}
                       </div>
+                    ) : ticket.isCheckedIn ? (
+                      <div className="ticket-qr-unavailable">
+                        <div
+                          className="ticket-checked-in-icon"
+                          aria-hidden="true"
+                        >
+                          ✓
+                        </div>
 
-                      <div className="myticket-id">
-                        {ticket.ticketId}
-                      </div>
+                        <div className="myticket-id">
+                          {ticket.ticketId}
+                        </div>
 
-                      <div className="myticket-tap-hint">
-                        เช็กอินเรียบร้อยแล้ว! ไม่สามารถใช้ QR นี้ เข้าร่วมงานซ้ำได้
+                        <div className="myticket-tap-hint">
+                          เช็กอินเรียบร้อยแล้ว! ไม่สามารถใช้ QR นี้ เข้าร่วมงานซ้ำได้
+                        </div>
                       </div>
-                    </div>
-                  ) : ticket.qrCode ? (
-                    <>
-                      <img
-                        src={ticket.qrCode}
-                        alt={`QR Code ของ ${ticket.eventName}`}
-                        className="myticket-qr-img"
-                      />
+                    ) : ticket.qrCode ? (
+                      <>
+                        <img
+                          src={ticket.qrCode}
+                          alt={`QR Code ของ ${ticket.eventName}`}
+                          className="myticket-qr-img"
+                        />
 
-                      <div className="myticket-id">
-                        {ticket.ticketId}
-                      </div>
+                        <div className="myticket-id">
+                          {ticket.ticketId}
+                        </div>
 
-                      <div className="myticket-tap-hint">
-                        แตะเพื่อขยาย QR
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="myticket-id">
-                        {ticket.ticketId}
-                      </div>
+                        <div className="myticket-tap-hint">
+                          แตะเพื่อขยาย QR
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="myticket-id">
+                          {ticket.ticketId}
+                        </div>
 
-                      <div className="myticket-tap-hint">
-                        ยังไม่มีรหัส QR จากระบบ
-                      </div>
-                    </>
-                  )}
-                </div>
+                        <div className="myticket-tap-hint">
+                          ยังไม่มีรหัส QR จากระบบ
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           )}

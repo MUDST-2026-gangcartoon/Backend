@@ -207,21 +207,66 @@ test('Guest pays, claims the original ticket, and appears in Staff check-in and 
   const admin = await newRolePage(browser, E2E.adminEmail);
   try {
     await admin.page.goto('/admin/dashboard');
-    await admin.page.getByRole('tab').filter({ hasText: event.eventTitle }).click();
     const chart = admin.page.getByRole('region', { name: 'เส้นทางการจองทุกอีเวนต์' });
+    const overview = admin.page.getByRole('region', { name: 'อีเวนต์ที่ต้องดูแล' });
+    await expect(overview.getByRole('heading', { name: 'วันนี้และงานที่กำลังจัด' })).toBeVisible();
+    await expect(chart).toHaveCount(0);
+    await expect(admin.page.getByRole('tablist', { name: 'เลือกอีเวนต์' })).toHaveCount(0);
+
+    await admin.page.getByRole('button', { name: 'สถิติเชิงลึก', exact: true }).click();
     await expect(chart.getByRole('list', { name: 'กราฟขั้นตอนการจอง' })).toBeVisible();
-    const report = admin.page.getByRole('region', { name: 'รายงานขั้นตอนการลงทะเบียน' });
-    const cells = (name) => report.getByRole('row', { name }).getByRole('cell');
-    await expect(cells(/^เริ่มจอง /)).toHaveText(['1', '1', '0']);
-    await expect(cells(/^จองสำเร็จ /)).toHaveText(['1', '1', '0']);
-    await expect(cells(/ที่นั่งที่เช็กอินแล้ว/)).toHaveText(['1', '1', '0']);
-    await expect(cells(/เปอร์เซ็นต์เช็กอิน/)).toHaveText(['100%', '100%', '—']);
+    await expect(overview).toHaveCount(0);
 
     const earlier = new Date(receipt.registeredAt.slice(0, 10) + 'T00:00:00Z');
     earlier.setUTCDate(earlier.getUTCDate() - 2);
     const day = earlier.toISOString().slice(0, 10);
     earlier.setUTCDate(earlier.getUTCDate() + 1);
     const exclusiveEnd = earlier.toISOString().slice(0, 10);
+    const fromDate = chart.getByLabel('ตั้งแต่วันที่');
+    const throughDate = chart.getByLabel('ถึงวันที่');
+    const applyDates = chart.getByRole('button', { name: 'ใช้ช่วงวันที่', exact: true });
+    const originalFrom = await fromDate.inputValue();
+    const originalThrough = await throughDate.inputValue();
+    const appliedDate = chart.getByText(/^กำลังแสดงข้อมูล/);
+    const originalAppliedDate = await appliedDate.innerText();
+    await expect(applyDates).toBeDisabled();
+
+    await fromDate.fill(day);
+    await throughDate.fill(day);
+    await expect(applyDates).toBeEnabled();
+    const filteredOverview = admin.page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === '/api/admin/analytics/funnel' && !url.searchParams.has('eventId') &&
+        url.searchParams.get('from') === day && url.searchParams.get('to') === exclusiveEnd;
+    });
+    await applyDates.click();
+    const overviewData = await responseJson(await filteredOverview, 200);
+    expect(overviewData.total.startedAttempts).toBe(0);
+    await expect(chart.getByText('ไม่พบการเริ่มจองผ่านเว็บในช่วงนี้')).toBeVisible();
+    await expect(appliedDate).not.toHaveText(originalAppliedDate);
+    await expect(applyDates).toBeDisabled();
+
+    await fromDate.fill(originalFrom);
+    await throughDate.fill(originalThrough);
+    await applyDates.click();
+    await expect(chart.getByRole('list', { name: 'กราฟขั้นตอนการจอง' })).toBeVisible();
+    await expect(appliedDate).toHaveText(originalAppliedDate);
+
+    await admin.page.getByRole('button', { name: 'รายอีเวนต์', exact: true }).click();
+    await admin.page.getByRole('tab').filter({ hasText: event.eventTitle }).click();
+    await expect(chart).toHaveCount(0);
+    await expect(admin.page.getByRole('button', { name: 'คัดลอกอีเมล' })).toBeVisible();
+    await admin.page.getByRole('button', { name: 'สรุปอีเวนต์', exact: true }).click();
+    await expect(admin.page.getByText('จาก 1 รายการจอง · ไม่นับที่ยกเลิก')).toBeVisible();
+    await admin.page.getByRole('button', { name: 'เปรียบเทียบการจอง', exact: true }).click();
+    const report = admin.page.getByRole('region', { name: 'รายงานขั้นตอนการลงทะเบียน' });
+    await expect(report.getByRole('list', { name: 'กราฟขั้นตอนการจอง' })).toHaveCount(0);
+    const cells = (name) => report.getByRole('row', { name }).getByRole('cell');
+    await expect(cells(/^เริ่มจอง /)).toHaveText(['1', '1', '0']);
+    await expect(cells(/^จองสำเร็จ /)).toHaveText(['1', '1', '0']);
+    await expect(cells(/ที่นั่งที่เช็กอินแล้ว/)).toHaveText(['1', '1', '0']);
+    await expect(cells(/เปอร์เซ็นต์เช็กอิน/)).toHaveText(['100%', '100%', '—']);
+
     await report.getByLabel('ตั้งแต่วันที่').fill(day);
     await report.getByLabel('ถึงวันที่').fill(day);
     const filtered = admin.page.waitForResponse((response) => {
@@ -230,7 +275,7 @@ test('Guest pays, claims the original ticket, and appears in Staff check-in and 
         url.searchParams.get('eventId') === String(event.eventId) &&
         url.searchParams.get('from') === day;
     });
-    await report.getByRole('button', { name: 'แสดงรายงาน', exact: true }).click();
+    await report.getByRole('button', { name: 'ใช้ช่วงวันที่', exact: true }).click();
     const empty = await responseJson(await filtered, 200);
     expect(empty).toMatchObject({
       eventId: event.eventId, from: day, to: exclusiveEnd,
