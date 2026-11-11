@@ -100,15 +100,15 @@
 .funnel-highlights dd { margin: 2px 0; color: #0f172a; font-weight: 700; font-size: 24px; }
 .funnel-highlights small { color: #475569; }
 .funnel-table-wrap { margin-top: 16px; }
-.funnel-table { width: 100%; border-spacing: 0; table-layout: fixed; font-size: 14px; color: #334155; }
+.funnel-table { width: 100%; min-width: 0; border-spacing: 0; table-layout: fixed; font-size: 14px; color: #334155; }
 .funnel-table caption { padding-bottom: 8px; text-align: left; color: #0f172a; font-weight: 600; }
 .funnel-table th, .funnel-table td { padding: 8px; text-align: right; border-bottom: 1px solid #e2e8f0; }
 .funnel-table th:first-child { width: 46%; text-align: left; }
-.funnel-table thead th { background: #075985; color: #fff; font-weight: 600; overflow-wrap: anywhere; }
+.funnel-table thead th { white-space: normal; background: #075985; color: #fff; font-weight: 600; overflow-wrap: anywhere; }
 .funnel-table .funnel-table-heading th { background: #e0f2fe; color: #0c4a6e; }
 .funnel-table tbody tr:nth-child(odd):not(.funnel-table-heading) { background: #f8fafc; }
 .funnel-table td:nth-child(2) { color: #0f172a; font-weight: 700; }
-.funnel-table td { font-variant-numeric: tabular-nums; }
+.funnel-table td { font-size: inherit; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 520px) {
   .bt-sources dl { grid-template-columns: 1fr; }
