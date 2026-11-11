@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Icon from './Icon.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { guestService } from '../api/guestService.js';
 
 export default function AuthModal() {
   const {
@@ -97,7 +98,13 @@ export default function AuthModal() {
       setRegisterEmail('');
       setRegisterPassword('');
 
-      // Backend สมัครสมาชิกแล้วเข้าสู่ระบบให้ทันที
+      if (result.user?.role === 'user' && !authReturnTo) {
+        const bookings = await guestService.bookings().catch(() => []);
+        if (Array.isArray(bookings) && bookings.length > 0) {
+          navigate('/MyRegistrationsPage?from=guest', { replace: true });
+          return;
+        }
+      }
       navigateByRole(result.user?.role);
     } catch (error) {
       setRegisterError(

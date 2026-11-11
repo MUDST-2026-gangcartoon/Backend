@@ -66,7 +66,16 @@ test('Guest free booking issues a session-bound ticket and cancellation hides th
   } finally {
     await stranger.close();
   }
+  await page.getByRole('button', { name: 'ไปที่บัตรที่จองไว้' }).click();
+  await expect(page.getByRole('heading', { name: 'บัตรที่จองไว้' })).toBeVisible();
+  await page.context().clearCookies({ name: 'EVENTHUB_SESSION' });
   await page.reload();
+  await expect(page.getByAltText('QR สำหรับเช็กอิน')).toBeVisible();
+  await expect(page.getByText(receipt.ticketCode, { exact: true })).toBeVisible();
+  expect((await page.request.get('/favicon.ico')).headers()['content-type']).toMatch(/image/);
+  expect((await page.request.get('/api/auth/session')).status()).toBe(204);
+
+  await page.goto(`/event-detail/${event.eventId}`);
   await expect(page.getByText(receipt.ticketCode, { exact: true })).toBeVisible();
 
   const cancelled = waitForPost(page, `${receiptPath}/cancel`);
@@ -144,7 +153,7 @@ test('Guest pays, claims the original ticket, and appears in Staff check-in and 
   await signup.getByLabel('อีเมล').fill(email);
   await signup.getByLabel('รหัสผ่าน').fill(requireIsolatedEnvironment());
   await signup.getByRole('button', { name: 'สร้างบัญชีและเริ่มจอง' }).click();
-  await expect(page).toHaveURL(/\/MyRegistrationsPage$/);
+  await expect(page).toHaveURL(/\/MyRegistrationsPage\?from=guest$/);
   expect(await getRegistrations(page)).toEqual([]);
 
   await page.getByRole('button', { name: 'รับรายการเข้าบัญชี', exact: true }).click();
@@ -174,6 +183,7 @@ test('Guest pays, claims the original ticket, and appears in Staff check-in and 
   expect(history[0]).toMatchObject({
     id: receipt.registrationId, ticketCode: receipt.ticketCode, quantity: receipt.quantity,
   });
+  expect(await responseJson(await page.request.get('/api/guest/bookings'), 200)).toEqual([]);
   await page.goto('/MyTicketsPage');
   const ticket = page.locator('.myticket-card').filter({ hasText: receipt.ticketCode });
   await expect(ticket.getByAltText(/^QR Code ของ /)).toBeVisible();

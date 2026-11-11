@@ -1197,12 +1197,15 @@ function EventDetails({ eventId }) {
 
             {receiptQr && <img src={receiptQr} alt="QR Code สำหรับบัตร" width={200} height={200} />}
             {!isLoggedIn && registrationResult?.status !== 'CANCELLED' && <>
-              <p>บันทึกหน้านี้ไว้ในเบราว์เซอร์นี้ หรือเข้าสู่ระบบด้วยอีเมลเดียวกันเพื่อรับรายการเข้าบัญชี</p>
+              <p>กลับมาดู QR และรหัสบัตรได้จากเมนู “บัตรที่จองไว้” ในเบราว์เซอร์นี้</p>
+              <button type="button" onClick={() => navigate('/guest-tickets')}>ไปที่บัตรที่จองไว้</button>
               <button type="button" disabled={submitting} onClick={() => withBookingLock(async () => {
                 try { setRegistrationResult(await guestService.cancelBooking(registrationResult.registrationId)); await refreshInventory(); }
                 catch (error) { setRegisterError(getErrorMessage(error)); try { setRegistrationResult(await guestService.receipt(registrationResult.registrationId)); } catch {} }
               })}>ยกเลิกการลงทะเบียน</button>
-              <button type="button" onClick={() => openModal('login', { pathname: '/MyRegistrationsPage' })}>เข้าสู่ระบบเพื่อรับรายการ</button>
+              <p>อยากเปิดบัตรจากเครื่องอื่น ให้ใช้บัญชีที่สมัครด้วยอีเมลเดียวกับตอนจอง</p>
+              <button type="button" onClick={() => openModal('login', { pathname: '/MyRegistrationsPage', search: '?from=guest' })}>เข้าสู่ระบบเพื่อรับรายการ</button>
+              <button type="button" onClick={() => openModal('register', { pathname: '/MyRegistrationsPage', search: '?from=guest' })}>สมัครด้วยอีเมลที่ใช้จอง</button>
             </>}
             {registerError && <p role="alert">{registerError}</p>}
             {ticketCode && (
