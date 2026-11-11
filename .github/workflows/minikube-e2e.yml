@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: minikube-e2e-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   deploy-smoke:

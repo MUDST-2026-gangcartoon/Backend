@@ -16,7 +16,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: mailpit
-          image: ghcr.io/axllent/mailpit:v1.33.1@sha256:21c32021234ac920c23bf27d8f09eac562348e681d3644fa33a4bd3e06e26cca
+          image: ghcr.io/axllent/mailpit:v1.33.1@sha256:aef2aacc11f075ec0fb6874275ee4a421e688e11a96ebb296134d1735c7761ce
           env:
             - name: MP_MAX_MESSAGES
               value: "50"
