@@ -184,6 +184,12 @@ jobs:
             -n eventhub-e2e \
             --tail=100 || true
 
+          echo "=== Mailpit pod logs ==="
+          kubectl logs deployment/eventhub-mailpit -n eventhub-e2e --tail=50 || true
+          if [ -f "$RUNNER_TEMP/mailpit-forward.log" ]; then
+            tail -n 50 "$RUNNER_TEMP/mailpit-forward.log"
+          fi
+
           echo "=== Backend port-forward diagnostics ==="
           if [ -f "$RUNNER_TEMP/backend-forward.log" ]; then
             tail -n 50 "$RUNNER_TEMP/backend-forward.log"
