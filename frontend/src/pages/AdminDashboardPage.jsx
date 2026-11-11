@@ -569,7 +569,7 @@ export default function AdminDashboardPage() {
             </div>
             <div className="dashboard-stat-description">
               {analyticsStats.totalRegistrations !== null
-                ? 'ข้อมูลจาก Analytics API'
+                ? 'นับผู้เข้าชมที่ระบบบันทึกได้'
                 : 'แสดงข้อมูลจาก Event API เมื่อไม่มีสถิติจาก Analytics'}
             </div>
           </article>
@@ -604,7 +604,7 @@ export default function AdminDashboardPage() {
             <div className="dashboard-stat-description">
               {hasAnalyticsError
                 ? 'ไม่สามารถโหลดสถิติผู้เข้าชมได้'
-                : 'ข้อมูลจาก Analytics API'}
+                : 'นับผู้เข้าชมที่ระบบบันทึกได้'}
             </div>
           </article>
         </section>
@@ -613,132 +613,34 @@ export default function AdminDashboardPage() {
 
         <section className="dashboard-charts">
           <article className="dashboard-chart-card dashboard-bar-card">
-            <div className="dashboard-chart-header">
-              <div>
-                <div className="dashboard-chart-label">เส้นทางการเข้าชม</div>
-                <h2>การเข้าชมเว็บไซต์และหน้าอีเวนต์</h2>
-              </div>
-              <div className="dashboard-chart-tag">ข้อมูล Analytics</div>
-            </div>
-
-            <div
-              className="dashboard-bar-chart"
-              aria-busy={isAnalyticsLoading}
-              style={{
-                minHeight: 190,
-                padding: 20,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                gap: 22,
-              }}
-            >
-              {isAnalyticsLoading ? (
-                <p role="status">กำลังโหลดข้อมูล Analytics…</p>
-              ) : hasAnalyticsError ? (
-                <p role="status">
-                  ไม่สามารถโหลดข้อมูล Analytics ได้ กรุณาลองอีกครั้ง
-                </p>
-              ) : siteViews === null && eventDetailViews === null ? (
-                <p role="status">
-                  API ยังไม่มีข้อมูลการเข้าชมเว็บไซต์และหน้าอีเวนต์
-                </p>
-              ) : (
-                <>
-                  <div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        gap: 12,
-                        marginBottom: 8,
-                      }}
-                    >
-                      <span>การเข้าชมเว็บไซต์</span>
-                      <strong>
-                        {siteViews === null ? '—' : formatNumber(siteViews)}
-                      </strong>
+            <h2>การเข้าชมเว็บ</h2>
+            {isAnalyticsLoading ? (
+              <p className="bt-report-note" role="status">กำลังโหลดสถิติการเข้าชม…</p>
+            ) : hasAnalyticsError ? (
+              <p className="bt-report-note">โหลดสถิติการเข้าชมไม่สำเร็จ</p>
+            ) : siteViews === null && eventDetailViews === null ? (
+              <p className="bt-report-note">ยังไม่มีข้อมูลการเข้าชม</p>
+            ) : (
+              <ul className="funnel-bars" aria-label="กราฟจำนวนครั้งที่เข้าชม">
+                {[
+                  ['หน้าเว็บทั้งหมด', siteViews],
+                  ['หน้ารายละเอียดอีเวนต์', eventDetailViews],
+                ].map(([label, views]) => (
+                  <li key={label}>
+                    <div><span>{label}</span><strong>{views == null ? '—' : `${formatNumber(views)} ครั้ง`}</strong></div>
+                    <div className="funnel-track" aria-hidden="true">
+                      <span style={{ width: `${(views ?? 0) / maxViews * 100}%` }} />
                     </div>
-                    <div
-                      style={{
-                        height: 12,
-                        background: '#E0F2FE',
-                        borderRadius: 999,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width:
-                            siteViews === null
-                              ? '0%'
-                              : `${(siteViews / maxViews) * 100}%`,
-                          height: '100%',
-                          background: '#38BDF8',
-                          borderRadius: 999,
-                          transition: 'width 0.3s ease',
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        gap: 12,
-                        marginBottom: 8,
-                      }}
-                    >
-                      <span>การเข้าชมหน้าอีเวนต์</span>
-                      <strong>
-                        {eventDetailViews === null
-                          ? '—'
-                          : formatNumber(eventDetailViews)}
-                      </strong>
-                    </div>
-                    <div
-                      style={{
-                        height: 12,
-                        background: '#FCE7F3',
-                        borderRadius: 999,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width:
-                            eventDetailViews === null
-                              ? '0%'
-                              : `${(eventDetailViews / maxViews) * 100}%`,
-                          height: '100%',
-                          background: '#F472B6',
-                          borderRadius: 999,
-                          transition: 'width 0.3s ease',
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <p style={{ margin: 0, fontSize: 12, color: '#64748B' }}>
-                    ความยาวแถบแสดงสัดส่วนเมื่อเทียบกับค่าที่สูงที่สุดในสองรายการ
-                  </p>
-                </>
-              )}
-            </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </article>
-          <article className="dashboard-chart-card">
-            <div className="dashboard-chart-header">
-              <div>
-                <div className="dashboard-chart-label">เริ่มจอง → ยืนยัน → เช็กอิน</div>
-                <h2>เส้นทางการจอง</h2>
-              </div>
-            </div>
-            <p className="dashboard-events-empty" role="status">
-              เลือกรายการกิจกรรมด้านล่างเพื่อดูรายงานขั้นตอนการลงทะเบียนแยก Guest และสมาชิก
-            </p>
-          </article>
+          {!isMockMode() && (
+            <article className="dashboard-chart-card">
+              <FunnelReport />
+            </article>
+          )}
         </section>
 
         <section className="dashboard-events" aria-busy={isLoading}>
@@ -944,7 +846,7 @@ export default function AdminDashboardPage() {
               </div>
 
               {isMockMode() ? (
-                <p className="bt-mock-note">โหมดข้อมูลจำลอง (?mock=1) — ไม่ใช่ข้อมูลจริง</p>
+                <p className="bt-mock-note">กำลังแสดงข้อมูลตัวอย่าง</p>
               ) : (
                 <ReportPanel
                   key={selectedEventId}

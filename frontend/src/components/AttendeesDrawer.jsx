@@ -38,7 +38,7 @@ export default function AttendeesDrawer({
 
         <div className="drawer-body">
           {mock && (
-            <p className="bt-mock-note">โหมดข้อมูลจำลอง (?mock=1) — ไม่ใช่ข้อมูลจริง</p>
+            <p className="bt-mock-note">กำลังแสดงข้อมูลตัวอย่าง</p>
           )}
           {!mock && (
             <ReportPanel key={event.id} eventId={event.id} eventEnded={event.status === 'ENDED'} refreshKey={bookings} />

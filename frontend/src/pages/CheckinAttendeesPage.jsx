@@ -793,7 +793,7 @@ export default function CheckinAttendeesPage() {
                   strokeLinejoin="round"
                 />
               </svg>
-              ที่นั่งที่ถือสิทธิ์
+              ที่นั่งที่จองไว้ (ไม่รวมที่ยกเลิก)
             </div>
 
             <div className="stat-number">{totalGuests} ที่นั่ง</div>
@@ -826,7 +826,7 @@ export default function CheckinAttendeesPage() {
         <section className="checkin-list-section">
           <h2 className="checkin-list-title">รายชื่อผู้เข้าร่วม</h2>
           {mockMode && (
-            <p className="bt-mock-note">โหมดข้อมูลจำลอง (?mock=1) — ไม่ใช่ข้อมูลจริง</p>
+            <p className="bt-mock-note">กำลังแสดงข้อมูลตัวอย่าง</p>
           )}
           <BookingTools
             bookings={attendees}

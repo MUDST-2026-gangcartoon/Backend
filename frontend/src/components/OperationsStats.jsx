@@ -2,10 +2,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { eventService } from '../api/eventService.js';
 import { useLiveRefresh } from '../hooks/useLiveRefresh.js';
 import { getAttendanceMetrics, reportCount } from '../utils/attendanceMetrics.js';
+import { CheckInSources } from './BookingTools.jsx';
 import './booking-tools.css';
 
 // ภาพรวมการดำเนินงานจาก GET /api/admin/analytics/operations
-// ถือสิทธิ์ใช้ participants; ยังไม่เช็กอิน = participants − checkedIn
 export default function OperationsStats() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -31,34 +31,34 @@ export default function OperationsStats() {
 
   useLiveRefresh(() => load(true), { intervalMs: 30000 });
 
-  if (loading) return <p className="bt-mock-note">กำลังโหลดสถิติการดำเนินงาน…</p>;
+  if (loading) return <p className="bt-report-note">กำลังโหลดสถิติการดำเนินงาน…</p>;
 
   if (error && !stats) {
     return (
-      <p className="bt-mock-note" role="alert">
+      <p className="bt-report-note" role="alert">
         {error} <button type="button" onClick={() => load()}>ลองอีกครั้ง</button>
       </p>
     );
   }
 
-  if (!stats) return <p className="bt-mock-note" role="status">ยังไม่มีข้อมูลการดำเนินงาน</p>;
+  if (!stats) return <p className="bt-report-note" role="status">ยังไม่มีข้อมูลการดำเนินงาน</p>;
 
   const { activeOrders, activeSeats, checkedInSeats, notCheckedInSeats, showRate } = getAttendanceMetrics(stats);
   const tiles = [
-    { key: 'orders', label: 'รายการจองที่ถือสิทธิ์', value: activeOrders },
-    { key: 'people', label: 'ที่นั่งที่ถือสิทธิ์', value: activeSeats, tone: 'accent' },
-    { key: 'in', label: 'เช็กอินแล้ว (ที่นั่ง)', value: checkedInSeats },
-    { key: 'not', label: 'ยังไม่เช็กอิน (ที่นั่ง)', value: notCheckedInSeats },
+    { key: 'orders', label: 'การจอง (ไม่รวมที่ยกเลิก)', value: activeOrders },
+    { key: 'people', label: 'ที่นั่งที่จองไว้ (ไม่รวมที่ยกเลิก)', value: activeSeats, tone: 'accent' },
+    { key: 'in', label: 'ที่นั่งที่เช็กอินแล้ว', value: checkedInSeats },
+    { key: 'not', label: 'ที่นั่งที่ยังไม่เช็กอิน', value: notCheckedInSeats },
     { key: 'cancel', label: 'รายการยกเลิก', value: reportCount(stats.cancelledOrders) },
-    { key: 'show', label: 'Show rate', value: showRate, sub: 'ที่นั่งที่เช็กอิน ÷ ที่นั่งที่ถือสิทธิ์' },
+    { key: 'show', label: 'เปอร์เซ็นต์เช็กอิน', value: showRate, sub: showRate == null ? null : `เช็กอิน ${checkedInSeats} จาก ${activeSeats} ที่นั่ง` },
   ];
 
   return (
     <section className="bt-summary-wrap dashboard-operations" aria-label="สถิติการดำเนินงาน">
-      <h3>การดำเนินงานทุกกิจกรรม</h3>
-      <p className="bt-mock-note">ข้อมูลรวมทุกช่วงเวลา</p>
+      <h3>ภาพรวมการจองและเช็กอิน</h3>
+      <p className="bt-report-note">รวมทุกอีเวนต์และทุกช่วงเวลา</p>
       {error && (
-        <p className="bt-mock-note" role="alert">
+        <p className="bt-report-note" role="alert">
           อัปเดตสถิติไม่สำเร็จ กำลังแสดงข้อมูลล่าสุดที่โหลดได้{' '}
           <button type="button" onClick={() => load()}>ลองอีกครั้ง</button>
         </p>
@@ -67,17 +67,16 @@ export default function OperationsStats() {
         {tiles.map((tile) => (
           <div key={tile.key} className={`bt-tile${tile.tone ? ` ${tile.tone}` : ''}`}>
             <span>{tile.label}</span>
-            <strong>{tile.value ?? 'N/A'}</strong>
+            <strong>{tile.value ?? '—'}</strong>
             {tile.sub && <small>{tile.sub}</small>}
           </div>
         ))}
       </div>
-      <div className="bt-sources" aria-label="ช่องทางเช็กอิน">
-        <span className="bt-sources-title">ช่องทางเช็กอิน (ที่นั่ง)</span>
-        <span className="bt-src staff">เจ้าหน้าที่ <b>{reportCount(stats.staffCheckedIn) ?? '—'}</b></span>
-        <span className="bt-src online">ออนไลน์ผ่านเว็บ <b>{reportCount(stats.onlineCheckedIn) ?? '—'}</b></span>
-        <span className="bt-src unknown">ไม่ทราบที่มา <b>{reportCount(stats.unknownCheckedIn) ?? '—'}</b></span>
-      </div>
+      <CheckInSources
+        staff={reportCount(stats.staffCheckedIn)}
+        online={reportCount(stats.onlineCheckedIn)}
+        unknown={reportCount(stats.unknownCheckedIn)}
+      />
     </section>
   );
 }
