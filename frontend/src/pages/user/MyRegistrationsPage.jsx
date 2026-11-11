@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import { registrationService } from '../../api/registrationService';
 import { guestService } from '../../api/guestService';
@@ -71,6 +71,8 @@ const getCancelErrorMessage = (error) => {
 
 export default function MyRegistrationsPage() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const fromGuest = searchParams.get('from') === 'guest';
   const [claimOpen, setClaimOpen] = useState(false);
   const [claimStep, setClaimStep] = useState('request');
   const [claimCode, setClaimCode] = useState('');
@@ -121,8 +123,18 @@ export default function MyRegistrationsPage() {
   const requestClaimCode = async () => {
     if (claimBusy) return;
     setClaimBusy(true); setClaimMessage('');
-    try { await guestService.requestVerification(); setClaimStep('code'); setClaimMessage('ส่งรหัสแล้ว กรุณาตรวจสอบอีเมลของบัญชี'); }
-    catch (error) { setClaimMessage(error.status === 429 ? 'กรุณารอ 60 วินาทีก่อนขอรหัสใหม่' : 'ส่งรหัสไม่สำเร็จ กรุณาลองอีกครั้ง'); }
+    try {
+      await guestService.requestVerification();
+      setClaimCode('');
+      setClaimStep('code');
+      setClaimMessage('ส่งรหัส 6 หลักแล้ว เปิดอีเมลเพื่อดูรหัส รหัสใช้ได้ 10 นาที');
+    } catch (error) {
+      const messages = {
+        429: 'รอ 60 วินาทีก่อนขอรหัสใหม่',
+        503: 'ระบบส่งอีเมลยังไม่พร้อม ลองใหม่ภายหลัง ระหว่างนี้เปิดบัตรจากเบราว์เซอร์ที่ใช้จองได้',
+      };
+      setClaimMessage(messages[error.status] ?? 'ส่งรหัสไม่สำเร็จ กรุณาลองอีกครั้ง');
+    }
     finally { setClaimBusy(false); }
   };
   const confirmClaim = async () => {
@@ -131,7 +143,9 @@ export default function MyRegistrationsPage() {
     try {
       if (claimStep !== 'verified') { await guestService.confirmVerification(claimCode); setClaimStep('verified'); }
       const result = await guestService.claim();
-      setClaimMessage(`รับรายการเข้าบัญชีแล้ว ${result.claimedRegistrations} รายการ`);
+      setClaimMessage(result.claimedRegistrations > 0
+        ? `รับรายการเข้าบัญชีแล้ว ${result.claimedRegistrations} รายการ`
+        : 'ไม่มีรายการใหม่ให้เพิ่ม ตรวจว่าใช้อีเมลเดียวกับตอนจอง หรือดูรายการที่เพิ่มไว้ด้านล่าง');
       setClaimCode(''); setClaimStep('done'); await fetchRegistrations();
     } catch (error) {
       setClaimMessage(error.status === 400 ? 'รหัสไม่ถูกต้องหรือหมดอายุ กรุณาตรวจสอบหรือขอรหัสใหม่' : error.status === 403 ? 'ต้องยืนยันอีเมลอีกครั้งก่อนรับรายการ' : error.status === 409 ? 'รายการนี้ถูกรับเข้าบัญชีอื่นแล้ว' : 'ดำเนินการไม่สำเร็จ กรุณาลองอีกครั้ง');
@@ -184,18 +198,39 @@ export default function MyRegistrationsPage() {
         </header>
 
         <section className="guest-claim" aria-labelledby="guest-claim-title">
-          <h2 id="guest-claim-title">รับรายการที่จองโดยไม่เข้าสู่ระบบ</h2>
-          <p>ยืนยันอีเมลบัญชี{user?.email ? ` ${user.email}` : ''} เพื่อรับรายการที่จองด้วยอีเมลเดียวกัน รวมถึงประวัติและบัตร</p>
-          {!claimOpen ? <button type="button" onClick={() => setClaimOpen(true)}>รับรายการเข้าบัญชี</button> : <>
-            {(claimStep === 'request' || claimStep === 'code') && <button type="button" disabled={claimBusy} onClick={requestClaimCode}>{claimStep === 'code' ? 'ส่งรหัสอีกครั้ง' : 'ส่งรหัสยืนยัน'}</button>}
-            {(claimStep === 'code' || claimStep === 'verified') && <div>
-              <label htmlFor="claim-code">รหัสยืนยัน 6 หลัก</label>{' '}
-              <input id="claim-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={claimCode} disabled={claimBusy || claimStep === 'verified'} onChange={(event) => setClaimCode(event.target.value.replace(/\D/g, ''))} />{' '}
-              <button type="button" disabled={claimBusy || (claimStep !== 'verified' && claimCode.length !== 6)} onClick={confirmClaim}>{claimBusy ? 'กำลังดำเนินการ...' : 'ยืนยันและรับรายการ'}</button>
-            </div>}
-            {claimStep === 'done' && <button type="button" onClick={() => { setClaimStep('request'); setClaimMessage(''); }}>เริ่มอีกครั้ง</button>}
-            {claimMessage && <p role="status">{claimMessage}</p>}
-          </>}
+          <h2 id="guest-claim-title">เพิ่มบัตรที่จองไว้ก่อนเข้าสู่ระบบ</h2>
+          {fromGuest && <p>บัญชีพร้อมแล้ว ยืนยันอีเมลเพื่อให้บัตรที่จองไว้แสดงในหน้านี้</p>}
+          <p>ใช้รหัสที่ส่งไปยัง <strong>{user?.email || 'อีเมลของบัญชีนี้'}</strong> อีเมลต้องตรงกับที่ใช้ตอนจอง</p>
+          {!claimOpen ? (
+            <button type="button" onClick={() => setClaimOpen(true)}>รับรายการเข้าบัญชี</button>
+          ) : (
+            <>
+              {(claimStep === 'request' || claimStep === 'code') && (
+                <button type="button" disabled={claimBusy} onClick={requestClaimCode}>
+                  {claimStep === 'code' ? 'ส่งรหัสอีกครั้ง' : 'ส่งรหัสยืนยัน'}
+                </button>
+              )}
+              {(claimStep === 'code' || claimStep === 'verified') && (
+                <form className="guest-claim-form" onSubmit={(event) => { event.preventDefault(); confirmClaim(); }}>
+                  {claimStep === 'code' && (
+                    <label htmlFor="claim-code">
+                      รหัสยืนยัน 6 หลัก
+                      <input id="claim-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
+                        value={claimCode} disabled={claimBusy} onChange={(event) => setClaimCode(event.target.value.replace(/\D/g, ''))} />
+                    </label>
+                  )}
+                  <button type="submit" disabled={claimBusy || (claimStep === 'code' && claimCode.length !== 6)}>
+                    {claimBusy ? 'กำลังดำเนินการ...' : 'ยืนยันและรับรายการ'}
+                  </button>
+                </form>
+              )}
+              {claimMessage && <p role="status">{claimMessage}</p>}
+              {claimStep === 'done' && (
+                <button type="button" onClick={() => { setClaimStep('request'); setClaimMessage(''); }}>ตรวจหารายการอีกครั้ง</button>
+              )}
+            </>
+          )}
+          <p><Link className="empty-state-link" to="/guest-tickets">ดูบัตรที่จองไว้ในเบราว์เซอร์นี้</Link></p>
         </section>
         {cancelError && (
           <div className="registration-alert registration-alert-error" role="alert">

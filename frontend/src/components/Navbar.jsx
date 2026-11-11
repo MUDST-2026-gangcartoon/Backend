@@ -77,6 +77,9 @@ export default function Navbar({ onSearchChange }) {
             ค้นหาอีเวนต์
           </NavLink>
 
+          {!isLoggedIn && (
+            <NavLink to="/guest-tickets" className={getNavLinkClass}>บัตรที่จองไว้</NavLink>
+          )}
           {isLoggedIn && (
             <>
               <NavLink to="/MyRegistrationsPage" className={getNavLinkClass}>

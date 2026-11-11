@@ -9,6 +9,7 @@ export const authService = {
     return apiClient.post('/auth/signup', userData);
   },
 
+  getSession: () => apiClient.get('/auth/session'),
   getProfile: () => {
     return apiClient.get('/auth/me');
   },

@@ -6,7 +6,7 @@ import { extname, resolve, sep } from 'node:path';
 const root = resolve(process.argv[2] || '../frontend/dist');
 const port = Number(process.env.E2E_FRONTEND_PORT || 15173);
 const backendPort = Number(process.env.E2E_BACKEND_PORT || 18080);
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
 const server = http.createServer(async (req, res) => {
   if (req.url.startsWith('/api/') || req.url.startsWith('/uploads/')) {
     const proxy = http.request({ hostname: '127.0.0.1', port: backendPort, path: req.url, method: req.method, headers: req.headers }, upstream => {

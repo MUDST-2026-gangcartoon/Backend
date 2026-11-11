@@ -5,6 +5,7 @@ export const guestService = {
   startAttempt: (eventId, attemptId) => apiClient.post('/analytics/registration-attempts', { eventId: Number(eventId), attemptId }),
   register: (eventId, payload, key) => apiClient.post(`/guest/events/${id(eventId)}/registrations`, payload, { 'Idempotency-Key': key }),
   checkout: (eventId, payload, key) => apiClient.post(`/guest/events/${id(eventId)}/checkout`, payload, { 'Idempotency-Key': key }),
+  bookings: () => apiClient.get('/guest/bookings'),
   receipt: (registrationId) => apiClient.get(`/guest/bookings/${id(registrationId)}`),
   cancelBooking: (registrationId) => apiClient.post(`/guest/bookings/${id(registrationId)}/cancel`),
   payment: (paymentId) => apiClient.get(`/guest/payments/${id(paymentId)}`),
