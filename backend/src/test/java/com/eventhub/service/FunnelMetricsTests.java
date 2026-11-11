@@ -1,12 +1,14 @@
 package com.eventhub.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.eventhub.model.RegistrationAttempt;
-import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,16 +17,18 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
-@ActiveProfiles({"test", "metrics"})
+@ActiveProfiles("test")
 @Transactional
 class FunnelMetricsTests {
     @Autowired EntityManager entityManager;
-    @Autowired FunnelMetrics metrics;
-    @Autowired MeterRegistry registry;
 
     @Test
     void maturedAttemptsCountLateConfirmationsAsDroppedButNotPendingAttempts() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.of(2026, 11, 11, 12, 0);
+        var clock = mock(GuestPhase2Clock.class);
+        when(clock.now()).thenReturn(now);
+        var registry = new SimpleMeterRegistry();
+        var metrics = new FunnelMetrics(entityManager, clock, registry);
         var timely = new RegistrationAttempt(UUID.randomUUID(), 1L, "g:timely", now.minusMinutes(60));
         timely.confirm(1L, now.minusMinutes(40));
         var late = new RegistrationAttempt(UUID.randomUUID(), 1L, "g:late", now.minusMinutes(60));
