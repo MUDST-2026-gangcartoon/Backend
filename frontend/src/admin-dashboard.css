@@ -1435,3 +1435,17 @@ body {
     display: none;
   }
 }
+
+
+.dashboard-charts {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  align-items: stretch;
+}
+
+.dashboard-charts .dashboard-chart-card {
+  min-height: 0;
+}
+
+@media (max-width: 980px) {
+  .dashboard-charts { grid-template-columns: minmax(0, 1fr); }
+}

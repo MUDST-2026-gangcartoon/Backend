@@ -198,12 +198,14 @@ test('Guest pays, claims the original ticket, and appears in Staff check-in and 
   try {
     await admin.page.goto('/admin/dashboard');
     await admin.page.getByRole('tab').filter({ hasText: event.eventTitle }).click();
+    const chart = admin.page.getByRole('region', { name: 'เส้นทางการจองทุกอีเวนต์' });
+    await expect(chart.getByRole('list', { name: 'กราฟขั้นตอนการจอง' })).toBeVisible();
     const report = admin.page.getByRole('region', { name: 'รายงานขั้นตอนการลงทะเบียน' });
     const cells = (name) => report.getByRole('row', { name }).getByRole('cell');
-    await expect(cells(/เริ่มลงทะเบียน/)).toHaveText(['1', '1', '0']);
-    await expect(cells(/ลงทะเบียนสำเร็จ/)).toHaveText(['1', '1', '0']);
-    await expect(cells(/ที่นั่งเช็กอิน/)).toHaveText(['1', '1', '0']);
-    await expect(cells(/Show rate/)).toHaveText(['100%', '100%', '—']);
+    await expect(cells(/^เริ่มจอง /)).toHaveText(['1', '1', '0']);
+    await expect(cells(/^จองสำเร็จ /)).toHaveText(['1', '1', '0']);
+    await expect(cells(/ที่นั่งที่เช็กอินแล้ว/)).toHaveText(['1', '1', '0']);
+    await expect(cells(/เปอร์เซ็นต์เช็กอิน/)).toHaveText(['100%', '100%', '—']);
 
     const earlier = new Date(receipt.registeredAt.slice(0, 10) + 'T00:00:00Z');
     earlier.setUTCDate(earlier.getUTCDate() - 2);
@@ -211,7 +213,7 @@ test('Guest pays, claims the original ticket, and appears in Staff check-in and 
     earlier.setUTCDate(earlier.getUTCDate() + 1);
     const exclusiveEnd = earlier.toISOString().slice(0, 10);
     await report.getByLabel('ตั้งแต่วันที่').fill(day);
-    await report.getByLabel('ถึงวันที่ (รวมวันสิ้นสุด)').fill(day);
+    await report.getByLabel('ถึงวันที่').fill(day);
     const filtered = admin.page.waitForResponse((response) => {
       const url = new URL(response.url());
       return url.pathname === '/api/admin/analytics/funnel' &&
@@ -225,7 +227,7 @@ test('Guest pays, claims the original ticket, and appears in Staff check-in and 
       guest: { startedAttempts: 0, confirmedOrders: 0, checkedInSeats: 0 },
     });
     await expect(report.getByText('ไม่มีข้อมูลในช่วงวันที่เลือก')).toBeVisible();
-    await expect(cells(/Show rate/)).toHaveText(['—', '—', '—']);
+    await expect(cells(/เปอร์เซ็นต์เช็กอิน/)).toHaveText(['—', '—', '—']);
   } finally {
     await admin.context.close();
   }
