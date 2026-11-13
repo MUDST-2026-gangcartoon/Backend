@@ -46,6 +46,8 @@ spec:
               value: /data/uploads
             - name: SPRING_PROFILES_ACTIVE
               value: prod,cloud-demo,metrics,tracing
+            - name: SERVER_FORWARD_HEADERS_STRATEGY
+              value: NATIVE
             - name: JAVA_TOOL_OPTIONS
               value: -XX:MaxRAMPercentage=55
             - name: MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT
