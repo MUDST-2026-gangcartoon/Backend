@@ -4,7 +4,9 @@ import com.eventhub.dto.ApiDtos;
 import com.eventhub.model.Role;
 import com.eventhub.model.UserAccount;
 import com.eventhub.repository.UserRepository;
+import com.eventhub.service.EventClock;
 import jakarta.validation.Validator;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,21 +42,33 @@ class DevAccountSeederIT {
     @Test
     void seedsTheDemoScenariosOnceWithoutChangingExistingRecords() {
         assertEquals(7, count("events"));
-        assertEquals(10, count("registrations"));
+        assertEquals(11, count("registrations"));
         assertEquals(6, count("mock_payment_orders"));
         assertEquals(27, count("page_views"));
-        assertEquals(13, count("registration_attempts"));
-        assertEquals(2, count("guest_identities"));
+        assertEquals(14, count("registration_attempts"));
+        assertEquals(3, count("guest_identities"));
+        assertEquals(7, jdbc.queryForObject("SELECT COUNT(*) FROM events WHERE image_url LIKE '/demo-events/%'", Integer.class));
+        LocalDateTime rehearsal = EventClock.now().plusDays(2);
+        assertEquals(2, jdbc.queryForObject("""
+                SELECT COUNT(*) FROM events
+                WHERE image_url IN ('/demo-events/poster.webp', '/demo-events/photography.webp')
+                  AND starts_at > ?
+                """, Integer.class, rehearsal));
+        assertEquals(2, jdbc.queryForObject("""
+                SELECT COUNT(*) FROM events
+                WHERE image_url IN ('/demo-events/developer.webp', '/demo-events/online.webp')
+                  AND starts_at < ? AND ends_at > ?
+                """, Integer.class, rehearsal, rehearsal));
 
         jdbc.update("UPDATE events SET title = 'Edited demo event' WHERE title LIKE '%เวิร์กช็อปทำโปสเตอร์'");
         demoSeeder.run();
 
         assertEquals(7, count("events"));
-        assertEquals(10, count("registrations"));
+        assertEquals(11, count("registrations"));
         assertEquals(6, count("mock_payment_orders"));
         assertEquals(27, count("page_views"));
-        assertEquals(13, count("registration_attempts"));
-        assertEquals(2, count("guest_identities"));
+        assertEquals(14, count("registration_attempts"));
+        assertEquals(3, count("guest_identities"));
         assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM events WHERE title = 'Edited demo event'", Integer.class));
     }
 
