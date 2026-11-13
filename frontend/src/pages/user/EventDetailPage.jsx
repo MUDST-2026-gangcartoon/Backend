@@ -695,6 +695,10 @@ function EventDetails({ eventId }) {
 
             <h1 className="event-title">{eventData.title}</h1>
 
+            {eventData.imageUrl && (
+              <img className="event-detail-photo" src={eventData.imageUrl} alt="" />
+            )}
+
             {eventData.status && (
               <p>สถานะ: {EVENT_STATUS_LABELS[status] || 'ไม่ระบุสถานะ'}</p>
             )}
@@ -748,6 +752,9 @@ function EventDetails({ eventId }) {
               ) : (
                 <p>ยังไม่มีรายละเอียดเพิ่มเติมสำหรับอีเวนต์นี้</p>
               )}
+              {eventData.detailImages?.map(({ url }, index) => (
+                <img key={index} className="event-detail-photo" src={url} alt="" loading="lazy" />
+              ))}
             </div>
 
             <hr className="divider" />
