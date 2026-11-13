@@ -88,6 +88,19 @@
   margin: 0 0 32px 0;
 }
 
+.event-detail-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  margin: 0 0 24px;
+  border-radius: 12px;
+}
+
+.event-description .event-detail-photo {
+  margin: 16px 0 0;
+}
+
 .info-row {
   display: flex;
   justify-content: space-between;

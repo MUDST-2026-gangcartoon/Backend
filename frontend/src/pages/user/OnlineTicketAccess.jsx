@@ -34,8 +34,12 @@ export default function OnlineTicketAccess({ eventId, checkedIn, onCheckedIn }) 
     try {
       const result = await eventService.joinOnlineEvent(eventId);
       if (result?.checkedInAt) onCheckedIn();
-      const url = new URL(result?.url);
-      if (url.protocol !== 'https:') throw new Error('Invalid meeting URL');
+      const url = result?.url === '/demo-events/online-room.html'
+        ? new URL(result.url, window.location.origin)
+        : new URL(result?.url);
+      if (url.protocol !== 'https:' && result?.url !== '/demo-events/online-room.html') {
+        throw new Error('Invalid meeting URL');
+      }
       setRoomUrl(url.href);
     } catch (error) {
       setJoinError(error.status === 403

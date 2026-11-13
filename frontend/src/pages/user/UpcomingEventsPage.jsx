@@ -230,7 +230,7 @@ export default function UpcomingEventsPage() {
     );
   };
 
-  const featuredEvent = events[0];
+  const featuredEvent = events.find((event) => event.status === 'OPEN') || events[0];
 
   return (
     <div className="page-wrapper">
@@ -264,7 +264,12 @@ export default function UpcomingEventsPage() {
             </button>
           </div>
 
-          <div className="hero-card-container">
+          <div
+            className="hero-card-container"
+            style={featuredEvent?.imageUrl ? {
+              background: `linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.55)), url("${featuredEvent.imageUrl}") center / cover no-repeat`,
+            } : undefined}
+          >
             <div className="hero-card-content">
               <span className="hero-badge">
                 {featuredEvent ? 'แนะนำ' : 'อีเวนต์'}

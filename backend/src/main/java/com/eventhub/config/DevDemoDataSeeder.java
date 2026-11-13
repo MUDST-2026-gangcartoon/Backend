@@ -1,5 +1,6 @@
 package com.eventhub.config;
 
+import com.eventhub.model.DetailImage;
 import com.eventhub.model.Event;
 import com.eventhub.model.GuestIdentity;
 import com.eventhub.model.MockPaymentOrder;
@@ -41,6 +42,7 @@ public class DevDemoDataSeeder implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(DevDemoDataSeeder.class);
     private static final BigDecimal FREE = BigDecimal.ZERO;
     private static final BigDecimal PAID = BigDecimal.valueOf(150);
+    private static final int DEMO_WINDOW_DAYS = 7;
     private final EntityManager database;
     private final JdbcTemplate jdbc;
     private final UserRepository users;
@@ -86,18 +88,37 @@ public class DevDemoDataSeeder implements CommandLineRunner {
         var member = users.findByEmail("user@example").filter(user -> user.getRole() == Role.USER).orElseGet(() -> demoUser("สมาชิกตัวอย่าง", demoEmail("demo.member")));
         var claimedMember = demoUser("สมาชิกที่ย้ายบัตร Guest แล้ว", unusedGuestEmail("demo.claimed"));
         var bookedAt = now.minusHours(2);
+        var demoWindowEnd = now.plusDays(DEMO_WINDOW_DAYS);
 
-        var workshop = event("เวิร์กช็อปทำโปสเตอร์", "DESIGN", now.plusDays(3), 20, List.of(
+        var workshop = event("เวิร์กช็อปทำโปสเตอร์", "DESIGN", demoWindowEnd.plusDays(1), 20, List.of(
                 new Ticket("บัตรทั่วไป (ฟรี)", FREE, 12), new Ticket("บัตรพร้อมอุปกรณ์", PAID, 8)));
+        describe(workshop, "poster", "ห้อง Design Lab · ชั้น 2",
+                "ลองออกแบบโปสเตอร์ตั้งแต่เลือกสีและตัวอักษรไปจนถึงจัดวางภาพ พร้อมรับคำแนะนำจากทีมวิทยากร เหมาะกับมือใหม่ เลือกบัตรฟรีและนำอุปกรณ์มาเอง หรือเลือกบัตรที่รวมชุดอุปกรณ์ไว้แล้ว");
+        workshop.setDetailImages(List.of(new DetailImage("/demo-events/poster-studio.webp", "DETAIL")));
         var checkin = event("พบปะนักพัฒนา · เช็กอินได้", "TECH", now.minusMinutes(30), 24, FREE);
-        var near = event("ถ่ายภาพเล่าเรื่อง · ใกล้เต็ม", "DESIGN", now.plusDays(2), 10, FREE);
-        var full = event("เสวนาอาชีพ · เต็มแล้ว", "CAREER", now.plusDays(4), 5, FREE);
-        var closed = event("ตลาดนัดชุมชน · ปิดรับจอง", "COMMUNITY", now.plusDays(1), 18, FREE);
+        checkin.setEndsAt(demoWindowEnd);
+        describe(checkin, "developer", "หอประชุม Innovation Hall · ประตู A",
+                "พบเพื่อนนักพัฒนา ฟังการแชร์โปรเจกต์สั้น ๆ และแลกเปลี่ยนวิธีทำงานกับทีมอื่น เตรียม QR จากหน้าบัตรของฉันให้เจ้าหน้าที่สแกนที่จุดลงทะเบียน");
+        var near = event("ถ่ายภาพเล่าเรื่อง · ใกล้เต็ม", "DESIGN", demoWindowEnd, 10, FREE);
+        describe(near, "photography", "สตูดิโอภาพถ่าย · ชั้น 3",
+                "เรียนรู้การจัดองค์ประกอบและแสงผ่านโจทย์ถ่ายภาพสั้น ๆ ใช้โทรศัพท์หรือกล้องของตัวเองได้ แล้วนำภาพมาเล่าเรื่องให้เพื่อนในคลาสฟัง");
+        var full = event("เสวนาอาชีพ · เต็มแล้ว", "CAREER", demoWindowEnd.plusDays(2), 5, FREE);
+        describe(full, "career", "ห้อง Career Studio · ชั้น 1",
+                "คุยกับรุ่นพี่เรื่องการทำพอร์ต สมัครฝึกงาน และเตรียมตัวสัมภาษณ์ กิจกรรมกลุ่มเล็กเพื่อให้ทุกคนได้ถามคำถาม ตอนนี้ที่นั่งเต็มแล้ว");
+        var closed = event("ตลาดนัดชุมชน · ปิดรับจอง", "COMMUNITY", demoWindowEnd.plusDays(3), 18, FREE);
+        describe(closed, "market", "ลานกิจกรรมกลางแจ้ง",
+                "เดินชมร้านจากชุมชนและผลงานของนักศึกษา ผู้ที่จองไว้แล้วสามารถใช้บัตรเดิมเข้าร่วมได้ รอบนี้ปิดรับจองล่วงหน้าเพื่อจัดเตรียมพื้นที่");
         closed.setRegistrationClosesAt(now.minusHours(1));
         var past = event("เสวนางานสร้างสรรค์ · จบแล้ว", "COMMUNITY", now.minusDays(1), 30, PAID);
+        describe(past, "creative", "ห้อง Creative Forum · ชั้น 4",
+                "วงสนทนาเรื่องการทำโปรเจกต์สร้างสรรค์ให้เกิดขึ้นจริง กิจกรรมจบแล้วและมีตัวอย่างทั้งบัตรที่ใช้แล้ว รายการที่ไม่ได้มา และรายการที่ยกเลิกสำหรับดูในรายงาน");
         var online = event("พบปะออนไลน์ · เข้าร่วมได้", "TECH", now.minusMinutes(20), 18, FREE);
+        online.setEndsAt(demoWindowEnd);
+        describe(online, "online", "ห้องกิจกรรมออนไลน์",
+                "เข้าร่วมจากหน้าบัตรของฉันเมื่อถึงเวลาเริ่ม ระบบจะบันทึกการเช็กอินให้อัตโนมัติเมื่อกดเข้าห้อง กิจกรรมนี้ใช้หน้าห้องจำลองสำหรับซ้อมนำเสนอ");
         online.setEventFormat("ONLINE");
-        online.setOnlineMeetingUrl("https://example.com/");
+        online.setOnlineMeetingUrl("/demo-events/online-room.html");
+        List.of(workshop, checkin, near, full, closed, past, online).forEach(database::persist);
 
         memberBooking(member, checkin, 3, bookedAt, null, false);
         memberBooking(attendee, checkin, 4, bookedAt, "STAFF", false);
@@ -117,6 +138,7 @@ public class DevDemoDataSeeder implements CommandLineRunner {
         payment(member, workshop, 1, 1, bookedAt, MockPaymentStatus.CANCELLED, null);
         payment(member, workshop, 1, 1, bookedAt.plusMinutes(20), MockPaymentStatus.EXPIRED, null);
         payment(attendee, workshop, 1, 1, now, MockPaymentStatus.PENDING_PAYMENT, null);
+        guestBooking(workshop, "ผู้เข้าร่วมเวิร์กช็อป", unusedGuestEmail("guest.workshop"), null, 2, bookedAt);
 
         attempt(workshop, "u:" + member.getId(), bookedAt, null);
         attempt(workshop, "g:" + UUID.randomUUID(), bookedAt.plusMinutes(10), null);
@@ -130,6 +152,12 @@ public class DevDemoDataSeeder implements CommandLineRunner {
 
     private String demoEmail(String local) {
         return local + ("default".equals(batch) ? "" : "+" + batch) + "@example.test";
+    }
+
+    private void describe(Event event, String cover, String location, String description) {
+        event.setImageUrl("/demo-events/" + cover + ".webp");
+        event.setLocation(location);
+        event.setDescription(description);
     }
 
     private String unusedGuestEmail(String local) {
@@ -154,8 +182,6 @@ public class DevDemoDataSeeder implements CommandLineRunner {
         var event = new Event();
         String prefix = "default".equals(batch) ? "[DEV]" : "[DEV " + batch + "]";
         event.setTitle(prefix + " " + title);
-        event.setDescription("ข้อมูลตัวอย่างสำหรับทดลองจองบัตร เช็กอิน และดูรายงาน EventHub");
-        event.setLocation("ห้องกิจกรรม EventHub");
         event.setCategory(category);
         event.setStartsAt(start);
         event.setEndsAt(start.plusHours(4));
@@ -165,7 +191,6 @@ public class DevDemoDataSeeder implements CommandLineRunner {
         for (Ticket ticket : tickets) {
             event.addTicketType(new TicketType(event, ticket.name(), "", ticket.price(), ticket.capacity()));
         }
-        database.persist(event);
         return event;
     }
 
