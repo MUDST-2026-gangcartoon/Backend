@@ -7,7 +7,23 @@ resources:
   - edge.yaml
   - mailpit.yaml
   - prometheus.yaml
+  - observability.yaml
 configMapGenerator:
   - name: prometheus-config
     files:
       - prometheus.yml
+  - name: alloy-config
+    files:
+      - config.alloy
+  - name: tempo-config
+    files:
+      - tempo.yml
+  - name: grafana-datasources
+    files:
+      - datasources.yml
+  - name: grafana-providers
+    files:
+      - dashboards.yml
+  - name: grafana-dashboards
+    files:
+      - eventhub.json
