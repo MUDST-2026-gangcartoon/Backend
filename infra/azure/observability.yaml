@@ -1,0 +1,206 @@
+apiVersion: "v1"
+kind: "ServiceAccount"
+metadata:
+  name: "alloy"
+---
+apiVersion: "rbac.authorization.k8s.io/v1"
+kind: "Role"
+metadata:
+  name: "alloy"
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get","list","watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+apiVersion: "rbac.authorization.k8s.io/v1"
+kind: "RoleBinding"
+metadata:
+  name: "alloy"
+roleRef:
+  apiGroup: "rbac.authorization.k8s.io"
+  kind: "Role"
+  name: "alloy"
+subjects:
+  - kind: "ServiceAccount"
+    name: "alloy"
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: "loki"
+spec:
+  selector:
+    matchLabels:
+      app: "loki"
+  template:
+    metadata:
+      labels:
+        app: "loki"
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: "loki"
+          image: "grafana/loki:3.5.5"
+          args: ["-config.file=/etc/loki/local-config.yaml"]
+          resources:
+            requests:
+              cpu: "35m"
+              memory: "192Mi"
+            limits:
+              memory: "600Mi"
+---
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: "loki"
+spec:
+  selector:
+    app: "loki"
+  ports:
+    - name: "http"
+      port: 3100
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: "tempo"
+spec:
+  selector:
+    matchLabels:
+      app: "tempo"
+  template:
+    metadata:
+      labels:
+        app: "tempo"
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: "tempo"
+          image: "grafana/tempo:2.8.2"
+          args: ["-config.file=/etc/eventhub/tempo.yml"]
+          resources:
+            requests:
+              cpu: "35m"
+              memory: "160Mi"
+            limits:
+              memory: "500Mi"
+          volumeMounts:
+            - name: "tempo-config"
+              mountPath: "/etc/eventhub"
+              readOnly: true
+      volumes:
+        - name: "tempo-config"
+          configMap:
+            name: "tempo-config"
+---
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: "tempo"
+spec:
+  selector:
+    app: "tempo"
+  ports:
+    - name: "http"
+      port: 3200
+    - name: "otlp"
+      port: 4318
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: "grafana"
+spec:
+  selector:
+    matchLabels:
+      app: "grafana"
+  template:
+    metadata:
+      labels:
+        app: "grafana"
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: "grafana"
+          image: "grafana/grafana:12.1.1"
+          env:
+            - name: "GF_SECURITY_ADMIN_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: "eventhub-grafana"
+                  key: "password"
+            - name: "GF_USERS_ALLOW_SIGN_UP"
+              value: "false"
+          resources:
+            requests:
+              cpu: "35m"
+              memory: "128Mi"
+            limits:
+              memory: "400Mi"
+          volumeMounts:
+            - name: "grafana-datasources"
+              mountPath: "/etc/grafana/provisioning/datasources"
+              readOnly: true
+            - name: "grafana-providers"
+              mountPath: "/etc/grafana/provisioning/dashboards"
+              readOnly: true
+            - name: "grafana-dashboards"
+              mountPath: "/var/lib/grafana/dashboards"
+              readOnly: true
+      volumes:
+        - name: "grafana-datasources"
+          configMap:
+            name: "grafana-datasources"
+        - name: "grafana-providers"
+          configMap:
+            name: "grafana-providers"
+        - name: "grafana-dashboards"
+          configMap:
+            name: "grafana-dashboards"
+---
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: "grafana"
+spec:
+  selector:
+    app: "grafana"
+  ports:
+    - name: "http"
+      port: 3000
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: "alloy"
+spec:
+  selector:
+    matchLabels:
+      app: "alloy"
+  template:
+    metadata:
+      labels:
+        app: "alloy"
+    spec:
+      serviceAccountName: "alloy"
+      containers:
+        - name: "alloy"
+          image: "grafana/alloy:v1.10.2"
+          args: ["run","/etc/eventhub/config.alloy","--storage.path=/tmp/alloy"]
+          resources:
+            requests:
+              cpu: "35m"
+              memory: "96Mi"
+            limits:
+              memory: "320Mi"
+          volumeMounts:
+            - name: "alloy-config"
+              mountPath: "/etc/eventhub"
+              readOnly: true
+      volumes:
+        - name: "alloy-config"
+          configMap:
+            name: "alloy-config"

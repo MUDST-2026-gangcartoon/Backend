@@ -38,6 +38,10 @@ public class DevAccountSeeder implements CommandLineRunner {
     }
 
     private void createIfMissing(String name, String email, Role role) {
+        createIfMissing(name, email, role, DEV_PASSWORD);
+    }
+
+    void createIfMissing(String name, String email, Role role, String password) {
         if (userRepository.findByEmail(email).isPresent()) {
             log.info("Dev account already exists; leaving it unchanged: {}", email);
             return;
@@ -46,7 +50,7 @@ public class DevAccountSeeder implements CommandLineRunner {
         userRepository.save(new UserAccount(
                 name,
                 email,
-                passwordEncoder.encode(DEV_PASSWORD),
+                passwordEncoder.encode(password),
                 role
         ));
         log.info("Created {} account for local development: {}", role, email);

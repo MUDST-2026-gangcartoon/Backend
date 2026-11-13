@@ -1,0 +1,34 @@
+discovery.kubernetes "eventhub" {
+  role = "pod"
+  namespaces {
+    names = ["eventhub"]
+  }
+  selectors {
+    role = "pod"
+    label = "app=eventhub-backend"
+  }
+}
+
+discovery.relabel "eventhub" {
+  targets = discovery.kubernetes.eventhub.targets
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_name"]
+    regex = "backend"
+    action = "keep"
+  }
+  rule {
+    target_label = "service_name"
+    replacement = "eventhub"
+  }
+}
+
+loki.source.kubernetes "eventhub" {
+  targets = discovery.relabel.eventhub.output
+  forward_to = [loki.write.eventhub.receiver]
+}
+
+loki.write "eventhub" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
