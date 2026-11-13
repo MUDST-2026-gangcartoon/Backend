@@ -24,3 +24,15 @@ sudo k3s kubectl -n eventhub create secret generic eventhub-runtime \
 ครั้งแรกตั้ง `SPRING_JPA_HIBERNATE_DDL_AUTO=update` ใน Secret เพื่อสร้าง schema บน PVC ใหม่ หลัง rollout สำเร็จให้ลบตัวแปรนี้จาก Secret แล้ว restart Backend เพื่อกลับไปใช้ `validate` จากโปรไฟล์ `prod` หากนำ H2 เดิมมาใช้ ให้สำรองข้อมูลและตรวจคู่มือ migration ก่อน
 
 เปิด Mailpit จาก SSH ด้วย `sudo k3s kubectl -n eventhub port-forward svc/mailpit 8025:8025` แล้วใช้ SSH local forwarding พอร์ต 8025 เพื่อเปิดจากเครื่องผู้พรีเซนต์ Grafana ใช้วิธีเดียวกันกับ service `grafana` พอร์ต 3000
+
+สร้าง Secret `eventhub-grafana` ที่มีคีย์ `password` จากไฟล์ส่วนตัวก่อน deploy ครั้งแรก
+
+GitHub Actions สร้าง image ทั้งสองตัวและติด tag ด้วย commit SHA ใน GHCR เปิดให้คลัสเตอร์อ่านสอง package ได้จากหน้า Package settings จากนั้นตั้ง Environment `azure-demo` และใช้ OIDC ที่ผูกกับ `repo:MUDST-2026-gangcartoon/Backend:environment:azure-demo` ให้สิทธิ์ Azure เฉพาะ VM นี้สำหรับอ่านสถานะและเรียก VM Run Command ตั้ง Environment Variables ดังนี้
+
+- `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
+- `AZURE_RESOURCE_GROUP`, `AZURE_VM_NAME`
+- `EVENTHUB_HOST`, `EVENTHUB_ACME_EMAIL`
+
+เลือก Run workflow จาก `main` แล้วใส่ SHA ที่ publish สำเร็จ Workflow ตรวจ rollout และเรียกหน้าเว็บกับ API ผ่าน HTTPS ใช้ SHA รุ่นก่อนเพื่อย้อนกลับ และตรวจความเข้ากันได้ของ schema ก่อนย้อนรุ่นที่เปลี่ยนฐานข้อมูล
+
+ใช้ `EVENTHUB_INTERNAL_ONLY=true` เมื่อทดสอบผ่าน SSH ก่อนตั้ง DNS และ TLS ผลทดสอบนี้ตรวจบริการภายในคลัสเตอร์ ให้รัน workflow อีกครั้งเพื่อยืนยัน URL สาธารณะ
