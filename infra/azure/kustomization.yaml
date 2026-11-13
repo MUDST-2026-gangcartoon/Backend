@@ -6,3 +6,8 @@ resources:
   - app.yaml
   - edge.yaml
   - mailpit.yaml
+  - prometheus.yaml
+configMapGenerator:
+  - name: prometheus-config
+    files:
+      - prometheus.yml
