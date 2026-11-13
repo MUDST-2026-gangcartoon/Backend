@@ -27,7 +27,7 @@ sudo k3s kubectl -n eventhub create secret generic eventhub-runtime \
 
 สร้าง Secret `eventhub-grafana` ที่มีคีย์ `password` จากไฟล์ส่วนตัวก่อน deploy ครั้งแรก
 
-GitHub Actions สร้าง image ทั้งสองตัวและติด tag ด้วย commit SHA ใน GHCR เปิดให้คลัสเตอร์อ่านสอง package ได้จากหน้า Package settings จากนั้นตั้ง Environment `azure-demo` และใช้ OIDC ที่ผูกกับ `repo:MUDST-2026-gangcartoon/Backend:environment:azure-demo` ให้สิทธิ์ Azure เฉพาะ VM นี้สำหรับอ่านสถานะและเรียก VM Run Command ตั้ง Environment Variables ดังนี้
+GitHub Actions สร้าง image ทั้งสองตัวและติด tag ด้วย commit SHA ใน GHCR ถ้า package เป็น private ให้สร้าง registry pull Secret ใน namespace `eventhub` ด้วยบัญชีที่มีสิทธิ์อ่าน package แล้วผูก `imagePullSecrets` กับ ServiceAccount `default` ใน namespace นี้ จากนั้นตั้ง Environment `azure-demo` และใช้ OIDC ที่ผูกกับ `repo:MUDST-2026-gangcartoon/Backend:environment:azure-demo` ให้สิทธิ์ Azure เฉพาะ VM นี้สำหรับอ่านสถานะและเรียก VM Run Command ตั้ง Environment Variables ดังนี้
 
 - `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
 - `AZURE_RESOURCE_GROUP`, `AZURE_VM_NAME`
