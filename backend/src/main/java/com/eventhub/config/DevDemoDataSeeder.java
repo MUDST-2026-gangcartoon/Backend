@@ -36,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @Order(20)
-@Profile("dev & !prod & !e2e")
+@Profile("(dev & !prod & !e2e) | (prod & cloud-demo & !e2e)")
 @ConditionalOnProperty(name = "app.dev.demo.enabled", havingValue = "true", matchIfMissing = true)
 public class DevDemoDataSeeder implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(DevDemoDataSeeder.class);
@@ -48,14 +48,17 @@ public class DevDemoDataSeeder implements CommandLineRunner {
     private final UserRepository users;
     private final PasswordEncoder encoder;
     private final String batch;
+    private final String fixturePassword;
 
     public DevDemoDataSeeder(EntityManager database, JdbcTemplate jdbc, UserRepository users,
-            PasswordEncoder encoder, @Value("${app.dev.demo.set:default}") String batch) {
+            PasswordEncoder encoder, @Value("${app.dev.demo.set:default}") String batch,
+            @Value("${app.demo.fixture-password:11111111}") String fixturePassword) {
         this.database = database;
         this.jdbc = jdbc;
         this.users = users;
         this.encoder = encoder;
         this.batch = batch.strip().toLowerCase(Locale.ROOT);
+        this.fixturePassword = fixturePassword;
     }
 
     @Override
@@ -171,7 +174,7 @@ public class DevDemoDataSeeder implements CommandLineRunner {
 
     private UserAccount demoUser(String name, String email) {
         return users.findByEmail(email).orElseGet(() -> users.save(
-                new UserAccount(name, email, encoder.encode(DevAccountSeeder.DEV_PASSWORD), Role.USER)));
+                new UserAccount(name, email, encoder.encode(fixturePassword), Role.USER)));
     }
 
     private Event event(String title, String category, LocalDateTime start, int capacity, BigDecimal price) {
