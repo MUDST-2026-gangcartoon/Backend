@@ -1,0 +1,38 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: eventhub-acme
+spec:
+  acme:
+    email: EVENTHUB_ACME_EMAIL
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: eventhub-acme-account
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: traefik
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: eventhub
+  annotations:
+    cert-manager.io/issuer: eventhub-acme
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: [EVENTHUB_HOST]
+      secretName: eventhub-tls
+  rules:
+    - host: EVENTHUB_HOST
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: eventhub-frontend
+                port:
+                  number: 80
