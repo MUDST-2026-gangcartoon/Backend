@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Icon from './Icon.jsx';
+import logo from '../../assets/public/logo.png';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { guestService } from '../api/guestService.js';
@@ -145,7 +146,7 @@ export default function AuthModal() {
 
           <div className="login-icon">
             <img
-              src="/assets/public/logo.png"
+              src={logo}
               alt="Logo"
             />
           </div>
@@ -238,7 +239,7 @@ export default function AuthModal() {
 
           <div className="login-icon">
             <img
-              src="/assets/public/logo.png"
+              src={logo}
               alt="Logo"
             />
           </div>

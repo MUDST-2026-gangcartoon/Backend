@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Icon from './Icon.jsx';
+import logo from '../../assets/public/logo.png';
 import ProfileMenu from './ProfileMenu.jsx';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -36,7 +37,7 @@ export default function Navbar({ onSearchChange }) {
         {/* ด้านซ้าย: Logo + ช่องค้นหา */}
         <div className="nav-left">
           <NavLink to="/" className="logo">
-            <img src="/assets/public/logo.png" alt="EventFest." />
+            <img src={logo} alt="EventFest." />
           </NavLink>
 
           <div className="search-box">
